@@ -1,0 +1,4 @@
+# Ignore anything that is not needed inside the image
+.git
+*.md
+
