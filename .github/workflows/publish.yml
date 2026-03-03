@@ -1,4 +1,4 @@
-name: Publish Docker Image
+name: Test & Publish Docker Image
 
 on:
   push:
@@ -7,10 +7,116 @@ on:
 
 env:
   IMAGE_NAME: pg-backup-restore-cli
+  PG_CONTAINER: pg-test
+  TEST_DB: testdb
 
 jobs:
-  build-and-push:
+  # ──────────────────────────────────────────────────────────────
+  # JOB 1 – Integration tests
+  # ──────────────────────────────────────────────────────────────
+  test:
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Build the CLI image locally (not pushed yet)
+      - name: Build CLI image
+        run: docker build -t ${{ env.IMAGE_NAME }}:test .
+
+      # Start a postgres container that the CLI will talk to via docker exec
+      - name: Start PostgreSQL container
+        run: |
+          docker run -d \
+            --name ${{ env.PG_CONTAINER }} \
+            -e POSTGRES_PASSWORD=postgres \
+            postgres:17-alpine
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL..."
+          for i in $(seq 1 30); do
+            if docker exec ${{ env.PG_CONTAINER }} pg_isready -U postgres -q; then
+              echo "PostgreSQL is ready."
+              break
+            fi
+            sleep 2
+          done
+
+      # Shared run helper – mounts the Docker socket + backups dir
+      # The CLI container can reach $PG_CONTAINER because both share the host Docker daemon
+      - name: "[create] Create database"
+        run: |
+          mkdir -p ${{ github.workspace }}/backups
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}/backups:/backups \
+            ${{ env.IMAGE_NAME }}:test \
+            create -c ${{ env.PG_CONTAINER }} -d ${{ env.TEST_DB }}
+
+      - name: "[create] Verify database exists"
+        run: |
+          docker exec ${{ env.PG_CONTAINER }} psql -U postgres -c "\l" | grep ${{ env.TEST_DB }}
+
+      - name: "[export] Export database"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}/backups:/backups \
+            ${{ env.IMAGE_NAME }}:test \
+            export -c ${{ env.PG_CONTAINER }} -d ${{ env.TEST_DB }}
+
+      - name: "[export] Verify dump file was created"
+        run: |
+          ls ${{ github.workspace }}/backups/${{ env.TEST_DB }}_*.sql | head -1
+          echo "Dump files found:"
+          ls -lh ${{ github.workspace }}/backups/
+
+      - name: "[unblock] Terminate connections"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ${{ env.IMAGE_NAME }}:test \
+            unblock -c ${{ env.PG_CONTAINER }} -d ${{ env.TEST_DB }}
+
+      - name: "[delete] Drop database"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ${{ env.IMAGE_NAME }}:test \
+            delete -c ${{ env.PG_CONTAINER }} -d ${{ env.TEST_DB }}
+
+      - name: "[delete] Verify database no longer exists"
+        run: |
+          ! docker exec ${{ env.PG_CONTAINER }} psql -U postgres -c "\l" | grep ${{ env.TEST_DB }}
+
+      - name: "[restore] Restore database from dump"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}/backups:/backups \
+            ${{ env.IMAGE_NAME }}:test \
+            restore -c ${{ env.PG_CONTAINER }} -d ${{ env.TEST_DB }}
+
+      - name: "[restore] Verify database is back"
+        run: |
+          docker exec ${{ env.PG_CONTAINER }} psql -U postgres -c "\l" | grep ${{ env.TEST_DB }}
+
+      - name: "[help] Smoke-test help command"
+        run: |
+          docker run --rm ${{ env.IMAGE_NAME }}:test --help
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f ${{ env.PG_CONTAINER }} || true
+
+  # ──────────────────────────────────────────────────────────────
+  # JOB 2 – Build & publish (only if tests pass)
+  # ──────────────────────────────────────────────────────────────
+  publish:
+    runs-on: ubuntu-latest
+    needs: test
     permissions:
       contents: read
       packages: write
@@ -55,4 +161,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
