@@ -21,6 +21,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
       # Build the CLI image locally (not pushed yet)
       - name: Build CLI image
         run: docker build -t ${{ env.IMAGE_NAME }}:test .
@@ -106,6 +112,25 @@ jobs:
       - name: "[help] Smoke-test help command"
         run: |
           docker run --rm ${{ env.IMAGE_NAME }}:test --help
+
+      - name: "[serve] Smoke-test Web UI starts and responds"
+        run: |
+          docker run -d --name pg-ui-test \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -p 3000:3000 \
+            ${{ env.IMAGE_NAME }}:test serve
+          echo "Waiting for UI to be ready..."
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:3000/api/containers > /dev/null 2>&1; then
+              echo "Web UI is up!"
+              break
+            fi
+            sleep 2
+          done
+          curl -sf http://localhost:3000/api/containers
+          curl -sf http://localhost:3000/api/backups
+          curl -sf http://localhost:3000/ | grep -i "PG Backup"
+          docker rm -f pg-ui-test
 
       - name: Cleanup
         if: always()

@@ -1,10 +1,37 @@
 services:
   pg-backup-restore:
-    image: ghcr.io/cswni/pg-backup-restore-cli:latest
+    #image: ghcr.io/cswni/pg-backup-restore-cli:latest
+    image: cswni/pg-backup:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./backups:/backups
-    # Override the default CMD per operation, e.g.:
-    # command: ["export", "-c", "my-postgres-container", "-d", "mydb"]
-    command: ["--help"]
+    environment:
+      PORT: "3000"
+    deploy:
+      replicas: 1
+      update_config:
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.id == sc9tjcr8pztj5adu0v81k7i8k
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-net
+        - traefik.constraint-label=traefik-local
+        - traefik.http.routers.pg-backup-restore.rule=Host(`pgui.zionode.com`)
+        - traefik.http.routers.pg-backup-restore.entrypoints=https
+        - traefik.http.routers.pg-backup-restore.tls=true
+        - traefik.http.routers.pg-backup-restore.tls.certresolver=le
+        - traefik.http.services.pg-backup-restore.loadbalancer.server.port=3000
+        - traefik.http.services.pg-backup-restore.loadbalancer.server.scheme=http
+    networks:
+      - traefik-net
 
+networks:
+  traefik-net:
+    external: true

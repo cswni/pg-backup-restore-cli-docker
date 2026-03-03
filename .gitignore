@@ -1,2 +1,5 @@
 .idea
 *.sql
+dist
+node_modules
+*.txt
