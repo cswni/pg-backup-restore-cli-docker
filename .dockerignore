@@ -1,4 +1,8 @@
 # Ignore anything that is not needed inside the image
 .git
 *.md
-
+node_modules
+ui/node_modules
+ui/dist
+ui/*.txt
+.github
