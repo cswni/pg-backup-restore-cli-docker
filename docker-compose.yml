@@ -1,0 +1,10 @@
+services:
+  pg-backup-restore:
+    image: ghcr.io/cswni/pg-backup-restore-cli:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backups:/backups
+    # Override the default CMD per operation, e.g.:
+    # command: ["export", "-c", "my-postgres-container", "-d", "mydb"]
+    command: ["--help"]
+
