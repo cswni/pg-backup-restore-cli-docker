@@ -1,6 +1,7 @@
 const express = require('express')
 const path = require('path')
 const fs = require('fs')
+const multer = require('multer')
 const { listContainers, listDatabases } = require('./docker')
 const { runOperation, getJob, listJobs } = require('./operations')
 
@@ -9,6 +10,33 @@ const PORT = process.env.PORT || 3000
 const BACKUPS_DIR = process.env.BACKUPS_DIR || '/backups'
 
 app.use(express.json())
+
+// ── File upload (multer) ──────────────────────────────────────────────────────
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(BACKUPS_DIR)) fs.mkdirSync(BACKUPS_DIR, { recursive: true })
+    cb(null, BACKUPS_DIR)
+  },
+  filename: (req, file, cb) => {
+    const dest = path.join(BACKUPS_DIR, file.originalname)
+    if (fs.existsSync(dest)) {
+      const ext = path.extname(file.originalname)
+      const base = path.basename(file.originalname, ext)
+      cb(null, `${base}_upload_${Date.now()}${ext}`)
+    } else {
+      cb(null, file.originalname)
+    }
+  },
+})
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (!file.originalname.endsWith('.sql')) {
+      return cb(new Error('Only .sql files are allowed'))
+    }
+    cb(null, true)
+  },
+})
 
 // ── Serve built frontend ─────────────────────────────────────────────────────
 const DIST = path.join(__dirname, '..', 'dist')
@@ -62,6 +90,26 @@ app.delete('/api/backups/:filename', (req, res) => {
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'Not found' })
   fs.unlinkSync(file)
   res.json({ ok: true })
+})
+
+// Upload a .sql file → save to /backups, optionally restore immediately
+app.post('/api/backups/upload', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+
+  const saved = req.file.filename
+  const { container, database, restore } = req.body
+
+  // If caller wants to restore immediately
+  if (restore === 'true' && container && database) {
+    try {
+      const jobId = runOperation('restore', { container, database, file: saved })
+      return res.json({ ok: true, filename: saved, jobId })
+    } catch (err) {
+      return res.status(500).json({ error: err.message })
+    }
+  }
+
+  res.json({ ok: true, filename: saved })
 })
 
 // ── Operations ────────────────────────────────────────────────────────────────
@@ -138,6 +186,14 @@ if (fs.existsSync(DIST)) {
     res.sendFile(path.join(DIST, 'index.html'))
   })
 }
+
+// Enable CORS for all requests
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  next()
+})
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[pg-backup-ui] Web UI running at http://0.0.0.0:${PORT}`)
