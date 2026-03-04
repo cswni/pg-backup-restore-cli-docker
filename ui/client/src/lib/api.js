@@ -1,4 +1,4 @@
-const BASE = 'http://panel.zionode.com:3001'
+const BASE = ''
 
 async function req(method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
