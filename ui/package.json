@@ -2,29 +2,30 @@
   "name": "pg-backup-restore-ui",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@9.15.4",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev:server": "node --watch server/index.js",
-    "dev:client": "node node_modules/vite/bin/vite.js client",
-    "build": "node node_modules/vite/bin/vite.js build client --outDir ../dist --emptyOutDir",
+    "dev:client": "vite",
+    "build": "vite build",
     "start": "node server/index.js"
   },
   "dependencies": {
-    "dockerode": "^4.0.2",
-    "express": "^4.19.2",
-    "multer": "^2.1.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "uuid": "^9.0.1"
+    "dockerode": "^5.0.1",
+    "express": "^5.2.1",
+    "multer": "^2.4.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.14",
-    "vite": "^5.4.8"
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.2"
   }
 }

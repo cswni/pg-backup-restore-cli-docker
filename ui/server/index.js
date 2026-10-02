@@ -117,7 +117,7 @@ app.post('/api/backups/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
   const saved = req.file.filename
-  const { container, database, restore, dropExisting } = req.body
+  const { container, database, restore, dropExisting } = req.body ?? {}
 
   // If caller wants to restore immediately
   if (restore === 'true' && container && database) {
@@ -142,7 +142,7 @@ const OPS = ['export', 'create', 'delete', 'unblock', 'restore']
 
 OPS.forEach((op) => {
   app.post(`/api/ops/${op}`, (req, res) => {
-    const { container, database, file, dropExisting, outputName } = req.body
+    const { container, database, file, dropExisting, outputName } = req.body ?? {}
     if (!container || !database) {
       return res.status(400).json({ error: 'container and database are required' })
     }
@@ -215,7 +215,7 @@ app.get('/api/jobs/:jobId', (req, res) => {
 
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 if (fs.existsSync(DIST)) {
-  app.get('*', (req, res) => {
+  app.get('/{*splat}', (req, res) => {
     res.sendFile(path.join(DIST, 'index.html'))
   })
 }

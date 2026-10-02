@@ -1,5 +1,5 @@
 const { spawn } = require('child_process')
-const { v4: uuidv4 } = require('uuid')
+const { randomUUID } = require('crypto')
 const EventEmitter = require('events')
 
 // In-memory job store: Map<jobId, { emitter, lines, status, startedAt, command }>
@@ -36,7 +36,7 @@ function runOperation(operation, params) {
   if (operation === 'restore' && dropExisting) args.push('-x')
   if (operation === 'export' && outputName) args.push('-n', outputName)
 
-  const jobId = uuidv4()
+  const jobId = randomUUID()
   const emitter = new EventEmitter()
   const lines = []
   const job = {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import {
@@ -53,7 +53,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl">
         {/* Header */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
@@ -96,7 +96,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
               <select
                 value={db}
                 onChange={(e) => setDb(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-none transition-colors"
+                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors"
               >
                 <option value="">— select database —</option>
                 {(databases || []).map((d) => (
@@ -144,7 +144,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
               <select
                 value={file}
                 onChange={(e) => setFile(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-none transition-colors"
+                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors"
               >
                 <option value="">— auto (latest) —</option>
                 {(backups || []).map((b) => (
@@ -165,7 +165,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
                 placeholder={finalDb}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="w-full bg-zinc-900 border border-red-500/30 focus:border-red-500 rounded-lg px-3 py-2 text-sm font-mono text-red-300 placeholder-red-900 outline-none transition-colors"
+                className="w-full bg-zinc-900 border border-red-500/30 focus:border-red-500 rounded-lg px-3 py-2 text-sm font-mono text-red-300 placeholder-red-900 outline-hidden transition-colors"
               />
             </div>
           )}

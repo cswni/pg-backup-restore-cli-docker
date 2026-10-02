@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router'
 
 const nav = [
   { to: '/',           label: 'Dashboard',   icon: '⬛' },
@@ -11,7 +11,7 @@ export default function Layout({ children }) {
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 flex flex-col border-r border-zinc-800 bg-zinc-900">
+      <aside className="w-56 shrink-0 flex flex-col border-r border-zinc-800 bg-zinc-900">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-zinc-800">
           <span className="text-2xl">🐘</span>
