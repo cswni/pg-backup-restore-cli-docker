@@ -1,0 +1,29 @@
+{
+  "$schema": "https://blueprint.com/blueprint/schema/config-v1.json",
+  "version": 1,
+  "name": "pg-backup-restore-cli",
+  "type": "generic",
+  "initialized_at": "2026-10-02T12:18:58Z",
+  "sdd_version": "0.2.13",
+  "memory": {
+    "store_path": "~/.blueprint/local.db",
+    "mcp_tools": "agent"
+  },
+  "workflow": {
+    "specs_dir": "specs",
+    "phases": [
+      "constitution",
+      "specify",
+      "clarify",
+      "plan",
+      "checklist",
+      "analyze",
+      "tasks",
+      "implement",
+      "converge"
+    ]
+  },
+  "skills": {
+    "manifest_path": ".blueprint/skills.manifest.json"
+  }
+}

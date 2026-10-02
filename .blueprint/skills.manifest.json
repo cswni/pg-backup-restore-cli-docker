@@ -1,0 +1,6 @@
+{
+  "$schema": "https://blueprint.com/blueprint/schema/skills-manifest-v1.json",
+  "version": 1,
+  "project": "pg-backup-restore-cli",
+  "skills": []
+}

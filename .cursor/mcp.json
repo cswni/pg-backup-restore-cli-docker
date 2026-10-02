@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "blueprint": {
+      "args": [
+        "mcp",
+        "--tools",
+        "agent"
+      ],
+      "command": "blueprint",
+      "env": {
+        "BLUEPRINT_PROJECT": "pg-backup-restore-cli"
+      }
+    }
+  }
+}

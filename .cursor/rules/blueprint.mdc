@@ -1,0 +1,35 @@
+---
+description: SDD workflow rules — spec-driven development via the blueprint tool
+alwaysApply: true
+---
+
+# SDD (spec-driven development) — pg-backup-restore-cli
+
+This project moves through `specify → clarify → plan → analyze → tasks →
+implement → converge` for every non-trivial feature. Artifact authoring uses
+Spec Kit templates (`.specify/` + `/speckit-*` skills). Cursor Agent should:
+
+1. **Consult prior context first.** Before proposing a solution, call
+   the `blueprint` MCP: `bp_memory_search`, `bp_memory_context`, `bp_memory_get`.
+   Cite the observation id when reusing a prior decision.
+2. **Check the current spec.** If working on a feature, read
+   `specs/<slug>/spec.md`, then `plan.md`, then `tasks.md` in order.
+   If they don't exist, present Option A/B/C to start `blueprint specify`
+   (do not dump a plain-text "run blueprint specify …" suggestion).
+3. **Plan mode for spec/clarify/plan.** During `specify`, `clarify`, and `plan`,
+   **switch to Plan mode** (`SwitchMode` → `plan`) and use `AskQuestion` for
+   confirmations — never markdown A/B/C lists. Run `/speckit-*` authoring there.
+   Switch to **Agent mode** before `tasks` / `implement` / `converge`.
+4. **Record decisions live.** Every non-trivial choice (framework
+   pick, algorithm, trade-off) becomes an observation via `bp_memory_save`
+   with `type=decision`, `scope=project`, `project=pg-backup-restore-cli`, and a
+   stable `topic_key` (so revisions merge instead of duplicating).
+5. **Type-specific rules.** This is a `generic` project — see the
+   "Type-specific guidance" section of `AGENTS.md` for the checklist
+   that applies.
+6. **Do not commit `specs/`.** It's VCS-ignored on purpose — the SDD
+   memory store is the durable source of truth. Commit only shipped
+   code.
+7. **Session hand-off.** At the end of a session, save a
+   `type=discovery` observation with the delta: what changed, what's
+   blocked, what's next. The next chat picks up cleanly.
