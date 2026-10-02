@@ -77,13 +77,16 @@ docker run --rm \
 ## Commands
 
 ### export
-Dump a database to `/backups/<database>_<DD-MM-YYYY_HH_MM_SS>.sql`.
+Dump a database to `/backups/<name>_<DD-MM-YYYY_HH_MM_SS>.sql`.
+`-n <name>` is optional and defaults to the database name. Restore uses the file
+name prefix as the default target database, so `-d premas -n premas_qa` produces
+a dump that restores as `premas_qa` by default.
 
 ```bash
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(pwd)/backups:/backups \
-  cswni/pg-backup export -c <container> -d <database>
+  cswni/pg-backup export -c <container> -d <database> [-n <name>]
 ```
 
 ### unblock
@@ -117,6 +120,20 @@ docker run --rm \
 Restore a database from a dump file.  
 `-f` is optional — if omitted the latest dump for that database is used.
 
+- `-d` is the **target** database. The dump is always restored into it, whatever
+  database it was exported from (e.g. a `premas` dump restored into `premas_qa`).
+  The target is created if it does not exist.
+- `-x` drops the target database (`WITH (FORCE)`) before restoring, so the restore
+  starts from an empty database instead of failing with "already exists" errors.
+
+```bash
+# Restore a dump of "premas" into "premas_qa", replacing it
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd)/backups:/backups \
+  cswni/pg-backup restore -c <container> -d premas_qa -x -f premas_01-01-2025_12_00_00.sql
+```
+
 **File resolution order for `-f <file>`:**
 1. `/work/<file>` — mount your current directory with `-v $(pwd):/work`
 2. `/backups/<file>` — mount your backups dir with `-v /path/to/backups:/backups`
@@ -141,6 +158,22 @@ docker run --rm \
   -v $(pwd):/work \
   cswni/pg-backup restore -c <container> -d <database>
 ```
+
+---
+
+## Web UI authentication
+
+The Web UI (`serve`, the default command) supports HTTP Basic authentication for
+the UI, the API and backup downloads. Set both variables to enable it:
+
+| Variable | Description |
+|----------|-------------|
+| `BASIC_AUTH_USER` | Username |
+| `BASIC_AUTH_PASSWORD` | Password |
+
+If neither is set the UI runs **unauthenticated** (a warning is logged). If only one
+is set the server refuses to start. Always serve the UI over HTTPS (e.g. behind
+Traefik) when auth is enabled, since Basic auth sends credentials on every request.
 
 ---
 

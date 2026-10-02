@@ -65,6 +65,71 @@ export function Button({ children, onClick, variant = 'primary', size = 'md', di
   )
 }
 
+export const DB_NAME_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_$-]{0,62}$/
+
+/**
+ * Free-text database name with suggestions from existing databases,
+ * so a new name (e.g. premas_qa) can be typed or an existing one picked.
+ */
+export function DbNameInput({ id, value, onChange, options = [], placeholder = 'database_name' }) {
+  const invalid = value && !DB_NAME_PATTERN.test(value)
+  return (
+    <>
+      <input
+        type="text"
+        list={`${id}-options`}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value.trim())}
+        className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 outline-none transition-colors ${
+          invalid ? 'border-red-500/60 focus:border-red-500' : 'border-zinc-700 focus:border-emerald-500'
+        }`}
+      />
+      <datalist id={`${id}-options`}>
+        {options.map((d) => <option key={d} value={d} />)}
+      </datalist>
+      {invalid && (
+        <p className="text-xs text-red-400 mt-1">Use letters, digits, _, $ or - (max 63 chars).</p>
+      )}
+    </>
+  )
+}
+
+export function Toggle({ checked, onChange, label, hint, danger = false }) {
+  const on = danger ? 'bg-red-500' : 'bg-emerald-500'
+  return (
+    <label className="flex items-start gap-3 cursor-pointer select-none group">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative shrink-0 mt-0.5 w-10 h-5 rounded-full transition-colors ${checked ? on : 'bg-zinc-700'}`}
+      >
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
+      </button>
+      <span>
+        <span className="block text-sm text-zinc-300 group-hover:text-zinc-100 transition-colors">{label}</span>
+        {hint && <span className="block text-xs text-zinc-500 mt-0.5">{hint}</span>}
+      </span>
+    </label>
+  )
+}
+
+export function ProgressBar({ percent }) {
+  return (
+    <div>
+      <div className="flex justify-between text-xs text-zinc-400 mb-1">
+        <span>{percent < 100 ? 'Uploading…' : 'Upload complete — processing…'}</span>
+        <span className="font-mono">{percent}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-zinc-800 overflow-hidden" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full bg-emerald-500 transition-[width] duration-200" style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  )
+}
+
 export function EmptyState({ icon, title, description }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">

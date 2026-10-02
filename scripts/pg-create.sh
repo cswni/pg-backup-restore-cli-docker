@@ -28,7 +28,7 @@ done
 echo "[pg-create] Creating database '${DATABASE}' on container '${CONTAINER}'..."
 
 docker exec -u postgres "${CONTAINER}" psql -c \
-  "CREATE DATABASE ${DATABASE};"
+  "CREATE DATABASE \"${DATABASE}\";"
 
 echo "[pg-create] Done."
 

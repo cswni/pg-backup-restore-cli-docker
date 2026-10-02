@@ -28,7 +28,7 @@ done
 echo "[pg-delete] Dropping database '${DATABASE}' on container '${CONTAINER}'..."
 
 docker exec -u postgres "${CONTAINER}" psql -c \
-  "DROP DATABASE ${DATABASE} WITH (FORCE);"
+  "DROP DATABASE \"${DATABASE}\" WITH (FORCE);"
 
 echo "[pg-delete] Done."
 

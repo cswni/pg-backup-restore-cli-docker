@@ -13,18 +13,28 @@ const SCRIPT_MAP = {
   restore: '/usr/local/bin/pg-restore.sh',
 }
 
+// Same rule as the shell scripts: names are always double-quoted in SQL,
+// so only a safe character set is accepted.
+const DB_NAME_RE = /^[A-Za-z0-9_][A-Za-z0-9_$-]{0,62}$/
+
+function isValidDbName(name) {
+  return typeof name === 'string' && DB_NAME_RE.test(name)
+}
+
 /**
  * Run an operation and return jobId immediately.
  * @param {string} operation - one of export|create|delete|unblock|restore
- * @param {object} params    - { container, database, file? }
+ * @param {object} params    - { container, database, file?, dropExisting?, outputName? }
  */
 function runOperation(operation, params) {
   const script = SCRIPT_MAP[operation]
   if (!script) throw new Error(`Unknown operation: ${operation}`)
 
-  const { container, database, file } = params
+  const { container, database, file, dropExisting, outputName } = params
   const args = ['-c', container, '-d', database]
-  if (file) args.push('-f', file)
+  if (operation === 'restore' && file) args.push('-f', file)
+  if (operation === 'restore' && dropExisting) args.push('-x')
+  if (operation === 'export' && outputName) args.push('-n', outputName)
 
   const jobId = uuidv4()
   const emitter = new EventEmitter()
@@ -86,5 +96,5 @@ function listJobs() {
   }))
 }
 
-module.exports = { runOperation, getJob, listJobs }
+module.exports = { runOperation, getJob, listJobs, isValidDbName }
 

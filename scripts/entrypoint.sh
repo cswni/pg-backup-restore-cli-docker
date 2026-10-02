@@ -109,11 +109,13 @@ Usage:
     <image> <command> [options]
 
 Commands:
-  export   -c <container> -d <database>             Export database to /backups
+  export   -c <container> -d <database> [-n <name>]  Export database to /backups/<name>_<ts>.sql
   unblock  -c <container> -d <database>             Terminate active connections
   delete   -c <container> -d <database>             Drop database (force)
   create   -c <container> -d <database>             Create database
-  restore  -c <container> -d <database> [-f <file>] Restore from dump file
+  restore  -c <container> -d <target_db> [-f <file>] [-x]
+                                                     Restore dump into <target_db> (created if
+                                                     missing; -x drops it first)
   serve                                              Start the Web UI (default)
   help                                               Show this help message
 
@@ -122,6 +124,9 @@ Restore file resolution (-f):
   2. /backups/<file>  – file in backups dir (mount with -v /path/to/backups:/backups)
   3. <file> as-is     – absolute path inside the container
   If -f is omitted, the latest dump for the database is used.
+
+Web UI authentication (serve):
+  BASIC_AUTH_USER / BASIC_AUTH_PASSWORD   Enable HTTP Basic auth (set both)
 EOF
     ;;
   *)
