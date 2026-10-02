@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import {
-  PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button
+  PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button,
+  DbNameInput, Toggle, ProgressBar, DB_NAME_PATTERN,
 } from '../components/UI'
 
 function formatBytes(b) {
@@ -22,17 +23,76 @@ function parseDbName(filename) {
   return m ? m[1] : filename.replace(/\.sql$/, '')
 }
 
+/** Existing databases of the selected container, for name suggestions. */
+function useContainerDatabases(container) {
+  const [databases, setDatabases] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setDatabases([])
+    if (!container) return
+    let cancelled = false
+    setLoading(true)
+    api.containers.databases(container)
+      .then((dbs) => { if (!cancelled) setDatabases(dbs) })
+      .catch(() => { if (!cancelled) setDatabases([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [container])
+
+  return { databases, loading }
+}
+
+function TargetDbFields({ id, container, db, setDb, dropExisting, setDropExisting }) {
+  const { databases, loading } = useContainerDatabases(container)
+  const exists = databases.includes(db)
+  return (
+    <>
+      <div>
+        <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
+          Target Database
+          {loading && <span className="ml-2 text-zinc-600 normal-case tracking-normal">loading…</span>}
+        </label>
+        <DbNameInput
+          id={id}
+          value={db}
+          onChange={setDb}
+          options={databases}
+          placeholder={container ? 'existing or new database name' : 'Select a container first'}
+        />
+        {container && db && !loading && (
+          <p className="text-xs text-zinc-500 mt-1">
+            {exists ? 'Database exists on this container.' : 'Database will be created.'}
+          </p>
+        )}
+      </div>
+      <Toggle
+        danger
+        checked={dropExisting}
+        onChange={setDropExisting}
+        label="Drop target database before restore"
+        hint={exists
+          ? `⚠️ "${db}" will be dropped (all connections terminated) and recreated empty.`
+          : 'Recommended — avoids "already exists" errors when restoring over an existing database.'}
+      />
+    </>
+  )
+}
+
 function RestoreModal({ backup, onClose, onRestore }) {
   const { data: containers, loading } = useFetch(api.containers.list)
   const [container, setContainer] = useState('')
   const [db, setDb] = useState(parseDbName(backup.name))
+  const [dropExisting, setDropExisting] = useState(false)
   const [running, setRunning] = useState(false)
 
+  const canSubmit = container && DB_NAME_PATTERN.test(db) && !running
+
   async function submit() {
-    if (!container || !db) return
+    if (!canSubmit) return
     setRunning(true)
     try {
-      await onRestore({ container, database: db, file: backup.name })
+      await onRestore({ container, database: db, file: backup.name, dropExisting })
     } finally {
       setRunning(false)
     }
@@ -66,20 +126,19 @@ function RestoreModal({ backup, onClose, onRestore }) {
               </select>
             )}
           </div>
-          <div>
-            <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">Database Name</label>
-            <input
-              type="text"
-              value={db}
-              onChange={(e) => setDb(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 outline-none transition-colors"
-            />
-          </div>
+          <TargetDbFields
+            id="restore-db"
+            container={container}
+            db={db}
+            setDb={setDb}
+            dropExisting={dropExisting}
+            setDropExisting={setDropExisting}
+          />
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={!container || !db || running} onClick={submit}>
+          <Button variant={dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
             {running ? <><span className="animate-spin">⟳</span> Running…</> : 'Restore'}
           </Button>
         </div>
@@ -91,48 +150,47 @@ function RestoreModal({ backup, onClose, onRestore }) {
 function UploadRestoreModal({ onClose, onDone }) {
   const { data: containers, loading: loadingContainers } = useFetch(api.containers.list)
   const [container, setContainer] = useState('')
-  const [databases, setDatabases] = useState([])
-  const [loadingDbs, setLoadingDbs] = useState(false)
   const [db, setDb] = useState('')
+  const [dropExisting, setDropExisting] = useState(false)
   const [file, setFile] = useState(null)
   const [restoreNow, setRestoreNow] = useState(true)
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [uploadError, setUploadError] = useState(null)
   const fileRef = useRef()
 
-  // Fetch databases when container changes
-  useEffect(() => {
-    setDb('')
-    setDatabases([])
-    if (!container) return
-    setLoadingDbs(true)
-    api.containers.databases(container)
-      .then(setDatabases)
-      .catch(() => setDatabases([]))
-      .finally(() => setLoadingDbs(false))
-  }, [container])
+  function pickFile(f) {
+    setFile(f)
+    setUploadError(null)
+    // Default the target to the dump's database name; user can rename it
+    if (f && !db) setDb(parseDbName(f.name))
+  }
 
   async function submit() {
-    if (!file) return
-    if (restoreNow && (!container || !db)) return
+    if (!canSubmit) return
     setRunning(true)
     setProgress(0)
+    setUploadError(null)
     try {
+      // Text fields go first so they are parsed before the file stream
       const fd = new FormData()
-      fd.append('file', file)
       if (restoreNow) {
         fd.append('restore', 'true')
         fd.append('container', container)
         fd.append('database', db)
+        fd.append('dropExisting', String(dropExisting))
       }
-      const result = await api.backups.upload(fd)
+      fd.append('file', file)
+      const result = await api.backups.upload(fd, setProgress)
       onDone(result)
+    } catch (e) {
+      setUploadError(e.message)
     } finally {
       setRunning(false)
     }
   }
 
-  const canSubmit = file && (!restoreNow || (container && db)) && !running
+  const canSubmit = file && (!restoreNow || (container && DB_NAME_PATTERN.test(db))) && !running
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -156,8 +214,9 @@ function UploadRestoreModal({ onClose, onDone }) {
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault()
+              if (running) return
               const f = e.dataTransfer.files[0]
-              if (f && f.name.endsWith('.sql')) setFile(f)
+              if (f && f.name.endsWith('.sql')) pickFile(f)
             }}
           >
             <input
@@ -165,17 +224,19 @@ function UploadRestoreModal({ onClose, onDone }) {
               type="file"
               accept=".sql"
               className="hidden"
-              onChange={(e) => setFile(e.target.files[0] || null)}
+              disabled={running}
+              onChange={(e) => pickFile(e.target.files[0] || null)}
             />
             {file ? (
               <>
                 <span className="text-3xl">📄</span>
                 <div className="text-center">
                   <p className="text-sm font-mono text-emerald-400">{file.name}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">{(file.size / 1024).toFixed(1)} KB</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{formatBytes(file.size)}</p>
                 </div>
                 <button
-                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors disabled:opacity-40"
+                  disabled={running}
                   onClick={(e) => { e.stopPropagation(); setFile(null) }}
                 >
                   ✕ Remove
@@ -192,16 +253,11 @@ function UploadRestoreModal({ onClose, onDone }) {
             )}
           </div>
 
+          {(running || progress > 0) && <ProgressBar percent={progress} />}
+          {uploadError && <ErrorAlert message={uploadError} />}
+
           {/* Restore now toggle */}
-          <label className="flex items-center gap-3 cursor-pointer select-none group">
-            <div
-              className={`relative w-10 h-5 rounded-full transition-colors ${restoreNow ? 'bg-emerald-500' : 'bg-zinc-700'}`}
-              onClick={() => setRestoreNow(!restoreNow)}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${restoreNow ? 'translate-x-5' : ''}`} />
-            </div>
-            <span className="text-sm text-zinc-300 group-hover:text-zinc-100 transition-colors">Restore immediately after upload</span>
-          </label>
+          <Toggle checked={restoreNow} onChange={setRestoreNow} label="Restore immediately after upload" />
 
           {/* Container + DB selectors (shown only when restore=true) */}
           {restoreNow && (
@@ -222,41 +278,23 @@ function UploadRestoreModal({ onClose, onDone }) {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
-                  Database Name
-                  {loadingDbs && <span className="ml-2 text-zinc-600 normal-case tracking-normal">loading…</span>}
-                </label>
-                {databases.length > 0 ? (
-                  <select
-                    value={db}
-                    onChange={(e) => setDb(e.target.value)}
-                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-none transition-colors"
-                  >
-                    <option value="">— select database —</option>
-                    {databases.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={db}
-                    placeholder={container ? 'Type database name…' : 'Select a container first'}
-                    onChange={(e) => setDb(e.target.value)}
-                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 outline-none transition-colors"
-                  />
-                )}
-              </div>
+              <TargetDbFields
+                id="upload-db"
+                container={container}
+                db={db}
+                setDb={setDb}
+                dropExisting={dropExisting}
+                setDropExisting={setDropExisting}
+              />
             </div>
           )}
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
           <Button variant="ghost" onClick={onClose} disabled={running}>Cancel</Button>
-          <Button variant="primary" disabled={!canSubmit} onClick={submit}>
+          <Button variant={restoreNow && dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
             {running
-              ? <><span className="animate-spin inline-block mr-1">⟳</span> Uploading…</>
+              ? <><span className="animate-spin inline-block mr-1">⟳</span> Uploading… {progress}%</>
               : restoreNow ? '⬆️ Upload & Restore' : '⬆️ Upload'}
           </Button>
         </div>

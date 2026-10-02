@@ -3,11 +3,24 @@ const path = require('path')
 const fs = require('fs')
 const multer = require('multer')
 const { listContainers, listDatabases } = require('./docker')
-const { runOperation, getJob, listJobs } = require('./operations')
+const { runOperation, getJob, listJobs, isValidDbName } = require('./operations')
+const { createBasicAuth } = require('./auth')
 
 const app = express()
 const PORT = process.env.PORT || 3000
 const BACKUPS_DIR = process.env.BACKUPS_DIR || '/backups'
+
+// ── HTTP Basic auth (protects UI, API and downloads) ─────────────────────────
+const basicAuth = createBasicAuth({
+  user: process.env.BASIC_AUTH_USER,
+  password: process.env.BASIC_AUTH_PASSWORD,
+})
+if (basicAuth) {
+  app.use(basicAuth)
+  console.log('[pg-backup-ui] HTTP Basic auth enabled')
+} else {
+  console.warn('[pg-backup-ui] WARNING: BASIC_AUTH_USER/BASIC_AUTH_PASSWORD not set — UI is unauthenticated')
+}
 
 app.use(express.json())
 
@@ -97,12 +110,17 @@ app.post('/api/backups/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
   const saved = req.file.filename
-  const { container, database, restore } = req.body
+  const { container, database, restore, dropExisting } = req.body
 
   // If caller wants to restore immediately
   if (restore === 'true' && container && database) {
+    if (!isValidDbName(database)) {
+      return res.status(400).json({ error: `Invalid database name: ${database}`, filename: saved })
+    }
     try {
-      const jobId = runOperation('restore', { container, database, file: saved })
+      const jobId = runOperation('restore', {
+        container, database, file: saved, dropExisting: dropExisting === 'true',
+      })
       return res.json({ ok: true, filename: saved, jobId })
     } catch (err) {
       return res.status(500).json({ error: err.message })
@@ -117,12 +135,20 @@ const OPS = ['export', 'create', 'delete', 'unblock', 'restore']
 
 OPS.forEach((op) => {
   app.post(`/api/ops/${op}`, (req, res) => {
-    const { container, database, file } = req.body
+    const { container, database, file, dropExisting, outputName } = req.body
     if (!container || !database) {
       return res.status(400).json({ error: 'container and database are required' })
     }
+    if (!isValidDbName(database)) {
+      return res.status(400).json({ error: `Invalid database name: ${database}` })
+    }
+    if (outputName && !isValidDbName(outputName)) {
+      return res.status(400).json({ error: `Invalid export name: ${outputName}` })
+    }
     try {
-      const jobId = runOperation(op, { container, database, file })
+      const jobId = runOperation(op, {
+        container, database, file, dropExisting: dropExisting === true, outputName,
+      })
       res.json({ jobId })
     } catch (err) {
       res.status(500).json({ error: err.message })

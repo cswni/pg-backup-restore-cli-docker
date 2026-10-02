@@ -2,7 +2,13 @@
 # ============================================================
 # pg-restore.sh  –  Restore a PostgreSQL database from a dump
 # ============================================================
-# Usage: pg-restore.sh -c <container> -d <database> [-f <file>]
+# Usage: pg-restore.sh -c <container> -d <target_database> [-f <file>] [-x]
+#
+#   -d  Target database name. The dump is always restored into THIS
+#       database, even if it was exported from a database with another
+#       name (e.g. dump of "premas" restored into "premas_qa").
+#       The database is created if it does not exist.
+#   -x  Drop the target database (WITH FORCE) before restoring.
 #
 # File resolution order for -f <file>:
 #   1. /work/<file>     (mount your CWD with -v $(pwd):/work)
@@ -13,44 +19,46 @@
 # database name, searching /work first, then /backups.
 #
 # Examples:
-#   # File in current directory (no /backups mount needed):
-#   docker run --rm \
-#     -v /var/run/docker.sock:/var/run/docker.sock \
-#     -v $(pwd):/work \
-#     cswni/pg-backup restore -c my_postgres -d my_db -f my_db.sql
-#
-#   # File in backups directory:
+#   # Restore a "premas" dump into "premas_qa", replacing it:
 #   docker run --rm \
 #     -v /var/run/docker.sock:/var/run/docker.sock \
 #     -v $(pwd)/backups:/backups \
-#     cswni/pg-backup restore -c my_postgres -d my_db -f my_db_01-01-2025_12_00_00.sql
+#     cswni/pg-backup restore -c my_postgres -d premas_qa -x -f premas_01-01-2025_12_00_00.sql
 # ============================================================
 
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 -c <container> -d <database> [-f <dump_file>]"
+  echo "Usage: $0 -c <container> -d <target_database> [-f <dump_file>] [-x]"
   echo "  -c  Target Docker container name or ID"
-  echo "  -d  Database name"
+  echo "  -d  Target database name (created if missing; dump's own name is ignored)"
   echo "  -f  Dump file name or path. Searched in /work, then /backups, then as absolute."
   echo "      Optional: defaults to the latest dump found in /work or /backups."
+  echo "  -x  Drop the target database before restoring"
   exit 1
 }
 
 CONTAINER=""
 DATABASE=""
 FILE=""
+DROP_EXISTING=0
 
-while getopts ":c:d:f:" opt; do
+while getopts ":c:d:f:x" opt; do
   case $opt in
     c) CONTAINER="$OPTARG" ;;
     d) DATABASE="$OPTARG" ;;
     f) FILE="$OPTARG" ;;
+    x) DROP_EXISTING=1 ;;
     *) usage ;;
   esac
 done
 
 [[ -z "$CONTAINER" || -z "$DATABASE" ]] && usage
+
+if [[ ! "$DATABASE" =~ ^[A-Za-z0-9_][A-Za-z0-9_$-]{0,62}$ ]]; then
+  echo "[pg-restore] ERROR: Invalid database name '${DATABASE}'. Use letters, digits, _, \$ or -." >&2
+  exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # resolve_file <name>
@@ -83,6 +91,42 @@ resolve_file() {
 }
 
 # ---------------------------------------------------------------------------
+# admin_sql <sql>
+#   Runs a statement against the maintenance database "postgres".
+# ---------------------------------------------------------------------------
+admin_sql() {
+  docker exec -u postgres "${CONTAINER}" \
+    psql -v ON_ERROR_STOP=1 -X -q -tA -d postgres -c "$1"
+}
+
+# ---------------------------------------------------------------------------
+# retarget_dump <target>
+#   Reads a plain SQL dump on stdin and makes it restore into <target>:
+#   - drops the header "CREATE DATABASE <src>" and "\connect <src>" lines
+#     emitted by `pg_dump -C` (we connect to the target ourselves)
+#   - rewrites "ALTER DATABASE <src> ..." / "COMMENT ON DATABASE <src> ..."
+#     so they apply to the target database
+#   Dumps without -C pass through unchanged.
+# ---------------------------------------------------------------------------
+retarget_dump() {
+  awk -v qtarget="\"$1\"" '
+    BEGIN { header = 1; src = "" }
+    header && NR <= 200 && /^CREATE DATABASE / { src = $3; next }
+    header && NR <= 200 && /^\\connect / { header = 0; next }
+    src != "" {
+      alter = "ALTER DATABASE " src " "
+      comment = "COMMENT ON DATABASE " src " "
+      if (index($0, alter) == 1) {
+        $0 = "ALTER DATABASE " qtarget " " substr($0, length(alter) + 1)
+      } else if (index($0, comment) == 1) {
+        $0 = "COMMENT ON DATABASE " qtarget " " substr($0, length(comment) + 1)
+      }
+    }
+    { print }
+  '
+}
+
+# ---------------------------------------------------------------------------
 # If no file given, auto-detect the latest dump in /work then /backups
 # ---------------------------------------------------------------------------
 if [[ -z "$FILE" ]]; then
@@ -97,9 +141,21 @@ else
   FILE=$(resolve_file "$FILE")
 fi
 
-echo "[pg-restore] Restoring '${DATABASE}' on container '${CONTAINER}' from: ${FILE}"
+if [[ "$DROP_EXISTING" -eq 1 ]]; then
+  echo "[pg-restore] Dropping existing database '${DATABASE}' (if any)..."
+  admin_sql "DROP DATABASE IF EXISTS \"${DATABASE}\" WITH (FORCE);"
+fi
 
-cat "${FILE}" | docker exec -i "${CONTAINER}" psql -U postgres
+if [[ -z "$(admin_sql "SELECT 1 FROM pg_database WHERE datname = '${DATABASE}';")" ]]; then
+  echo "[pg-restore] Creating database '${DATABASE}'..."
+  admin_sql "CREATE DATABASE \"${DATABASE}\";"
+else
+  echo "[pg-restore] Database '${DATABASE}' already exists – restoring on top of it (use -x to drop it first)."
+fi
+
+echo "[pg-restore] Restoring into '${DATABASE}' on container '${CONTAINER}' from: ${FILE}"
+
+retarget_dump "$DATABASE" < "${FILE}" \
+  | docker exec -i -u postgres "${CONTAINER}" psql -X -d "${DATABASE}"
 
 echo "[pg-restore] Done."
-

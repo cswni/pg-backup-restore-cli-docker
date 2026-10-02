@@ -3,39 +3,50 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import {
-  PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button
+  PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button,
+  DbNameInput, Toggle, DB_NAME_PATTERN,
 } from '../components/UI'
 
 const OPERATIONS = [
   { id: 'export',  label: 'Export',   icon: '📤', variant: 'primary',   desc: 'Dump database to /backups' },
   { id: 'create',  label: 'Create',   icon: '➕', variant: 'primary',   desc: 'Create a new database' },
   { id: 'unblock', label: 'Unblock',  icon: '🔓', variant: 'secondary', desc: 'Terminate active connections' },
-  { id: 'restore', label: 'Restore',  icon: '♻️', variant: 'secondary', desc: 'Restore from latest dump' },
+  { id: 'restore', label: 'Restore',  icon: '♻️', variant: 'secondary', desc: 'Restore a dump into any database name' },
   { id: 'delete',  label: 'Delete',   icon: '🗑️', variant: 'danger',    desc: 'Drop database (irreversible!)' },
 ]
 
-function OperationModal({ op, container, databases, backups, onClose, onRun }) {
-  const [db, setDb] = useState('')
-  const [customDb, setCustomDb] = useState('')
+function OperationModal({ op, container, databases, presetDb, backups, onClose, onRun }) {
+  const [db, setDb] = useState(presetDb || '')
+  const [customDb, setCustomDb] = useState(presetDb || '')
   const [file, setFile] = useState('')
+  const [outputName, setOutputName] = useState('')
+  const [dropExisting, setDropExisting] = useState(false)
   const [confirm, setConfirm] = useState('')
   const [running, setRunning] = useState(false)
 
-  const needsFile = op.id === 'restore'
-  const isCreate = op.id === 'create'
+  const isRestore = op.id === 'restore'
+  const isExport = op.id === 'export'
+  const isFreeText = op.id === 'create' || isRestore // name may not exist yet
   const isDanger = op.id === 'delete'
-  const finalDb = isCreate ? customDb : db
+  const finalDb = isFreeText ? customDb : db
+  const exists = (databases || []).includes(finalDb)
 
   const valid =
-    finalDb &&
-    (!needsFile || true) && // file is optional for restore
+    DB_NAME_PATTERN.test(finalDb) &&
+    (!isExport || !outputName || DB_NAME_PATTERN.test(outputName)) &&
     (!isDanger || confirm === finalDb)
 
   async function submit() {
     if (!valid) return
     setRunning(true)
     try {
-      await onRun(op.id, { container, database: finalDb, file: file || undefined })
+      await onRun(op.id, {
+        container,
+        database: finalDb,
+        file: file || undefined,
+        outputName: isExport && outputName ? outputName : undefined,
+        dropExisting: isRestore ? dropExisting : undefined,
+      })
     } finally {
       setRunning(false)
     }
@@ -63,15 +74,24 @@ function OperationModal({ op, container, databases, backups, onClose, onRun }) {
 
           {/* Database selector or input */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">Database</label>
-            {isCreate ? (
-              <input
-                type="text"
-                placeholder="new_database_name"
-                value={customDb}
-                onChange={(e) => setCustomDb(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 outline-none transition-colors"
-              />
+            <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
+              {isRestore ? 'Target Database' : 'Database'}
+            </label>
+            {isFreeText ? (
+              <>
+                <DbNameInput
+                  id={`op-${op.id}-db`}
+                  value={customDb}
+                  onChange={setCustomDb}
+                  options={isRestore ? databases : []}
+                  placeholder={isRestore ? 'existing or new database name' : 'new_database_name'}
+                />
+                {isRestore && customDb && (
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {exists ? 'Database exists on this container.' : 'Database will be created.'}
+                  </p>
+                )}
+              </>
             ) : (
               <select
                 value={db}
@@ -86,8 +106,39 @@ function OperationModal({ op, container, databases, backups, onClose, onRun }) {
             )}
           </div>
 
+          {/* Export: optional dump name */}
+          {isExport && (
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
+                Export Name <span className="text-zinc-600 normal-case">(optional — defaults to database name)</span>
+              </label>
+              <DbNameInput
+                id="op-export-name"
+                value={outputName}
+                onChange={setOutputName}
+                placeholder={db || 'e.g. premas_qa'}
+              />
+              <p className="text-xs text-zinc-500 mt-1 font-mono">
+                → {(outputName || db || '<name>')}_DD-MM-YYYY_HH_MM_SS.sql
+              </p>
+            </div>
+          )}
+
+          {/* Restore: drop target first */}
+          {isRestore && (
+            <Toggle
+              danger
+              checked={dropExisting}
+              onChange={setDropExisting}
+              label="Drop target database before restore"
+              hint={exists
+                ? `⚠️ "${finalDb}" will be dropped (all connections terminated) and recreated empty.`
+                : 'Recommended — avoids "already exists" errors when restoring over an existing database.'}
+            />
+          )}
+
           {/* Restore file picker */}
-          {needsFile && (
+          {isRestore && (
             <div>
               <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
                 Dump File <span className="text-zinc-600 normal-case">(optional — uses latest if empty)</span>
@@ -126,7 +177,7 @@ function OperationModal({ op, container, databases, backups, onClose, onRun }) {
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button
-            variant={op.variant}
+            variant={isRestore && dropExisting ? 'danger' : op.variant}
             disabled={!valid || running}
             onClick={submit}
           >
@@ -256,7 +307,8 @@ export default function ContainerDetail() {
         <OperationModal
           op={activeOp}
           container={containerName}
-          databases={activeOp._presetDb ? [activeOp._presetDb] : databases}
+          databases={activeOp._presetDb && activeOp.id !== 'restore' ? [activeOp._presetDb] : databases}
+          presetDb={activeOp._presetDb}
           backups={backups}
           onClose={() => setActiveOp(null)}
           onRun={handleRun}
