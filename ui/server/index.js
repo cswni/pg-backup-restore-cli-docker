@@ -11,15 +11,22 @@ const PORT = process.env.PORT || 3000
 const BACKUPS_DIR = process.env.BACKUPS_DIR || '/backups'
 
 // ── HTTP Basic auth (protects UI, API and downloads) ─────────────────────────
-const basicAuth = createBasicAuth({
-  user: process.env.BASIC_AUTH_USER,
-  password: process.env.BASIC_AUTH_PASSWORD,
-})
+let basicAuth
+try {
+  basicAuth = createBasicAuth({
+    user: process.env.BASIC_AUTH_USER,
+    password: process.env.BASIC_AUTH_PASSWORD,
+    disabled: process.env.BASIC_AUTH_DISABLED === 'true',
+  })
+} catch (err) {
+  console.error(`[pg-backup-ui] FATAL: ${err.message}`)
+  process.exit(1)
+}
 if (basicAuth) {
   app.use(basicAuth)
-  console.log('[pg-backup-ui] HTTP Basic auth enabled')
+  console.log(`[pg-backup-ui] HTTP Basic auth enabled for user '${process.env.BASIC_AUTH_USER}'`)
 } else {
-  console.warn('[pg-backup-ui] WARNING: BASIC_AUTH_USER/BASIC_AUTH_PASSWORD not set — UI is unauthenticated')
+  console.warn('[pg-backup-ui] WARNING: BASIC_AUTH_DISABLED=true — UI is unauthenticated')
 }
 
 app.use(express.json())

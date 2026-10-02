@@ -2,24 +2,27 @@ const crypto = require('crypto')
 
 /**
  * HTTP Basic authentication middleware.
- * Enabled when BASIC_AUTH_USER and BASIC_AUTH_PASSWORD are set.
- * Returns null when auth is disabled (neither variable set).
- * Throws when only one of the two is set, so a half-configured
- * deployment never runs unprotected by accident.
+ *
+ * Fails closed: BASIC_AUTH_USER and BASIC_AUTH_PASSWORD are required, and
+ * the server refuses to start without them. Auth can only be turned off
+ * explicitly with BASIC_AUTH_DISABLED=true (e.g. local development), in
+ * which case this returns null.
  */
-function createBasicAuth({ user, password, realm = 'PG Backup & Restore' }) {
-  if (!user && !password) return null
+function createBasicAuth({ user, password, disabled, realm = 'PG Backup & Restore' }) {
+  if (disabled) return null
   if (!user || !password) {
-    throw new Error('BASIC_AUTH_USER and BASIC_AUTH_PASSWORD must both be set (or both empty to disable auth)')
+    throw new Error(
+      'BASIC_AUTH_USER and BASIC_AUTH_PASSWORD must be set. ' +
+      'Set BASIC_AUTH_DISABLED=true to run without authentication (not recommended).'
+    )
   }
 
-  const expected = Buffer.from(`${user}:${password}`)
+  const expected = crypto.createHash('sha256').update(`${user}:${password}`).digest()
 
   // Compare SHA-256 digests so timingSafeEqual always gets equal-length buffers
   const matches = (given) => {
-    const a = crypto.createHash('sha256').update(given).digest()
-    const b = crypto.createHash('sha256').update(expected).digest()
-    return crypto.timingSafeEqual(a, b)
+    const digest = crypto.createHash('sha256').update(given).digest()
+    return crypto.timingSafeEqual(digest, expected)
   }
 
   return (req, res, next) => {

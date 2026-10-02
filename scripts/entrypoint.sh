@@ -126,7 +126,8 @@ Restore file resolution (-f):
   If -f is omitted, the latest dump for the database is used.
 
 Web UI authentication (serve):
-  BASIC_AUTH_USER / BASIC_AUTH_PASSWORD   Enable HTTP Basic auth (set both)
+  BASIC_AUTH_USER / BASIC_AUTH_PASSWORD   Required: HTTP Basic auth credentials
+  BASIC_AUTH_DISABLED=true                Run without auth (local development only)
 EOF
     ;;
   *)
