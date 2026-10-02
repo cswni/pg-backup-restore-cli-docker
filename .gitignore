@@ -3,3 +3,15 @@
 dist
 node_modules
 *.txt
+
+# --- Blueprint workspace ---
+# SDD spec artifacts are ephemeral on disk — durable state lives in the
+# Blueprint memory store (~/.blueprint/local.db). See docs/ROADMAP.md.
+specs/
+.blueprint/state/
+.blueprint/cache/
+# Agent skill links are per-user symlinks into a global cache; recreate
+# them with `blueprint skills sync`. The .blueprint/skills.manifest.json IS committed.
+.agents/skills/
+.cursor/skills/
+.claude/skills/
