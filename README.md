@@ -125,6 +125,8 @@ Restore a database from a dump file.
   The target is created if it does not exist.
 - `-x` drops the target database (`WITH (FORCE)`) before restoring, so the restore
   starts from an empty database instead of failing with "already exists" errors.
+- Without `-x`, restoring into an existing database that already has tables is
+  refused. The command exits non-zero if psql reports any SQL error.
 
 ```bash
 # Restore a dump of "premas" into "premas_qa", replacing it

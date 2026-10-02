@@ -95,6 +95,13 @@ export function DbNameInput({ id, value, onChange, options = [], placeholder = '
   )
 }
 
+/** Hint under the "drop target before restore" toggle. */
+export function dropTargetHint(db, exists, dropExisting) {
+  if (!exists) return 'Target does not exist yet — it will be created.'
+  if (dropExisting) return `⚠️ "${db}" will be dropped (all connections terminated) and recreated empty.`
+  return `⚠️ "${db}" already exists — the restore will be refused if it has tables. Enable this to replace it.`
+}
+
 export function Toggle({ checked, onChange, label, hint, danger = false }) {
   const on = danger ? 'bg-red-500' : 'bg-emerald-500'
   return (
