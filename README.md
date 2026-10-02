@@ -165,17 +165,22 @@ docker run --rm \
 
 ## Web UI authentication
 
-The Web UI (`serve`, the default command) supports HTTP Basic authentication for
-the UI, the API and backup downloads. Set both variables to enable it:
+The Web UI (`serve`, the default command) protects the UI, the API and backup
+downloads with HTTP Basic authentication. **Credentials are required**: the server
+refuses to start unless both variables are set.
 
 | Variable | Description |
 |----------|-------------|
-| `BASIC_AUTH_USER` | Username |
-| `BASIC_AUTH_PASSWORD` | Password |
+| `BASIC_AUTH_USER` | Username (required) |
+| `BASIC_AUTH_PASSWORD` | Password (required) |
+| `BASIC_AUTH_DISABLED` | Set to `true` to run without authentication (local development only) |
 
-If neither is set the UI runs **unauthenticated** (a warning is logged). If only one
-is set the server refuses to start. Always serve the UI over HTTPS (e.g. behind
-Traefik) when auth is enabled, since Basic auth sends credentials on every request.
+Always serve the UI over HTTPS (e.g. behind Traefik), since Basic auth sends
+credentials on every request. Browsers remember Basic credentials until they are
+closed, so after a redeploy you may not be prompted again in an already-open browser.
+
+For local development run the server with `BASIC_AUTH_DISABLED=true` (or set
+credentials) before `pnpm run dev:server`.
 
 ---
 
