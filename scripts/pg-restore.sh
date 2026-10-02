@@ -93,10 +93,20 @@ resolve_file() {
 # ---------------------------------------------------------------------------
 # admin_sql <sql>
 #   Runs a statement against the maintenance database "postgres".
+#   Optional second argument: database to run it in (default "postgres").
 # ---------------------------------------------------------------------------
 admin_sql() {
   docker exec -u postgres "${CONTAINER}" \
-    psql -v ON_ERROR_STOP=1 -X -q -tA -d postgres -c "$1"
+    psql -v ON_ERROR_STOP=1 -X -q -tA -d "${2:-postgres}" -c "$1"
+}
+
+# Number of user tables in <db> (system schemas excluded)
+count_user_tables() {
+  admin_sql "SELECT count(*) FROM pg_class c
+             JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE c.relkind IN ('r', 'p')
+               AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+               AND n.nspname NOT LIKE 'pg_toast%';" "$1"
 }
 
 # ---------------------------------------------------------------------------
@@ -150,12 +160,35 @@ if [[ -z "$(admin_sql "SELECT 1 FROM pg_database WHERE datname = '${DATABASE}';"
   echo "[pg-restore] Creating database '${DATABASE}'..."
   admin_sql "CREATE DATABASE \"${DATABASE}\";"
 else
-  echo "[pg-restore] Database '${DATABASE}' already exists – restoring on top of it (use -x to drop it first)."
+  # Restoring a full dump on top of existing tables only produces
+  # "already exists" / duplicate key errors and a half-merged database.
+  TABLES=$(count_user_tables "$DATABASE")
+  if [[ "$TABLES" -gt 0 ]]; then
+    echo "[pg-restore] ERROR: Database '${DATABASE}' already exists and contains ${TABLES} table(s)." >&2
+    echo "[pg-restore] ERROR: Enable 'Drop target database before restore' (-x) or choose another target name." >&2
+    exit 1
+  fi
+  echo "[pg-restore] Database '${DATABASE}' exists and is empty – restoring into it."
 fi
 
 echo "[pg-restore] Restoring into '${DATABASE}' on container '${CONTAINER}' from: ${FILE}"
 
-retarget_dump "$DATABASE" < "${FILE}" \
-  | docker exec -i -u postgres "${CONTAINER}" psql -X -d "${DATABASE}"
+# psql keeps going after SQL errors and exits 0, so capture stderr
+# (still streamed to the job log) and count the errors afterwards.
+ERR_LOG=$(mktemp)
+trap 'rm -f "$ERR_LOG"' EXIT
 
-echo "[pg-restore] Done."
+# fd swap: psql stdout -> fd 3 (our stdout), psql stderr -> tee -> our stderr
+{
+  retarget_dump "$DATABASE" < "${FILE}" \
+    | docker exec -i -u postgres "${CONTAINER}" psql -X -d "${DATABASE}" 2>&1 1>&3 \
+    | tee "$ERR_LOG" >&2
+} 3>&1
+
+ERRORS=$(grep -c '^ERROR:' "$ERR_LOG" || true)
+if [[ "$ERRORS" -gt 0 ]]; then
+  echo "[pg-restore] FAILED: restore finished with ${ERRORS} SQL error(s) – see the log above." >&2
+  exit 1
+fi
+
+echo "[pg-restore] Done. Restore completed without errors."

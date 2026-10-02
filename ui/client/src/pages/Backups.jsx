@@ -4,7 +4,7 @@ import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import {
   PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button,
-  DbNameInput, Toggle, ProgressBar, DB_NAME_PATTERN,
+  DbNameInput, Toggle, ProgressBar, DB_NAME_PATTERN, dropTargetHint,
 } from '../components/UI'
 
 function formatBytes(b) {
@@ -71,9 +71,7 @@ function TargetDbFields({ id, container, db, setDb, dropExisting, setDropExistin
         checked={dropExisting}
         onChange={setDropExisting}
         label="Drop target database before restore"
-        hint={exists
-          ? `⚠️ "${db}" will be dropped (all connections terminated) and recreated empty.`
-          : 'Recommended — avoids "already exists" errors when restoring over an existing database.'}
+        hint={dropTargetHint(db, exists, dropExisting)}
       />
     </>
   )

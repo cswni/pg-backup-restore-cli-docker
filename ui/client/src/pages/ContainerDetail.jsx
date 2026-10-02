@@ -4,7 +4,7 @@ import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import {
   PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button,
-  DbNameInput, Toggle, DB_NAME_PATTERN,
+  DbNameInput, Toggle, DB_NAME_PATTERN, dropTargetHint,
 } from '../components/UI'
 
 const OPERATIONS = [
@@ -131,9 +131,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
               checked={dropExisting}
               onChange={setDropExisting}
               label="Drop target database before restore"
-              hint={exists
-                ? `⚠️ "${finalDb}" will be dropped (all connections terminated) and recreated empty.`
-                : 'Recommended — avoids "already exists" errors when restoring over an existing database.'}
+              hint={dropTargetHint(finalDb, exists, dropExisting)}
             />
           )}
 
