@@ -49,9 +49,9 @@ export function Button({ children, onClick, variant = 'primary', size = 'md', di
     lg: 'px-5 py-2.5 text-sm',
   }
   const variants = {
-    primary:   'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-900/30',
+    primary:   'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs shadow-emerald-900/30',
     secondary: 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700',
-    danger:    'bg-red-600 hover:bg-red-500 text-white shadow-sm shadow-red-900/30',
+    danger:    'bg-red-600 hover:bg-red-500 text-white shadow-xs shadow-red-900/30',
     ghost:     'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800',
   }
   return (
@@ -81,7 +81,7 @@ export function DbNameInput({ id, value, onChange, options = [], placeholder = '
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value.trim())}
-        className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 outline-none transition-colors ${
+        className={`w-full bg-zinc-800 border rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 outline-hidden transition-colors ${
           invalid ? 'border-red-500/60 focus:border-red-500' : 'border-zinc-700 focus:border-emerald-500'
         }`}
       />
@@ -113,7 +113,7 @@ export function Toggle({ checked, onChange, label, hint, danger = false }) {
         onClick={() => onChange(!checked)}
         className={`relative shrink-0 mt-0.5 w-10 h-5 rounded-full transition-colors ${checked ? on : 'bg-zinc-700'}`}
       >
-        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-5' : ''}`} />
       </button>
       <span>
         <span className="block text-sm text-zinc-300 group-hover:text-zinc-100 transition-colors">{label}</span>

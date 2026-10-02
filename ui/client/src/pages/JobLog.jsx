@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router'
 import { api } from '../lib/api'
 import { StatusBadge, Button, Spinner } from '../components/UI'
 
@@ -60,7 +60,7 @@ export default function JobLog() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex-shrink-0 px-8 py-5 border-b border-zinc-800 flex items-center gap-4">
+      <div className="shrink-0 px-8 py-5 border-b border-zinc-800 flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="text-zinc-500 hover:text-zinc-300 transition-colors text-sm">← Back</button>
         <div className="h-4 w-px bg-zinc-800" />
         <div className="flex-1 min-w-0">
@@ -124,7 +124,7 @@ export default function JobLog() {
 
       {/* Footer */}
       {status !== 'running' && (
-        <div className={`flex-shrink-0 px-8 py-3 border-t text-xs font-medium flex items-center gap-3 ${
+        <div className={`shrink-0 px-8 py-3 border-t text-xs font-medium flex items-center gap-3 ${
           exitCode === 0
             ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
             : 'border-red-500/20 bg-red-500/5 text-red-400'

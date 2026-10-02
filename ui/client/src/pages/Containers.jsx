@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button } from '../components/UI'
@@ -29,7 +29,7 @@ export default function Containers() {
           placeholder="Search by name or image..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors"
+          className="w-full max-w-sm bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-hidden focus:border-emerald-500 transition-colors"
         />
       </div>
 
@@ -55,7 +55,7 @@ export default function Containers() {
               <Card className="hover:border-emerald-500/30 hover:bg-zinc-800/50 transition-all cursor-pointer">
                 <div className="flex items-center gap-4">
                   {/* Status dot */}
-                  <div className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-500/30" />
+                  <div className="shrink-0 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-500/30" />
 
                   {/* Name & image */}
                   <div className="flex-1 min-w-0">
@@ -66,7 +66,7 @@ export default function Containers() {
                   </div>
 
                   {/* ID */}
-                  <div className="hidden md:block flex-shrink-0 text-right">
+                  <div className="hidden md:block shrink-0 text-right">
                     <p className="text-xs text-zinc-600 font-mono">{c.id}</p>
                     <p className="text-xs text-zinc-600 mt-0.5">{c.status}</p>
                   </div>

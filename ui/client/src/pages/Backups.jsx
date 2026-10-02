@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import {
@@ -97,7 +97,7 @@ function RestoreModal({ backup, onClose, onRestore }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
           <span className="text-2xl">♻️</span>
@@ -115,7 +115,7 @@ function RestoreModal({ backup, onClose, onRestore }) {
               <select
                 value={container}
                 onChange={(e) => setContainer(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-none transition-colors"
+                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors"
               >
                 <option value="">— select container —</option>
                 {(containers || []).map((c) => (
@@ -191,7 +191,7 @@ function UploadRestoreModal({ onClose, onDone }) {
   const canSubmit = file && (!restoreNow || (container && DB_NAME_PATTERN.test(db))) && !running
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-lg shadow-2xl">
         {/* Header */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
@@ -266,7 +266,7 @@ function UploadRestoreModal({ onClose, onDone }) {
                   <select
                     value={container}
                     onChange={(e) => setContainer(e.target.value)}
-                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-none transition-colors"
+                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors"
                   >
                     <option value="">— select container —</option>
                     {(containers || []).map((c) => (

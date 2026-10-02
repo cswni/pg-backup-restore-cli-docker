@@ -1,20 +1,25 @@
-# ─── Stage 1: Build the React frontend ───────────────────────────────────────
-FROM node:20-alpine AS ui-builder
+# ─── Stage 1: Build the React frontend + production node_modules ─────────────
+FROM node:24-alpine AS ui-builder
 
-# Enable pnpm via corepack (ships with Node 20)
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Keep in sync with "packageManager" in ui/package.json
+ARG PNPM_VERSION=12.8.1
+RUN npm install -g pnpm@${PNPM_VERSION}
 
 WORKDIR /build
 
-COPY ui/package.json ui/pnpm-lock.yaml ./
+# pnpm-workspace.yaml holds the install-script policy (allowBuilds)
+COPY ui/package.json ui/pnpm-lock.yaml ui/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY ui/ .
 RUN pnpm run build
 
+# Server-only dependencies for the runtime image (no package manager needed there)
+RUN rm -rf node_modules && pnpm install --frozen-lockfile --prod
+
 # ─── Stage 2: Runtime image ───────────────────────────────────────────────────
-FROM alpine:3.21
+FROM alpine:3.24
 
 # Install bash, curl, docker CLI, postgresql-client, and Node.js
 RUN apk add --no-cache \
@@ -22,11 +27,7 @@ RUN apk add --no-cache \
     curl \
     docker-cli \
     nodejs \
-    npm \
-    postgresql17-client
-
-# Enable pnpm via corepack
-RUN npm install -g corepack && corepack enable && corepack prepare pnpm@latest --activate
+    postgresql18-client
 
 # Create working directory for SQL dump files
 WORKDIR /backups
@@ -42,11 +43,10 @@ RUN chmod +x /usr/local/bin/pg-export.sh \
               /usr/local/bin/pg-restore.sh \
               /usr/local/bin/entrypoint.sh
 
-# Copy the server and install only production deps
+# Server, its production dependencies, and the built frontend
 WORKDIR /ui
-COPY ui/package.json ui/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
-
+COPY ui/package.json ./
+COPY --from=ui-builder /build/node_modules ./node_modules
 COPY ui/server/ ./server/
 COPY --from=ui-builder /build/dist ./dist
 
