@@ -7,8 +7,10 @@ import {
   PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toggle, ProgressBar,
 } from '../components/UI'
 import RestoreTargetFields, { useRestoreTarget } from '../components/servers/RestoreTarget'
+import BackupBadges from '../components/storage/BackupBadges'
 
 function formatBytes(b) {
+  if (b == null) return '—'
   if (b < 1024) return `${b} B`
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
   return `${(b / 1024 / 1024).toFixed(2)} MB`
@@ -139,13 +141,13 @@ function UploadRestoreModal({ onClose, onDone }) {
               e.preventDefault()
               if (running) return
               const f = e.dataTransfer.files[0]
-              if (f && f.name.endsWith('.sql')) pickFile(f)
+              if (f && /\.sql(\.gz)?(\.enc)?$/i.test(f.name)) pickFile(f)
             }}
           >
             <input
               ref={fileRef}
               type="file"
-              accept=".sql"
+              accept=".sql,.gz,.enc"
               className="hidden"
               disabled={running}
               onChange={(e) => pickFile(e.target.files[0] || null)}
@@ -169,7 +171,7 @@ function UploadRestoreModal({ onClose, onDone }) {
               <>
                 <span className="text-3xl text-zinc-600">📂</span>
                 <div className="text-center">
-                  <p className="text-sm text-zinc-400">Drop a <span className="font-mono">.sql</span> file here</p>
+                  <p className="text-sm text-zinc-400">Drop a <span className="font-mono">.sql</span>, <span className="font-mono">.sql.gz</span> or <span className="font-mono">.enc</span> file here</p>
                   <p className="text-xs text-zinc-600 mt-1">or click to browse</p>
                 </div>
               </>
@@ -217,10 +219,17 @@ export default function Backups() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  async function handleDelete(filename) {
+  async function handleDelete(backup) {
+    const filename = backup.name
+    const remote = backup.locations?.length || 0
+    if (remote && !window.confirm(backup.local === false
+      ? `Delete the ${remote} remote cop${remote === 1 ? 'y' : 'ies'} of ${filename}? This cannot be undone.`
+      : `Delete ${filename} locally AND its ${remote} remote cop${remote === 1 ? 'y' : 'ies'}?`)) return
     setDeleting(filename)
     try {
-      await api.backups.delete(filename)
+      // Remote copies first, so they are never left untracked
+      if (remote) await api.storage.deleteRemoteCopies(filename)
+      if (backup.local !== false) await api.backups.delete(filename)
       showToast('success', `Deleted ${filename}`)
       reload()
     } catch (e) {
@@ -250,7 +259,7 @@ export default function Backups() {
     }
   }
 
-  const totalSize = (backups || []).reduce((a, b) => a + b.size, 0)
+  const totalSize = (backups || []).filter((b) => b.local !== false).reduce((a, b) => a + b.size, 0)
 
   return (
     <div className="p-8">
@@ -303,22 +312,25 @@ export default function Backups() {
                 {backups.map((b) => (
                   <tr key={b.name} className="hover:bg-zinc-800/30 transition-colors group">
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">📄</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-base">{b.local === false ? '☁️' : '📄'}</span>
                         <span className="font-mono text-xs text-zinc-300">{b.name}</span>
+                        <BackupBadges backup={b} />
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-zinc-500 text-xs font-mono">{formatBytes(b.size)}</td>
                     <td className="px-5 py-3.5 text-zinc-500 text-xs">{formatDate(b.mtime)}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1.5">
-                        <a
-                          href={api.backups.downloadUrl(b.name)}
-                          download
-                          className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
-                        >
-                          ⬇ Download
-                        </a>
+                        {b.local !== false && (
+                          <a
+                            href={api.backups.downloadUrl(b.name)}
+                            download
+                            className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
+                          >
+                            ⬇ Download
+                          </a>
+                        )}
                         <Button
                           size="sm"
                           variant="secondary"
@@ -331,7 +343,7 @@ export default function Backups() {
                             size="sm"
                             variant="danger"
                             disabled={deleting === b.name}
-                            onClick={() => handleDelete(b.name)}
+                            onClick={() => handleDelete(b)}
                           >
                             {deleting === b.name ? '…' : '🗑️'}
                           </Button>

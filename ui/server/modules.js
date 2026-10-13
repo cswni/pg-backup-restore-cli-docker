@@ -20,4 +20,5 @@ module.exports = [
   require('./routes/jobs'),
   require('./scheduler'),
   require('./monitoring'),
+  require('./storage'),
 ]

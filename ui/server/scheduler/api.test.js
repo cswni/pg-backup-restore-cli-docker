@@ -25,7 +25,7 @@ let roleApp
 
 const valid = {
   name: 'Nightly app', cron: '0 2 * * *', timezone: 'UTC', serverId: 'local', engine: 'fake',
-  container: 'pg', database: 'app', options: { compress: true, destinations: ['s3'] },
+  container: 'pg', database: 'app', options: { compress: true },
 }
 
 /** Minimal app mounting the scheduler router with a chosen role (permission tests). */

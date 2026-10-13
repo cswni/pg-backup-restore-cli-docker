@@ -8,7 +8,8 @@ const { getDb, migrate } = require('./db')
 // compression, encryption, remote copies). Files without a catalog row
 // (uploads, CLI exports, legacy dumps) are still listed.
 
-// Extendable: storage steps register their suffixes (e.g. /\.gz$/).
+// Extendable: storage steps register their suffixes (a RegExp such as
+// /\.gz$/, or any object with a `test(name)` method).
 const backupPatterns = [/\.sql$/i]
 
 function registerBackupPattern(re) {
@@ -77,6 +78,7 @@ function rowToEntry(row) {
     jobId: row.job_id,
     scheduleId: row.schedule_id,
     createdAt: row.created_at,
+    size: row.size,
     sha256: row.sha256,
     compressed: !!row.compressed,
     encrypted: !!row.encrypted,
@@ -84,19 +86,36 @@ function rowToEntry(row) {
   }
 }
 
-/** All backups on disk, newest first, merged with catalog metadata. */
+/**
+ * All backups, newest first, merged with catalog metadata. Files on disk are
+ * `local: true`; catalog rows whose file was removed locally (e.g. by
+ * retention) but that still have remote copies are listed as `local: false`.
+ */
 function listBackups() {
-  if (!fs.existsSync(BACKUPS_DIR)) return []
   const rows = new Map(getDb().prepare('SELECT * FROM backups').all().map((r) => [r.filename, rowToEntry(r)]))
-  return fs.readdirSync(BACKUPS_DIR)
-    .filter(isBackupFile)
+  const names = fs.existsSync(BACKUPS_DIR) ? fs.readdirSync(BACKUPS_DIR).filter(isBackupFile) : []
+  const local = names
     .map((name) => {
       const stat = fs.statSync(path.join(BACKUPS_DIR, name))
       if (!stat.isFile()) return null
-      return { ...rows.get(name), name, size: stat.size, mtime: stat.mtimeMs }
+      return { ...rows.get(name), name, size: stat.size, mtime: stat.mtimeMs, local: true }
     })
     .filter(Boolean)
-    .sort((a, b) => b.mtime - a.mtime)
+  const onDisk = new Set(local.map((b) => b.name))
+  const remoteOnly = [...rows.values()]
+    .filter((e) => !onDisk.has(e.filename) && e.locations.length > 0 && isBackupFile(e.filename))
+    .map((e) => ({ ...e, name: e.filename, mtime: e.createdAt, local: false }))
+  return [...local, ...remoteOnly].sort((a, b) => b.mtime - a.mtime)
+}
+
+/** Every catalog row (including remote-only ones), unordered. */
+function listCatalogEntries() {
+  return getDb().prepare('SELECT * FROM backups').all().map(rowToEntry)
+}
+
+/** Replace the remote copies recorded for a backup. */
+function updateLocations(filename, locations) {
+  getDb().prepare('UPDATE backups SET locations = ? WHERE filename = ?').run(JSON.stringify(locations || []), filename)
 }
 
 /** Absolute path of a backup file, guarding against path traversal. */
@@ -116,5 +135,5 @@ function removeCatalogEntry(filename) {
 
 module.exports = {
   init, isBackupFile, registerBackupPattern, recordBackup, getCatalogEntry,
-  listBackups, backupPath, removeCatalogEntry,
+  listBackups, listCatalogEntries, updateLocations, backupPath, removeCatalogEntry,
 }

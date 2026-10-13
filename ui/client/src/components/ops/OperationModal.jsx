@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Button, DbNameInput, Toggle, DB_NAME_PATTERN, dropTargetHint } from '../UI'
+import ExportStorageOptions, { exportSuffix } from '../storage/ExportStorageOptions'
 
 // Database operations offered for a container or a direct database server.
 export const OPERATIONS = [
@@ -41,7 +42,7 @@ function DatabaseField({ op, databases, db, setDb, customDb, setCustomDb, exists
   )
 }
 
-function ExportNameField({ db, outputName, setOutputName }) {
+function ExportNameField({ db, outputName, setOutputName, storageOptions }) {
   return (
     <div>
       <label className={LABEL_CLASS}>
@@ -49,7 +50,7 @@ function ExportNameField({ db, outputName, setOutputName }) {
       </label>
       <DbNameInput id="op-export-name" value={outputName} onChange={setOutputName} placeholder={db || 'e.g. premas_qa'} />
       <p className="text-xs text-zinc-500 mt-1 font-mono">
-        → {(outputName || db || '<name>')}_DD-MM-YYYY_HH_MM_SS.sql
+        → {(outputName || db || '<name>')}_DD-MM-YYYY_HH_MM_SS{exportSuffix(storageOptions)}
       </p>
     </div>
   )
@@ -74,7 +75,7 @@ function DangerConfirm({ db, confirm, setConfirm }) {
 
 /**
  * Dialog for one operation. `targetLabel` describes where it runs (container
- * or server); `onRun(opId, params)` receives { database, file, outputName, dropExisting }.
+ * or server); `onRun(opId, params)` receives { database, file, outputName, options, dropExisting }.
  */
 export default function OperationModal({ op, targetLabel, databases, presetDb, backups, onClose, onRun }) {
   const [db, setDb] = useState(presetDb || '')
@@ -84,6 +85,7 @@ export default function OperationModal({ op, targetLabel, databases, presetDb, b
   const [dropExisting, setDropExisting] = useState(false)
   const [confirm, setConfirm] = useState('')
   const [running, setRunning] = useState(false)
+  const [storageOptions, setStorageOptions] = useState(null)
 
   const isRestore = op.id === 'restore'
   const isExport = op.id === 'export'
@@ -105,6 +107,7 @@ export default function OperationModal({ op, targetLabel, databases, presetDb, b
         database: finalDb,
         file: isRestore ? file : undefined,
         outputName: isExport && outputName ? outputName : undefined,
+        options: isExport && storageOptions ? storageOptions : undefined,
         dropExisting: isRestore ? dropExisting : undefined,
       })
     } finally {
@@ -114,7 +117,7 @@ export default function OperationModal({ op, targetLabel, databases, presetDb, b
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl max-h-[95vh] overflow-y-auto">
         <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
           <span className="text-2xl">{op.icon}</span>
           <div>
@@ -136,7 +139,10 @@ export default function OperationModal({ op, targetLabel, databases, presetDb, b
               customDb={customDb} setCustomDb={setCustomDb} exists={exists} />
           </div>
 
-          {isExport && <ExportNameField db={db} outputName={outputName} setOutputName={setOutputName} />}
+          {isExport && <ExportNameField db={db} outputName={outputName} setOutputName={setOutputName} storageOptions={storageOptions} />}
+
+          {/* Export: compression / encryption / cloud copies */}
+          {isExport && <ExportStorageOptions onChange={setStorageOptions} />}
 
           {isRestore && (
             <Toggle

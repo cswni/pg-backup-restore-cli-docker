@@ -10,6 +10,7 @@ import ServerDatabases from './pages/ServerDatabases'
 import Schedules from './pages/Schedules'
 import Jobs from './pages/Jobs'
 import Notifications from './pages/Notifications'
+import StorageSettings from './pages/StorageSettings'
 
 // Page registry used by App (routes) and Layout (sidebar).
 //   path     — react-router path
@@ -29,6 +30,7 @@ export const routes = [
   { path: '/jobs', element: <Jobs />, nav: { label: 'Jobs', icon: '📋' } },
   { path: '/jobs/:jobId', element: <JobLog /> },
   { path: '/settings/notifications', element: <Notifications />, nav: { label: 'Notifications', icon: '🔔' }, adminOnly: true },
+  { path: '/settings/storage', element: <StorageSettings />, nav: { label: 'Storage', icon: '☁️' }, adminOnly: true },
   { path: '/users', element: <Users />, nav: { label: 'Users', icon: '👥' }, adminOnly: true },
   { path: '/profile', element: <Profile /> },
 ]
