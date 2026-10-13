@@ -50,5 +50,6 @@ function listEngines() {
 
 // Built-in drivers
 registerDriver(require('./postgres-docker'))
+registerDriver(require('./postgres-direct'))
 
 module.exports = { registerDriver, getDriver, listEngines }
