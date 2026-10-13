@@ -49,6 +49,19 @@ function uniqueName(filename) {
   return `${filename.slice(0, filename.length - ext.length)}_upload_${Date.now()}${ext}`
 }
 
+// Keep this much free after an upload so backups and restores can still run
+const MIN_FREE_AFTER_UPLOAD = 1024 * 1024 * 1024
+
+/** 507 when the backups volume can't hold the file (plus a safety margin). */
+function assertFreeSpace(size) {
+  fs.mkdirSync(BACKUPS_DIR, { recursive: true })
+  const { bavail, bsize } = fs.statfsSync(BACKUPS_DIR)
+  const free = bavail * bsize
+  if (size + MIN_FREE_AFTER_UPLOAD > free) {
+    throw httpError(507, `Not enough free space for this upload (${Math.floor(free / 1048576)} MiB available)`)
+  }
+}
+
 function cleanupStale() {
   if (!fs.existsSync(UPLOAD_DIR)) return
   const now = Date.now()
@@ -63,6 +76,7 @@ router.post('/uploads', handle(async (req, res) => {
   const name = path.basename(String(filename || ''))
   if (!name || name !== filename || !isBackupFile(name)) throw httpError(400, `Unsupported backup file name: ${filename}`)
   if (!Number.isSafeInteger(size) || size <= 0) throw httpError(400, 'size must be a positive integer')
+  assertFreeSpace(size)
 
   fs.mkdirSync(UPLOAD_DIR, { recursive: true })
   const id = randomUUID()

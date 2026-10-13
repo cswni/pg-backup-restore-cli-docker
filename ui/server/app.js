@@ -4,6 +4,24 @@ const express = require('express')
 const { DIST_DIR } = require('./config')
 const { setupAuth } = require('./auth')
 
+/** Baseline browser hardening for the SPA and API (no inline scripts are used). */
+function securityHeaders(req, res, next) {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('Referrer-Policy', 'same-origin')
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "img-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'", // React style attributes
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; '))
+  next()
+}
+
 /**
  * Build the Express app. Exported separately from index.js so tests can
  * start it on an ephemeral port.
@@ -17,6 +35,8 @@ function createApp() {
   // Docker network) so clients can't spoof their IP for rate limiting.
   // TRUST_PROXY accepts any Express "trust proxy" value (hop count, CIDRs).
   app.set('trust proxy', process.env.TRUST_PROXY || 'loopback, linklocal, uniquelocal')
+  app.disable('x-powered-by')
+  app.use(securityHeaders)
   app.use(express.json({ limit: '1mb' }))
 
   // Routes reachable without authentication (login, health, OAuth callbacks)

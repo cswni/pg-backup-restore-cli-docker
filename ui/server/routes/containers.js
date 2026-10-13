@@ -2,7 +2,7 @@ const express = require('express')
 const { requireServer, execEnv, toPublic } = require('../servers')
 const { listContainers } = require('../docker')
 const { getDriver, listEngines } = require('../drivers')
-const { httpError } = require('../validation')
+const { httpError, isValidContainerName } = require('../validation')
 const { handle } = require('./util')
 
 // GET /api/servers lives in connectivity/routes.js (server registry API).
@@ -31,6 +31,7 @@ router.get('/containers', handle(async (req, res) => {
 }))
 
 router.get('/containers/:name/databases', handle(async (req, res) => {
+  if (!isValidContainerName(req.params.name)) throw httpError(400, `Invalid container name: ${req.params.name}`)
   const server = requireDockerServer(req.query.serverId)
   const driver = getDriver(req.query.engine || 'postgres', server.kind)
   res.json(await driver.listDatabases({ server, container: req.params.name }))

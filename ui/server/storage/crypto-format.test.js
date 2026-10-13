@@ -93,3 +93,13 @@ test('offline CLI decrypts with the passphrase from env or stdin, optionally gun
   assert.equal(r4.status, 1)
   assert.match(r4.stderr.toString(), /Refusing to overwrite/)
 })
+
+test('rejects headers requesting oversized scrypt parameters (memory DoS)', async () => {
+  fs.writeFileSync(file('p-kdf'), 'data')
+  await encryptFile(file('p-kdf'), file('e-kdf'), 'passphrase-123')
+  const buf = fs.readFileSync(file('e-kdf'))
+  buf[9] = 22 // logN = 22 → N = 4M; with r = 8 that is ~4 GiB of scrypt memory
+  fs.writeFileSync(file('e-kdf-evil'), buf)
+  await assert.rejects(decryptFile(file('e-kdf-evil'), file('o-kdf'), 'passphrase-123'), /Invalid key derivation parameters/)
+  assert.equal(fs.existsSync(file('o-kdf')), false)
+})

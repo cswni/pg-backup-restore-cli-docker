@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Button, DbNameInput, Toggle, DB_NAME_PATTERN, dropTargetHint } from '../UI'
 import ExportStorageOptions, { exportSuffix } from '../storage/ExportStorageOptions'
+import { useAuth } from '../../lib/auth'
 
 // Database operations offered for a container or a direct database server.
 export const OPERATIONS = [
@@ -86,6 +87,8 @@ export default function OperationModal({ op, targetLabel, databases, presetDb, b
   const [confirm, setConfirm] = useState('')
   const [running, setRunning] = useState(false)
   const [storageOptions, setStorageOptions] = useState(null)
+  // Storage overrides are admin-only (the server applies defaults for others)
+  const { isAdmin } = useAuth()
 
   const isRestore = op.id === 'restore'
   const isExport = op.id === 'export'
@@ -142,7 +145,7 @@ export default function OperationModal({ op, targetLabel, databases, presetDb, b
           {isExport && <ExportNameField db={db} outputName={outputName} setOutputName={setOutputName} storageOptions={storageOptions} />}
 
           {/* Export: compression / encryption / cloud copies */}
-          {isExport && <ExportStorageOptions onChange={setStorageOptions} />}
+          {isExport && isAdmin && <ExportStorageOptions onChange={setStorageOptions} />}
 
           {isRestore && (
             <Toggle

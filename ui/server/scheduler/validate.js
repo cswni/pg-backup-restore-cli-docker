@@ -1,6 +1,6 @@
 const { getServer } = require('../servers')
 const { getDriver } = require('../drivers')
-const { isValidDbName, httpError } = require('../validation')
+const { isValidDbName, CONTAINER_RE, httpError } = require('../validation')
 const { cronError, defaultTimezone } = require('./cron')
 
 // Input validation for schedule create/update requests.
@@ -8,7 +8,6 @@ const { cronError, defaultTimezone } = require('./cron')
 const MAX_NAME_LENGTH = 100
 const MAX_OPTIONS_BYTES = 4096
 // Docker container names/ids: [a-zA-Z0-9][a-zA-Z0-9_.-]*
-const CONTAINER_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/
 
 const EDITABLE = ['name', 'enabled', 'cron', 'timezone', 'serverId', 'engine', 'container', 'database', 'outputName', 'options']
 

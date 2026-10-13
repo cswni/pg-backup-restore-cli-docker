@@ -13,7 +13,9 @@ let key = null
 function loadKey() {
   if (key) return key
   if (process.env.APP_SECRET) {
-    key = crypto.createHash('sha256').update(process.env.APP_SECRET).digest()
+    // scrypt (not a bare hash) so a weak APP_SECRET is costly to brute-force
+    // from a stolen database; fixed salt because the key must be stable.
+    key = crypto.scryptSync(process.env.APP_SECRET, 'pg-backup-ui/app-secret/v1', 32, { N: 2 ** 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 })
     return key
   }
   const file = path.join(DATA_DIR, 'secret.key')

@@ -70,3 +70,29 @@ test('user role can upload but not restore the upload; the upload stays resumabl
   assert.equal(saved.status, 200, saved.text)
   assert.equal(saved.json.filename, 'up.sql')
 })
+
+async function waitForJob(id) {
+  const jobs = require('../jobs')
+  for (let i = 0; i < 100; i++) {
+    const job = jobs.getJob(id)
+    if (job && job.status !== 'running') return job
+    await new Promise((r) => setTimeout(r, 20))
+  }
+  throw new Error('job did not finish')
+}
+
+test('only admins can override storage defaults per backup', async () => {
+  // Compression is on by default; a regular user asking to skip it is ignored
+  const asUserJob = await asUserRequest('POST', '/api/ops/export', { ...target, options: { compress: false } })
+  assert.match((await waitForJob(asUserJob.json.jobId)).meta.file, /\.sql\.gz$/)
+
+  const asAdminJob = await srv.request('POST', '/api/ops/export', { body: { ...target, options: { compress: false } } })
+  assert.match((await waitForJob(asAdminJob.json.jobId)).meta.file, /\.sql$/)
+})
+
+test('rejects container names that could be parsed as docker options', async () => {
+  const res = await srv.request('POST', '/api/ops/export', { body: { ...target, container: '--privileged' } })
+  assert.equal(res.status, 400)
+  const list = await srv.request('GET', '/api/containers/--help/databases')
+  assert.equal(list.status, 400)
+})

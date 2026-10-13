@@ -53,6 +53,8 @@ COPY --from=ui-builder /build/dist ./dist
 
 VOLUME ["/backups"]
 
+ENV NODE_ENV=production
+
 EXPOSE 3000
 
 # Ensure the runtime working directory is /ui so node can resolve node_modules

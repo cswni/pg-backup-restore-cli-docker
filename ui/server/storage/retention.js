@@ -66,12 +66,16 @@ function adoptUncataloged(groups, cataloged) {
   }
   const files = fs.existsSync(BACKUPS_DIR) ? fs.readdirSync(BACKUPS_DIR).filter(catalog.isBackupFile) : []
   for (const filename of files) {
-    if (cataloged.has(filename)) continue
+    // Uploads (and manually renamed copies) are never adopted
+    if (cataloged.has(filename) || filename.includes('_upload_')) continue
     const parsed = parseName(filename)
     const keys = parsed && prefixGroups.get(parsed.prefix)
     if (!keys || keys.size !== 1) continue
     const key = [...keys][0]
-    groups.get(key).push({ filename, createdAt: parsed.time, locations: [], uncataloged: true })
+    // A name can claim any date (e.g. 2099) to look "newest" and push real
+    // backups out; never trust it beyond when the file actually appeared.
+    const { mtimeMs } = fs.statSync(path.join(BACKUPS_DIR, filename))
+    groups.get(key).push({ filename, createdAt: Math.min(parsed.time, mtimeMs), locations: [], uncataloged: true })
   }
 }
 

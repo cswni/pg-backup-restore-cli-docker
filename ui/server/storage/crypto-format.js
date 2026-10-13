@@ -58,7 +58,9 @@ function parseHeader(buf) {
   if (buf[7] !== VERSION) throw new Error(`Unsupported encrypted backup version ${buf[7]}`)
   if (buf[8] !== KDF_SCRYPT) throw new Error(`Unsupported key derivation function ${buf[8]}`)
   const params = { logN: buf[9], r: buf[10], p: buf[11] }
-  if (params.logN < 10 || params.logN > 22 || params.r < 1 || params.r > 32 || params.p < 1 || params.p > 16) {
+  // Bounded to a few times the writer's 15/8/1 so a crafted file can't make
+  // scrypt allocate gigabytes (logN 17, r 8 → 128 MiB)
+  if (params.logN < 10 || params.logN > 17 || params.r < 1 || params.r > 8 || params.p < 1 || params.p > 4) {
     throw new Error('Invalid key derivation parameters')
   }
   return {

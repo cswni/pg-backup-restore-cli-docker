@@ -1,9 +1,9 @@
 const express = require('express')
-const { startJob } = require('../jobs')
+const { startJob, listJobs } = require('../jobs')
 const { requireServer } = require('../servers')
 const { getDriver } = require('../drivers')
 const { runBackup, runRestore } = require('../pipeline')
-const { isValidDbName, httpError } = require('../validation')
+const { isValidDbName, isValidContainerName, httpError } = require('../validation')
 const { handle } = require('./util')
 
 // POST /api/ops/:op   op = export | restore | create | delete | unblock
@@ -19,6 +19,7 @@ function resolveSpec(body) {
   if (!isValidDbName(database)) throw httpError(400, `Invalid database name: ${database}`)
   const server = requireServer(serverId)
   if (server.kind === 'docker' && !container) throw httpError(400, 'container is required for Docker servers')
+  if (container && !isValidContainerName(container)) throw httpError(400, `Invalid container name: ${container}`)
   const driver = getDriver(engine, server.kind)
   return { server, engine, container, database, driver }
 }
@@ -34,11 +35,35 @@ function jobMeta(spec, extra = {}) {
   }
 }
 
+/**
+ * Per-backup storage options (compression, encryption, destinations) can
+ * override the admin's defaults, so only admins and schedules (created by
+ * admins) may set them; other users always get the configured defaults.
+ */
+function allowedOptions(body, user, extraMeta) {
+  return user?.role === 'admin' || extraMeta.scheduleId ? body.options : undefined
+}
+
+// Non-admin users can't queue unlimited dumps (each holds a DB connection,
+// CPU and disk); admins and schedules are not limited.
+const MAX_RUNNING_BACKUPS_PER_USER = 2
+
+function assertBackupCapacity(user, extraMeta) {
+  if (user?.role === 'admin' || extraMeta.scheduleId) return
+  const running = listJobs({ type: 'export', status: 'running', limit: 500 })
+    .filter((j) => j.username === user?.username).length
+  if (running >= MAX_RUNNING_BACKUPS_PER_USER) {
+    throw httpError(429, `You already have ${running} backups running; wait for them to finish`)
+  }
+}
+
 function startBackupJob(body, user, extraMeta = {}) {
+  assertBackupCapacity(user, extraMeta)
   const spec = resolveSpec(body)
   if (body.outputName && !isValidDbName(body.outputName)) throw httpError(400, `Invalid export name: ${body.outputName}`)
+  const options = allowedOptions(body, user, extraMeta)
   return startJob('export', jobMeta(spec, extraMeta),
-    (job) => runBackup(job, { ...spec, outputName: body.outputName, scheduleId: extraMeta.scheduleId, options: body.options }),
+    (job) => runBackup(job, { ...spec, outputName: body.outputName, scheduleId: extraMeta.scheduleId, options }),
     { username: user?.username })
 }
 
