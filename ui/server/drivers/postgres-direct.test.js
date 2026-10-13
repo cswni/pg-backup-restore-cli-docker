@@ -78,6 +78,12 @@ test('a failed dump removes the partial file', async () => {
   assert.ok(job.lines.some((l) => l.stream === 'stderr' && l.text.includes('connection failed')))
 })
 
+test('a dump that cannot be written fails instead of hanging', async () => {
+  fakes.setState({ dump: DUMP })
+  const outFile = path.join(env.BACKUPS_DIR, 'missing-dir', 'out.sql')
+  await assert.rejects(driver.dump(fakeJob(), target, { database: 'premas', outFile }), /Cannot write out\.sql/)
+})
+
 test('restore creates a missing target and retargets the dump', async () => {
   fakes.setState({ existing: ['postgres'] })
   const job = fakeJob()

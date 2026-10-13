@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { PageHeader, Spinner, ErrorAlert, Button } from '../components/UI'
@@ -17,10 +17,14 @@ export default function Servers({ isAdmin = true }) {
   const { data: servers, loading, error, reload } = useFetch(api.servers.list)
   const [editing, setEditing] = useState(null) // null | 'new' | server
   const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+
+  useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   function showToast(type, msg) {
+    clearTimeout(toastTimer.current)
     setToast({ type, msg })
-    setTimeout(() => setToast(null), 4000)
+    toastTimer.current = setTimeout(() => setToast(null), 4000)
   }
 
   async function save(payload) {

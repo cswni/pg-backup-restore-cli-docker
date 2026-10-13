@@ -5,6 +5,19 @@ const childProcess = require('child_process')
 // credentials through the environment.
 
 const DEFAULT_TIMEOUT_MS = 60000
+// Variables a client tool may need; everything else (APP_SECRET, auth
+// credentials…) is withheld from tools that process untrusted input.
+const SAFE_ENV_KEYS = ['PATH', 'PATHEXT', 'SystemRoot', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'LANG', 'LC_ALL', 'TZ']
+
+/**
+ * Minimal environment for client tools: a few system variables plus `extra`.
+ * @param {object} [extra]
+ */
+function toolEnv(extra = {}) {
+  const base = Object.fromEntries(SAFE_ENV_KEYS.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]]))
+  return { ...base, ...extra }
+}
+
 const MAX_CAPTURE = 16 * 1024 * 1024
 
 /**
@@ -12,21 +25,26 @@ const MAX_CAPTURE = 16 * 1024 * 1024
  * message when it exits non-zero, fails to start, or times out.
  * @param {string} command
  * @param {string[]} args
- * @param {{ env?: object, timeout?: number }} [opts]
+ * @param {{ env?: object, timeout?: number }} [opts]  `env` is the complete environment (see toolEnv)
  * @returns {Promise<string>}
  */
-function capture(command, args, { env, timeout = DEFAULT_TIMEOUT_MS } = {}) {
+function capture(command, args, { env = toolEnv(), timeout = DEFAULT_TIMEOUT_MS } = {}) {
   return new Promise((resolve, reject) => {
-    const proc = childProcess.spawn(command, args, { env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] })
+    const proc = childProcess.spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] })
     let stdout = ''
     let stderr = ''
     let timedOut = false
+    let tooLarge = false
     const timer = setTimeout(() => { timedOut = true; proc.kill('SIGKILL') }, timeout)
-    proc.stdout.on('data', (d) => { if (stdout.length < MAX_CAPTURE) stdout += d.toString() })
+    proc.stdout.on('data', (d) => {
+      if (stdout.length + d.length > MAX_CAPTURE) { tooLarge = true; proc.kill('SIGKILL'); return }
+      stdout += d.toString()
+    })
     proc.stderr.on('data', (d) => { if (stderr.length < MAX_CAPTURE) stderr += d.toString() })
     proc.on('error', (err) => { clearTimeout(timer); reject(new Error(`Cannot run ${command}: ${err.message}`)) })
     proc.on('close', (code) => {
       clearTimeout(timer)
+      if (tooLarge) return reject(new Error(`${command} output exceeded ${MAX_CAPTURE} bytes`))
       if (timedOut) return reject(new Error(`${command} timed out after ${Math.round(timeout / 1000)}s`))
       if (code === 0) return resolve(stdout)
       reject(new Error(stderr.trim() || `${command} exited with code ${code}`))
@@ -62,4 +80,4 @@ function exitCode(proc) {
   })
 }
 
-module.exports = { capture, lineReader, exitCode }
+module.exports = { capture, lineReader, exitCode, toolEnv }

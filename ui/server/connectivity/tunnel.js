@@ -1,6 +1,7 @@
 const childProcess = require('child_process')
 const net = require('net')
 const { CONFIG_FILE, syncSshConfig } = require('./ssh-config')
+const { toolEnv } = require('./process')
 
 // SSH tunnels for direct database connections.
 //
@@ -57,7 +58,8 @@ function waitForPort(proc, port, timeoutMs, getStderr) {
     proc.once('error', (err) => finish(new Error(`Cannot start ssh: ${err.message}`)))
     const poll = async () => {
       if (done) return
-      if (await canConnect(port)) return finish()
+      // Only trust the port while our ssh is alive (another process could grab it)
+      if (await canConnect(port) && proc.exitCode === null && proc.signalCode === null) return finish()
       setTimeout(poll, POLL_INTERVAL_MS)
     }
     poll()
@@ -95,7 +97,7 @@ async function openTunnel(server, { timeoutMs = TUNNEL_TIMEOUT_MS, log } = {}) {
     `pgui-${server.id}`,
   ]
   log?.(`[tunnel] Opening SSH tunnel via ${server.tunnel.user}@${server.tunnel.host}:${server.tunnel.port} → ${server.host}:${server.port}`)
-  const proc = childProcess.spawn('ssh', args, { stdio: ['ignore', 'ignore', 'pipe'] })
+  const proc = childProcess.spawn('ssh', args, { stdio: ['ignore', 'ignore', 'pipe'], env: toolEnv() })
   let stderr = ''
   proc.stderr.on('data', (d) => {
     stderr += d.toString()

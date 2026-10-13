@@ -3,7 +3,7 @@ const path = require('path')
 const childProcess = require('child_process')
 const { SCRIPTS_DIR } = require('../config')
 const { withConnection } = require('../connectivity/tunnel')
-const { capture, lineReader, exitCode } = require('../connectivity/process')
+const { capture, lineReader, exitCode, toolEnv } = require('../connectivity/process')
 
 // PostgreSQL reached directly over TCP (optionally through an SSH tunnel).
 // The client tools (psql, pg_dump) run inside this image. Semantics match
@@ -48,7 +48,7 @@ function adminDb(conn) {
 
 /** Run one statement and return trimmed tuples-only output. */
 async function query(conn, database, sql) {
-  const out = await capture('psql', ['-X', '-w', '-q', '-tA', '-v', 'ON_ERROR_STOP=1', '-d', database, '-c', sql], { env: pgEnv(conn) })
+  const out = await capture('psql', ['-X', '-w', '-q', '-tA', '-v', 'ON_ERROR_STOP=1', '-d', database, '-c', sql], { env: toolEnv(pgEnv(conn)) })
   return out.trim()
 }
 
@@ -73,30 +73,41 @@ async function databaseExists(conn, database) {
 
 /** Stream `pg_dump -C` into outFile; removes the partial file on failure. */
 async function dumpTo(job, conn, database, outFile) {
-  const proc = childProcess.spawn('pg_dump', ['-w', '-C', '-d', database], { env: { ...process.env, ...pgEnv(conn) } })
+  const proc = childProcess.spawn('pg_dump', ['-w', '-C', '-d', database], { env: toolEnv(pgEnv(conn)) })
   const out = fs.createWriteStream(outFile)
-  const written = new Promise((resolve, reject) => { out.on('finish', resolve); out.on('error', reject) })
+  let writeError = null
+  // A write error (disk full…) unpipes pg_dump, which would then block forever
+  const written = new Promise((resolve) => {
+    out.on('finish', resolve)
+    out.on('error', (err) => { writeError = err; proc.kill('SIGKILL'); resolve() })
+  })
   const stderr = lineReader((l) => job.log(l, 'stderr'))
   proc.stdout.pipe(out)
   proc.stderr.on('data', (d) => stderr.push(d))
-  const code = await exitCode(proc).catch((err) => { out.destroy(); throw new Error(`Cannot run pg_dump: ${err.message}`) })
-  stderr.flush()
-  await written.catch(() => {})
-  if (code !== 0) {
+  try {
+    const code = await exitCode(proc).catch((err) => { throw new Error(`Cannot run pg_dump: ${err.message}`) })
+    stderr.flush()
+    await written
+    if (writeError) throw new Error(`Cannot write ${path.basename(outFile)}: ${writeError.message}`)
+    if (code !== 0) throw new Error(`pg_dump exited with code ${code}`)
+  } catch (err) {
+    out.destroy()
     fs.rmSync(outFile, { force: true })
-    throw new Error(`pg_dump exited with code ${code}`)
+    throw err
   }
 }
 
 /**
  * awk (retarget) | psql into `database`. psql keeps going after SQL errors,
  * so stderr is scanned and the restore fails if any ERROR: was reported.
+ * Both tools get a minimal environment (no app secrets): the dump is
+ * untrusted input and psql executes backslash meta-commands.
  */
 async function pipeRestore(job, conn, database, inFile) {
   const awkFile = path.join(SCRIPTS_DIR, 'pg-retarget.awk')
   if (!fs.existsSync(awkFile)) throw new Error(`${awkFile} not found`)
-  const awk = childProcess.spawn('awk', ['-v', `qtarget=${quoteIdent(database)}`, '-f', awkFile])
-  const psql = childProcess.spawn('psql', ['-X', '-w', '-d', database], { env: { ...process.env, ...pgEnv(conn) } })
+  const awk = childProcess.spawn('awk', ['-v', `qtarget=${quoteIdent(database)}`, '-f', awkFile], { env: toolEnv() })
+  const psql = childProcess.spawn('psql', ['-X', '-w', '-d', database], { env: toolEnv(pgEnv(conn)) })
   let errors = 0
   const out = lineReader((l) => job.log(l, 'stdout'))
   const err = lineReader((l) => { if (SQL_ERROR_RE.test(l)) errors += 1; job.log(l, 'stderr') })
@@ -110,10 +121,19 @@ async function pipeRestore(job, conn, database, inFile) {
   psql.stdout.on('data', (d) => out.push(d))
   psql.stderr.on('data', (d) => err.push(d))
 
-  const [awkCode, psqlCode] = await Promise.all([exitCode(awk), exitCode(psql)])
+  let codes
+  try {
+    codes = await Promise.all([exitCode(awk), exitCode(psql)])
+  } catch (e) {
+    awk.kill('SIGKILL')
+    psql.kill('SIGKILL')
+    throw new Error(`Cannot run restore tools: ${e.message}`)
+  }
+  const [awkCode, psqlCode] = codes
   out.flush(); err.flush(); awkErr.flush()
-  if (awkCode !== 0) throw new Error(`Retargeting the dump failed (awk exited with code ${awkCode})`)
+  // psql first: when it dies early (bad password…) awk only gets SIGPIPE
   if (psqlCode !== 0) throw new Error(`psql exited with code ${psqlCode}`)
+  if (awkCode !== 0) throw new Error(`Retargeting the dump failed (awk exited with code ${awkCode})`)
   if (errors > 0) throw new Error(`[pg-restore] FAILED: restore finished with ${errors} SQL error(s) – see the log above.`)
 }
 
