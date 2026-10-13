@@ -6,6 +6,7 @@ import {
   PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button,
   DbNameInput, Toggle, DB_NAME_PATTERN, dropTargetHint,
 } from '../components/UI'
+import ExportStorageOptions, { exportSuffix } from '../components/storage/ExportStorageOptions'
 
 const OPERATIONS = [
   { id: 'export',  label: 'Export',   icon: '📤', variant: 'primary',   desc: 'Dump database to /backups' },
@@ -23,6 +24,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
   const [dropExisting, setDropExisting] = useState(false)
   const [confirm, setConfirm] = useState('')
   const [running, setRunning] = useState(false)
+  const [storageOptions, setStorageOptions] = useState(null)
 
   const isRestore = op.id === 'restore'
   const isExport = op.id === 'export'
@@ -45,6 +47,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
         database: finalDb,
         file: file || undefined,
         outputName: isExport && outputName ? outputName : undefined,
+        options: isExport && storageOptions ? storageOptions : undefined,
         dropExisting: isRestore ? dropExisting : undefined,
       })
     } finally {
@@ -54,7 +57,7 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
           <span className="text-2xl">{op.icon}</span>
@@ -119,10 +122,13 @@ function OperationModal({ op, container, databases, presetDb, backups, onClose, 
                 placeholder={db || 'e.g. premas_qa'}
               />
               <p className="text-xs text-zinc-500 mt-1 font-mono">
-                → {(outputName || db || '<name>')}_DD-MM-YYYY_HH_MM_SS.sql
+                → {(outputName || db || '<name>')}_DD-MM-YYYY_HH_MM_SS{storageOptions ? exportSuffix(storageOptions) : '.sql'}
               </p>
             </div>
           )}
+
+          {/* Export: compression / encryption / cloud copies */}
+          {isExport && <ExportStorageOptions onChange={setStorageOptions} />}
 
           {/* Restore: drop target first */}
           {isRestore && (

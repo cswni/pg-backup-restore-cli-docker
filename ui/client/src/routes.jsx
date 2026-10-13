@@ -3,6 +3,7 @@ import Containers from './pages/Containers'
 import ContainerDetail from './pages/ContainerDetail'
 import Backups from './pages/Backups'
 import JobLog from './pages/JobLog'
+import StorageSettings from './pages/StorageSettings'
 
 // Page registry used by App (routes) and Layout (sidebar).
 //   path     — react-router path
@@ -17,4 +18,5 @@ export const routes = [
   { path: '/containers/:name', element: <ContainerDetail /> },
   { path: '/backups', element: <Backups />, nav: { label: 'Backups', icon: '🗄️' } },
   { path: '/jobs/:jobId', element: <JobLog /> },
+  { path: '/settings/storage', element: <StorageSettings />, nav: { label: 'Storage', icon: '☁️' }, adminOnly: true },
 ]

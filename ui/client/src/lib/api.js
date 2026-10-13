@@ -123,6 +123,20 @@ export const api = {
   ops: {
     run: (operation, payload) => req('POST', `/api/ops/${operation}`, payload),
   },
+  storage: {
+    defaults: () => req('GET', '/api/storage/defaults'),
+    settings: () => req('GET', '/api/storage/settings'),
+    saveSettings: (body) => req('PUT', '/api/storage/settings', body),
+    destinations: () => req('GET', '/api/storage/destinations'),
+    createDestination: (body) => req('POST', '/api/storage/destinations', body),
+    updateDestination: (id, body) => req('PUT', `/api/storage/destinations/${encodeURIComponent(id)}`, body),
+    deleteDestination: (id) => req('DELETE', `/api/storage/destinations/${encodeURIComponent(id)}`),
+    testDestination: (id) => req('POST', `/api/storage/destinations/${encodeURIComponent(id)}/test`),
+    // Full-page navigation: the server redirects to Google's consent screen
+    gdriveConnectUrl: (id) => `/api/storage/gdrive/${encodeURIComponent(id)}/connect`,
+    runRetention: () => req('POST', '/api/storage/retention/run'),
+    deleteRemoteCopies: (filename) => req('DELETE', `/api/storage/backups/${encodeURIComponent(filename)}/remote`),
+  },
   jobs: {
     list: (params = {}) => req('GET', `/api/jobs${qs(params)}`),
     get: (jobId) => req('GET', `/api/jobs/${jobId}`),
