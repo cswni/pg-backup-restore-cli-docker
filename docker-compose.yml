@@ -9,6 +9,8 @@ services:
       - "3001:3000"
     environment:
       PORT: "3000"
+      # Seeds the first admin account on first start only. Afterwards users are
+      # managed in the UI and changing these does NOT change existing passwords.
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:-admin}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:?BASIC_AUTH_PASSWORD must be set}
     deploy:

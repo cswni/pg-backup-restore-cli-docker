@@ -3,6 +3,8 @@ import Containers from './pages/Containers'
 import ContainerDetail from './pages/ContainerDetail'
 import Backups from './pages/Backups'
 import JobLog from './pages/JobLog'
+import Users from './pages/Users'
+import Profile from './pages/Profile'
 
 // Page registry used by App (routes) and Layout (sidebar).
 //   path     — react-router path
@@ -17,4 +19,6 @@ export const routes = [
   { path: '/containers/:name', element: <ContainerDetail /> },
   { path: '/backups', element: <Backups />, nav: { label: 'Backups', icon: '🗄️' } },
   { path: '/jobs/:jobId', element: <JobLog /> },
+  { path: '/users', element: <Users />, nav: { label: 'Users', icon: '👥' }, adminOnly: true },
+  { path: '/profile', element: <Profile /> },
 ]

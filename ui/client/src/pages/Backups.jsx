@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
+import { useAuth } from '../lib/auth'
 import {
   PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button,
   DbNameInput, Toggle, ProgressBar, DB_NAME_PATTERN, dropTargetHint,
@@ -315,6 +316,7 @@ export default function Backups() {
   const [toast, setToast] = useState(null)
   const [showUpload, setShowUpload] = useState(false)
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
 
   const showToast = (type, msg) => {
     setToast({ type, msg })
@@ -430,14 +432,16 @@ export default function Backups() {
                         >
                           ♻️ Restore
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          disabled={deleting === b.name}
-                          onClick={() => handleDelete(b.name)}
-                        >
-                          {deleting === b.name ? '…' : '🗑️'}
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            disabled={deleting === b.name}
+                            onClick={() => handleDelete(b.name)}
+                          >
+                            {deleting === b.name ? '…' : '🗑️'}
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
