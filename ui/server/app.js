@@ -32,7 +32,8 @@ function createApp() {
   // Built frontend + SPA fallback
   if (fs.existsSync(DIST_DIR)) {
     app.use(express.static(DIST_DIR))
-    app.get('/{*splat}', (req, res) => res.sendFile(path.join(DIST_DIR, 'index.html')))
+    // dotfiles: 'allow' — the fixed index path may itself sit under a dot-directory
+    app.get('/{*splat}', (req, res) => res.sendFile(path.join(DIST_DIR, 'index.html'), { dotfiles: 'allow' }))
   }
 
   return app

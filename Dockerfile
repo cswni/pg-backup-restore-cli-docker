@@ -27,7 +27,7 @@ RUN apk add --no-cache \
     curl \
     docker-cli \
     nodejs \
-    openssh-client \
+    openssh-client-default \
     postgresql18-client
 
 # Create working directory for SQL dump files
