@@ -10,6 +10,13 @@ services:
       # managed in the UI and changing these does NOT change existing passwords.
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:-admin}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:?BASIC_AUTH_PASSWORD must be set}
+      # Encrypts stored credentials (SSH keys, DB passwords, cloud tokens).
+      # Keep it safe and never change it, or stored credentials become unreadable.
+      APP_SECRET: ${APP_SECRET:?APP_SECRET must be set}
+      # Public https URL of this UI (Google Drive OAuth redirect, links in notifications)
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      # Default timezone for new backup schedules
+      TZ: ${TZ:-UTC}
     deploy:
       replicas: 1
       update_config:
