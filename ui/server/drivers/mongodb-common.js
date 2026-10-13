@@ -1,3 +1,4 @@
+const fs = require('fs')
 const path = require('path')
 const { registerBackupPattern } = require('../catalog')
 const { dumpToFile, restoreFromFile } = require('./stream-tools')
@@ -93,6 +94,13 @@ function createMongoDriver({ kind, open }) {
       return connect(job, target, async (runner) => {
         job.log(`[mongo-export] Exporting database '${database}' from ${where(target)}...`)
         await dumpToFile(job, runner.spawn('mongodump', ['--archive', `--db=${database}`]), outFile, 'mongodump')
+        // mongodump "succeeds" for a missing/empty database; an empty archive
+        // restored with dropExisting would silently wipe the target.
+        const { databases } = await inspectArchive(outFile)
+        if (!databases.length) {
+          fs.rmSync(outFile, { force: true })
+          throw new Error(`Database '${database}' is empty or does not exist — nothing was exported`)
+        }
         job.log(`[mongo-export] Done. Archive saved to: ${outFile}`)
       })
     },

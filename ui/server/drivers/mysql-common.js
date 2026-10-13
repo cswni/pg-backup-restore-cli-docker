@@ -120,8 +120,12 @@ async function databaseExists(runner, database) {
   return Number(n) > 0
 }
 
+/** Tables/views + routines + events: a database with any of them is not empty. */
 function countTables(runner, database) {
-  return query(runner, `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ${quoteLiteral(database)};`).then(Number)
+  const db = quoteLiteral(database)
+  return query(runner, `SELECT (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ${db})
+    + (SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = ${db})
+    + (SELECT COUNT(*) FROM information_schema.EVENTS WHERE EVENT_SCHEMA = ${db});`).then(Number)
 }
 
 /** Drop/create the target and refuse to merge into a database that has tables. */

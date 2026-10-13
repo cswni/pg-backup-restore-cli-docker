@@ -68,7 +68,14 @@ async function restoreFromFile(job, proc, inFile, { tool, transform, countErrors
     input.pipe(proc.stdin)
   }
 
-  const code = await exitCode(proc).catch((e) => { throw new Error(`Cannot run ${tool}: ${e.message}`) })
+  let code
+  try {
+    code = await exitCode(proc).catch((e) => { throw new Error(`Cannot run ${tool}: ${e.message}`) })
+  } finally {
+    // When the tool exits early the pipe stops but the source stays open
+    input.destroy()
+    transform?.destroy()
+  }
   out.flush()
   err.flush()
   if (streamError) throw new Error(`Restore aborted: ${streamError.message}`)

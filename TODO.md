@@ -24,3 +24,6 @@
 - [ ] Remote Docker over SSH and SSH tunnels against real hosts
 - [ ] MySQL/MariaDB and MongoDB backup/restore against real containers and servers
 - [ ] S3-compatible providers and Google Drive OAuth with real credentials
+- [ ] MySQL rename: views/routines that reference the source schema by name (`premas`.`t`) or carry DEFINERs — test `premas` → `premas_qa` with a real view; target DB uses the server's default charset/collation
+- [ ] Cancelling/failing a Docker-based job kills the local `docker exec`, but the tool inside the container may keep running until its pipe closes
+- [ ] Docker MySQL restore: run the in-container client with `--sandbox` when it supports it (direct restores already do)

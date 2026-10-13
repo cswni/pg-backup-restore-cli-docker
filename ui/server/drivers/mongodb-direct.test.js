@@ -102,3 +102,11 @@ test('sslmode mapping and URI building', () => {
 test('testConnection reports server and tool versions', async () => {
   assert.deepEqual(await driver.testConnection(target), { version: 'MongoDB 8.0.4 · mongodump version: 100.10.0' })
 })
+
+test('dumping a missing or empty database fails and leaves no archive', async () => {
+  // mongodump exits 0 with an archive that has no collections
+  fakes.setState({ dumpBase64: buildArchive([]).toString('base64') })
+  const outFile = path.join(env.BACKUPS_DIR, 'ghost.archive')
+  await assert.rejects(driver.dump(fakeJob(), target, { database: 'ghost', outFile }), /empty or does not exist/)
+  assert.equal(fs.existsSync(outFile), false)
+})
