@@ -7,7 +7,7 @@ const { BACKUPS_DIR } = require('../config')
 const { isBackupFile } = require('../catalog')
 const { handle } = require('./util')
 const { httpError } = require('../validation')
-const { startRestoreJob } = require('./ops')
+const { startRestoreJob, assertCanRun } = require('./ops')
 
 // Chunked, resumable uploads.
 //
@@ -95,6 +95,8 @@ router.put('/uploads/:id', handle(async (req, res) => {
 }))
 
 router.post('/uploads/:id/complete', handle(async (req, res) => {
+  // Check before completing so a refused restore leaves the upload resumable
+  if (req.body?.restore) assertCanRun('restore', req.user)
   const u = readUpload(req.params.id)
   if (u.received !== u.meta.size) throw httpError(409, `Upload incomplete: ${u.received}/${u.meta.size} bytes`)
 

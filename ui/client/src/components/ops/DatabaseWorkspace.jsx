@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
+import { useAuth } from '../../lib/auth'
 import { Card, Spinner, ErrorAlert, EmptyState } from '../UI'
 import OperationModal, { OPERATIONS } from './OperationModal'
 
@@ -18,10 +19,15 @@ function Toast({ toast }) {
   )
 }
 
-function OperationGrid({ onSelect }) {
+/** Restores and schema changes are admin-only (the API enforces it too). */
+function visibleOperations(isAdmin) {
+  return isAdmin ? OPERATIONS : OPERATIONS.filter((op) => op.id === 'export')
+}
+
+function OperationGrid({ operations, onSelect }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
-      {OPERATIONS.map((op) => (
+      {operations.map((op) => (
         <button
           key={op.id}
           onClick={() => onSelect(op)}
@@ -39,7 +45,7 @@ function OperationGrid({ onSelect }) {
   )
 }
 
-function DatabaseRow({ db, onSelect }) {
+function DatabaseRow({ db, operations, onSelect }) {
   return (
     <div className="flex items-center justify-between py-3 group">
       <div className="flex items-center gap-3">
@@ -47,7 +53,7 @@ function DatabaseRow({ db, onSelect }) {
         <span className="font-mono text-sm text-zinc-200">{db}</span>
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-        {OPERATIONS.filter((o) => o.id !== 'create').map((op) => (
+        {operations.filter((o) => o.id !== 'create').map((op) => (
           <button
             key={op.id}
             onClick={() => onSelect({ ...op, presetDb: db })}
@@ -77,6 +83,8 @@ function DatabaseRow({ db, onSelect }) {
 export default function DatabaseWorkspace({ target, targetLabel, databases, emptyDescription }) {
   const navigate = useNavigate()
   const { data: backups } = useFetch(api.backups.list)
+  const { isAdmin } = useAuth()
+  const operations = visibleOperations(isAdmin)
   const [activeOp, setActiveOp] = useState(null)
   const [toast, setToast] = useState(null)
   const { data: dbs, loading, error, reload } = databases
@@ -97,7 +105,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
   return (
     <>
       <Toast toast={toast} />
-      <OperationGrid onSelect={setActiveOp} />
+      <OperationGrid operations={operations} onSelect={setActiveOp} />
 
       <Card>
         <div className="flex items-center justify-between mb-4">
@@ -114,7 +122,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
 
         {!loading && !error && dbs?.length > 0 && (
           <div className="divide-y divide-zinc-800/60">
-            {dbs.map((db) => <DatabaseRow key={db} db={db} onSelect={setActiveOp} />)}
+            {dbs.map((db) => <DatabaseRow key={db} db={db} operations={operations} onSelect={setActiveOp} />)}
           </div>
         )}
       </Card>

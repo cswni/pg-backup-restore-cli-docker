@@ -193,8 +193,12 @@ hashes.
 
 | Role | Can |
 |------|-----|
-| `admin` | Everything, including managing users and deleting backups |
-| `user` | View, back up, restore, upload and download |
+| `admin` | Everything: restores, create/drop/unblock databases, deleting backups, servers, storage, schedules, notifications and users |
+| `user` | View, back up, upload, download and run schedules |
+
+Restores are admin-only on purpose: `psql` and `mysql` execute meta-commands
+embedded in a dump (e.g. `\!` runs a shell command), and this container has
+the Docker socket mounted. Only restore dumps you trust.
 
 Disabling a user or resetting/changing a password signs that user out
 everywhere (the user who changes their own password stays signed in). The last
@@ -211,6 +215,12 @@ curl -u admin:secret http://localhost:3000/api/backups
 Browser requests authenticated by the session cookie must send
 `X-Requested-With: pgui` on POST/PUT/PATCH/DELETE (CSRF protection; the UI does
 this automatically). Always serve the UI over HTTPS (e.g. behind Traefik).
+
+**Behind a proxy.** `X-Forwarded-*` headers (client IP for rate limiting,
+`https` for secure cookies) are trusted only from loopback and private-network
+hops, which covers Traefik on a Docker network. Set `TRUST_PROXY` to an
+[Express "trust proxy" value](https://expressjs.com/en/guide/behind-proxies.html)
+(e.g. a hop count or CIDR list) if your proxy chain differs.
 
 For local development run the server with credentials (or
 `BASIC_AUTH_DISABLED=true`) before `pnpm run dev:server`.

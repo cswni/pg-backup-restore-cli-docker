@@ -70,9 +70,11 @@ function RestoreModal({ backup, onClose, onRestore }) {
 }
 
 function UploadRestoreModal({ onClose, onDone }) {
+  const { isAdmin } = useAuth()
   const target = useRestoreTarget('')
   const [file, setFile] = useState(null)
-  const [restoreNow, setRestoreNow] = useState(true)
+  // Restores are admin-only; other users can still upload
+  const [restoreNow, setRestoreNow] = useState(isAdmin)
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState(0)
   const [uploadError, setUploadError] = useState(null)
@@ -182,7 +184,7 @@ function UploadRestoreModal({ onClose, onDone }) {
           {uploadError && <ErrorAlert message={uploadError} />}
 
           {/* Restore now toggle */}
-          <Toggle checked={restoreNow} onChange={setRestoreNow} label="Restore immediately after upload" />
+          {isAdmin && <Toggle checked={restoreNow} onChange={setRestoreNow} label="Restore immediately after upload" />}
 
           {/* Server, container and target database (shown only when restore=true) */}
           {restoreNow && (
@@ -268,7 +270,7 @@ export default function Backups() {
         subtitle={backups ? `${backups.length} files · ${formatBytes(totalSize)} total` : 'Dump files in /backups'}
         action={
           <div className="flex gap-2">
-            <Button variant="primary" size="sm" onClick={() => setShowUpload(true)}>⬆️ Upload &amp; Restore</Button>
+            <Button variant="primary" size="sm" onClick={() => setShowUpload(true)}>{isAdmin ? <>⬆️ Upload &amp; Restore</> : '⬆️ Upload'}</Button>
             <Button variant="secondary" size="sm" onClick={reload}>↻ Refresh</Button>
           </div>
         }
@@ -331,13 +333,15 @@ export default function Backups() {
                             ⬇ Download
                           </a>
                         )}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => setRestoreTarget(b)}
-                        >
-                          ♻️ Restore
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setRestoreTarget(b)}
+                          >
+                            ♻️ Restore
+                          </Button>
+                        )}
                         {isAdmin && (
                           <Button
                             size="sm"

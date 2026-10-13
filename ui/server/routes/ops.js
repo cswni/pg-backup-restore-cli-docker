@@ -56,8 +56,19 @@ const SIMPLE_OPS = {
   unblock: 'unblock',
 }
 
+/**
+ * Only backups are open to every role. Restores run psql/mysql on a dump,
+ * and those clients execute meta-commands such as `\!` (shell) embedded in
+ * the file — for direct servers inside this container, which has the Docker
+ * socket mounted. Restores and schema changes are therefore admin-only.
+ */
+function assertCanRun(op, user) {
+  if (op !== 'export' && user?.role !== 'admin') throw httpError(403, `Admin role required for '${op}'`)
+}
+
 router.post('/ops/:op', handle(async (req, res) => {
   const { op } = req.params
+  assertCanRun(op, req.user)
   if (op === 'export') return res.json({ jobId: startBackupJob(req.body ?? {}, req.user) })
   if (op === 'restore') return res.json({ jobId: startRestoreJob(req.body ?? {}, req.user) })
 
@@ -71,4 +82,4 @@ router.post('/ops/:op', handle(async (req, res) => {
   res.json({ jobId })
 }))
 
-module.exports = { router, startBackupJob, startRestoreJob }
+module.exports = { router, startBackupJob, startRestoreJob, assertCanRun }

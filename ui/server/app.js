@@ -13,7 +13,10 @@ function createApp() {
   for (const m of modules) if (typeof m.init === 'function') m.init()
 
   const app = express()
-  app.set('trust proxy', true) // behind Traefik/Cloudflare: honour X-Forwarded-Proto for secure cookies
+  // Trust X-Forwarded-* only from private/loopback hops (Traefik on the
+  // Docker network) so clients can't spoof their IP for rate limiting.
+  // TRUST_PROXY accepts any Express "trust proxy" value (hop count, CIDRs).
+  app.set('trust proxy', process.env.TRUST_PROXY || 'loopback, linklocal, uniquelocal')
   app.use(express.json({ limit: '1mb' }))
 
   // Routes reachable without authentication (login, health, OAuth callbacks)
