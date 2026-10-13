@@ -3,6 +3,9 @@ import Containers from './pages/Containers'
 import ContainerDetail from './pages/ContainerDetail'
 import Backups from './pages/Backups'
 import JobLog from './pages/JobLog'
+import Schedules from './pages/Schedules'
+import Jobs from './pages/Jobs'
+import Notifications from './pages/Notifications'
 
 // Page registry used by App (routes) and Layout (sidebar).
 //   path     — react-router path
@@ -16,5 +19,8 @@ export const routes = [
   { path: '/containers', element: <Containers />, nav: { label: 'Containers', icon: '🐳' } },
   { path: '/containers/:name', element: <ContainerDetail /> },
   { path: '/backups', element: <Backups />, nav: { label: 'Backups', icon: '🗄️' } },
+  { path: '/schedules', element: <Schedules />, nav: { label: 'Schedules', icon: '⏰' } },
+  { path: '/jobs', element: <Jobs />, nav: { label: 'Jobs', icon: '📋' } },
   { path: '/jobs/:jobId', element: <JobLog /> },
+  { path: '/settings/notifications', element: <Notifications />, nav: { label: 'Notifications', icon: '🔔' }, adminOnly: true },
 ]

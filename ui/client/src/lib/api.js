@@ -128,4 +128,22 @@ export const api = {
     get: (jobId) => req('GET', `/api/jobs/${jobId}`),
     streamUrl: (jobId) => `/api/jobs/${jobId}/stream`,
   },
+  schedules: {
+    list: () => req('GET', '/api/schedules'),
+    get: (id) => req('GET', `/api/schedules/${encodeURIComponent(id)}`),
+    create: (schedule) => req('POST', '/api/schedules', schedule),
+    update: (id, patch) => req('PUT', `/api/schedules/${encodeURIComponent(id)}`, patch),
+    remove: (id) => req('DELETE', `/api/schedules/${encodeURIComponent(id)}`),
+    run: (id) => req('POST', `/api/schedules/${encodeURIComponent(id)}/run`),
+    preview: (cron, tz) => req('GET', `/api/schedules/preview${qs({ cron, tz })}`),
+  },
+  monitoring: {
+    health: () => req('GET', '/api/health'),
+    summary: () => req('GET', '/api/monitoring/summary'),
+    settings: () => req('GET', '/api/monitoring/settings'),
+    createWebhook: (webhook) => req('POST', '/api/monitoring/settings/webhooks', webhook),
+    updateWebhook: (id, patch) => req('PUT', `/api/monitoring/settings/webhooks/${encodeURIComponent(id)}`, patch),
+    deleteWebhook: (id) => req('DELETE', `/api/monitoring/settings/webhooks/${encodeURIComponent(id)}`),
+    testWebhook: (id) => req('POST', `/api/monitoring/settings/webhooks/${encodeURIComponent(id)}/test`),
+  },
 }

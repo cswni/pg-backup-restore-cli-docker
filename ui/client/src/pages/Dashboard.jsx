@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { api } from '../lib/api'
 import { Card, Spinner, StatusBadge } from '../components/UI'
+import { HealthIndicator, RecentFailures, LastBackups, NextRuns } from '../components/MonitoringWidgets'
+
+const JOBS_REFRESH_MS = 3000
+const SUMMARY_REFRESH_MS = 30000
 
 function StatCard({ icon, label, value, sub, to }) {
   const inner = (
@@ -37,6 +41,7 @@ export default function Dashboard() {
   const [containers, setContainers] = useState(null)
   const [backups, setBackups] = useState(null)
   const [jobs, setJobs] = useState(null)
+  const [summary, setSummary] = useState(null)
 
   useEffect(() => {
     api.containers.list().then(setContainers).catch(() => setContainers([]))
@@ -44,7 +49,14 @@ export default function Dashboard() {
     api.jobs.list().then(setJobs).catch(() => setJobs([]))
     const t = setInterval(() => {
       api.jobs.list().then(setJobs).catch(() => {})
-    }, 3000)
+    }, JOBS_REFRESH_MS)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const load = () => api.monitoring.summary().then(setSummary).catch(() => {})
+    load()
+    const t = setInterval(load, SUMMARY_REFRESH_MS)
     return () => clearInterval(t)
   }, [])
 
@@ -54,9 +66,12 @@ export default function Dashboard() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-zinc-100">Dashboard</h1>
-        <p className="text-sm text-zinc-500 mt-1">PostgreSQL Backup & Restore — at a glance</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-100">Dashboard</h1>
+          <p className="text-sm text-zinc-500 mt-1">PostgreSQL Backup & Restore — at a glance</p>
+        </div>
+        <HealthIndicator health={summary?.health} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
@@ -89,12 +104,19 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Monitoring */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-10">
+        <RecentFailures failures={summary?.recentFailures} />
+        <LastBackups backups={summary?.lastBackups} />
+        <NextRuns runs={summary?.nextRuns} />
+      </div>
+
       {/* Recent Jobs */}
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-zinc-200">Recent Jobs</h2>
-          <Link to="/" onClick={() => api.jobs.list().then(setJobs)} className="text-xs text-zinc-500 hover:text-zinc-300">
-            Refresh
+          <Link to="/jobs" className="text-xs text-zinc-500 hover:text-zinc-300">
+            All jobs →
           </Link>
         </div>
         {!jobs ? (
@@ -114,7 +136,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
-                {[...jobs].reverse().slice(0, 15).map((j) => (
+                {jobs.slice(0, 15).map((j) => (
                   <tr key={j.id} className="hover:bg-zinc-800/30 transition-colors">
                     <td className="py-2.5 pr-4">
                       <Link to={`/jobs/${j.id}`} className="font-mono text-emerald-400 hover:text-emerald-300 hover:underline">
