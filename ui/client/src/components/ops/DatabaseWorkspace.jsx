@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { Card, Spinner, ErrorAlert, EmptyState } from '../UI'
+import { useEngines, engineInfo, isCompatibleBackup } from '../../lib/engines'
 import OperationModal, { OPERATIONS } from './OperationModal'
 
 function Toast({ toast }) {
@@ -18,10 +19,10 @@ function Toast({ toast }) {
   )
 }
 
-function OperationGrid({ onSelect }) {
+function OperationGrid({ operations, onSelect }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
-      {OPERATIONS.map((op) => (
+      {operations.map((op) => (
         <button
           key={op.id}
           onClick={() => onSelect(op)}
@@ -39,7 +40,7 @@ function OperationGrid({ onSelect }) {
   )
 }
 
-function DatabaseRow({ db, onSelect }) {
+function DatabaseRow({ db, operations, onSelect }) {
   return (
     <div className="flex items-center justify-between py-3 group">
       <div className="flex items-center gap-3">
@@ -47,7 +48,7 @@ function DatabaseRow({ db, onSelect }) {
         <span className="font-mono text-sm text-zinc-200">{db}</span>
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-        {OPERATIONS.filter((o) => o.id !== 'create').map((op) => (
+        {operations.filter((o) => o.id !== 'create').map((op) => (
           <button
             key={op.id}
             onClick={() => onSelect({ ...op, presetDb: db })}
@@ -73,13 +74,20 @@ function DatabaseRow({ db, onSelect }) {
  * @param {string} props.targetLabel   shown in the dialog
  * @param {{ data: string[]|null, loading: boolean, error: string|null, reload: Function }} props.databases
  * @param {string} props.emptyDescription
+ * @param {string} props.kind  server kind ('docker' | 'direct'), selects the driver capabilities
  */
-export default function DatabaseWorkspace({ target, targetLabel, databases, emptyDescription }) {
+export default function DatabaseWorkspace({ target, targetLabel, databases, emptyDescription, kind }) {
   const navigate = useNavigate()
-  const { data: backups } = useFetch(api.backups.list)
+  const { data: allBackups } = useFetch(api.backups.list)
+  const engines = useEngines()
   const [activeOp, setActiveOp] = useState(null)
   const [toast, setToast] = useState(null)
   const { data: dbs, loading, error, reload } = databases
+
+  // Only what this engine's driver supports, and only backups it can restore
+  const { operations: supported, fileExtension } = engineInfo(engines, target.engine, kind)
+  const operations = OPERATIONS.filter((op) => supported.includes(op.id))
+  const backups = (allBackups || []).filter((b) => isCompatibleBackup(b.name, b.engine, target.engine))
 
   async function handleRun(operation, params) {
     try {
@@ -97,7 +105,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
   return (
     <>
       <Toast toast={toast} />
-      <OperationGrid onSelect={setActiveOp} />
+      <OperationGrid operations={operations} onSelect={setActiveOp} />
 
       <Card>
         <div className="flex items-center justify-between mb-4">
@@ -114,7 +122,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
 
         {!loading && !error && dbs?.length > 0 && (
           <div className="divide-y divide-zinc-800/60">
-            {dbs.map((db) => <DatabaseRow key={db} db={db} onSelect={setActiveOp} />)}
+            {dbs.map((db) => <DatabaseRow key={db} db={db} operations={operations} onSelect={setActiveOp} />)}
           </div>
         )}
       </Card>
@@ -126,6 +134,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
           databases={modalDatabases}
           presetDb={activeOp.presetDb}
           backups={backups}
+          fileExtension={fileExtension}
           onClose={() => setActiveOp(null)}
           onRun={handleRun}
         />

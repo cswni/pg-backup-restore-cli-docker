@@ -52,22 +52,42 @@ function SshFields({ value, onChange, configured, hostLabel = 'SSH host', hostPl
   )
 }
 
-function DirectFields({ form, set, server }) {
+// Per-engine defaults: port, maintenance database (MongoDB: authSource) and user placeholder
+const ENGINE_DEFAULTS = {
+  postgres: { label: 'PostgreSQL', port: 5432, database: 'postgres', user: 'postgres', dbLabel: 'Maintenance database' },
+  mysql: { label: 'MySQL / MariaDB', port: 3306, database: 'mysql', user: 'root', dbLabel: 'Default database' },
+  mongodb: { label: 'MongoDB', port: 27017, database: 'admin', user: 'root', dbLabel: 'Auth database' },
+}
+
+/** Switch engine; port and database follow when they still hold the old engine's defaults. */
+function switchEngine(form, engine) {
+  const before = ENGINE_DEFAULTS[form.engine]
+  const after = ENGINE_DEFAULTS[engine]
+  return {
+    ...form,
+    engine,
+    port: !form.port || String(form.port) === String(before.port) ? after.port : form.port,
+    database: !form.database || form.database === before.database ? after.database : form.database,
+  }
+}
+
+function DirectFields({ form, set, setForm, server }) {
+  const defaults = ENGINE_DEFAULTS[form.engine] || ENGINE_DEFAULTS.postgres
   return (
     <div className="grid grid-cols-6 gap-3">
       <Field label="Engine" className="col-span-2">
-        <select value={form.engine} onChange={(e) => set('engine')(e.target.value)} className={INPUT}>
-          <option value="postgres">PostgreSQL</option>
+        <select value={form.engine} onChange={(e) => setForm((f) => switchEngine(f, e.target.value))} className={INPUT}>
+          {Object.entries(ENGINE_DEFAULTS).map(([id, d]) => <option key={id} value={id}>{d.label}</option>)}
         </select>
       </Field>
       <Field label="Host" className="col-span-3"><TextInput value={form.host} onChange={set('host')} placeholder="db.example.com" /></Field>
-      <Field label="Port" className="col-span-1"><TextInput value={form.port} onChange={set('port')} placeholder="5432" inputMode="numeric" /></Field>
-      <Field label="Username" className="col-span-3"><TextInput value={form.username} onChange={set('username')} placeholder="postgres" autoComplete="off" /></Field>
+      <Field label="Port" className="col-span-1"><TextInput value={form.port} onChange={set('port')} placeholder={String(defaults.port)} inputMode="numeric" /></Field>
+      <Field label="Username" className="col-span-3"><TextInput value={form.username} onChange={set('username')} placeholder={defaults.user} autoComplete="off" /></Field>
       <Field label="Password" className="col-span-3">
         <TextInput type="password" value={form.password} onChange={set('password')} autoComplete="new-password"
           placeholder={server?.passwordConfigured ? '•••• configured' : ''} />
       </Field>
-      <Field label="Maintenance database" className="col-span-3"><TextInput value={form.database} onChange={set('database')} placeholder="postgres" /></Field>
+      <Field label={defaults.dbLabel} className="col-span-3"><TextInput value={form.database} onChange={set('database')} placeholder={defaults.database} /></Field>
       <Field label="SSL mode" className="col-span-3">
         <select value={form.sslmode} onChange={(e) => set('sslmode')(e.target.value)} className={INPUT}>
           {SSL_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -165,7 +185,7 @@ export default function ServerForm({ server, onClose, onSave }) {
 
           {form.kind === 'direct' && (
             <>
-              <DirectFields form={form} set={set} server={server} />
+              <DirectFields form={form} set={set} setForm={setForm} server={server} />
               <Toggle checked={form.tunnelEnabled} onChange={set('tunnelEnabled')} label="Connect through an SSH tunnel"
                 hint="The database host and port are then resolved from the bastion host." />
               {form.tunnelEnabled && (

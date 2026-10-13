@@ -21,11 +21,11 @@ function formatDate(ms) {
 function parseDbName(filename) {
   // e.g. mydb_12-03-2025_14_30_00.sql → mydb
   const m = filename.match(/^(.+?)_\d{2}-\d{2}-\d{4}/)
-  return m ? m[1] : filename.replace(/\.sql$/, '')
+  return m ? m[1] : filename.replace(/\.(sql|archive)$/, '')
 }
 
 function RestoreModal({ backup, onClose, onRestore }) {
-  const target = useRestoreTarget(parseDbName(backup.name))
+  const target = useRestoreTarget(parseDbName(backup.name), { name: backup.name, engine: backup.engine })
   const [running, setRunning] = useState(false)
 
   const canSubmit = target.ready && !running
@@ -68,8 +68,9 @@ function RestoreModal({ backup, onClose, onRestore }) {
 }
 
 function UploadRestoreModal({ onClose, onDone }) {
-  const target = useRestoreTarget('')
   const [file, setFile] = useState(null)
+  // Uploads have no catalog row: the engine is inferred from the extension
+  const target = useRestoreTarget('', file ? { name: file.name } : null)
   const [restoreNow, setRestoreNow] = useState(true)
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -123,7 +124,7 @@ function UploadRestoreModal({ onClose, onDone }) {
           <span className="text-2xl">⬆️</span>
           <div>
             <p className="font-semibold text-zinc-100">Upload &amp; Restore</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Upload a .sql dump file and optionally restore it immediately</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Upload a .sql dump or MongoDB .archive and optionally restore it immediately</p>
           </div>
           <button onClick={onClose} className="ml-auto text-zinc-600 hover:text-zinc-300 text-xl leading-none">✕</button>
         </div>
@@ -139,13 +140,13 @@ function UploadRestoreModal({ onClose, onDone }) {
               e.preventDefault()
               if (running) return
               const f = e.dataTransfer.files[0]
-              if (f && f.name.endsWith('.sql')) pickFile(f)
+              if (f && /\.(sql|archive)$/i.test(f.name)) pickFile(f)
             }}
           >
             <input
               ref={fileRef}
               type="file"
-              accept=".sql"
+              accept=".sql,.archive"
               className="hidden"
               disabled={running}
               onChange={(e) => pickFile(e.target.files[0] || null)}
@@ -169,7 +170,7 @@ function UploadRestoreModal({ onClose, onDone }) {
               <>
                 <span className="text-3xl text-zinc-600">📂</span>
                 <div className="text-center">
-                  <p className="text-sm text-zinc-400">Drop a <span className="font-mono">.sql</span> file here</p>
+                  <p className="text-sm text-zinc-400">Drop a <span className="font-mono">.sql</span> or <span className="font-mono">.archive</span> file here</p>
                   <p className="text-xs text-zinc-600 mt-1">or click to browse</p>
                 </div>
               </>

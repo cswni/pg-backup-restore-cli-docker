@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { Spinner, DbNameInput, Toggle, DB_NAME_PATTERN, dropTargetHint } from '../UI'
-import { ServerSelect } from './ServerBits'
+import { isCompatibleBackup } from '../../lib/engines'
+import { ServerSelect, engineLabel } from './ServerBits'
 
 // Where a backup is restored: server → container (Docker servers only) →
 // target database. Shared by the Backups page restore dialogs.
@@ -29,18 +30,23 @@ function useList(fetcher, key) {
 /**
  * Restore target state.
  * @param {string} initialDb  suggested target database name
+ * @param {{ name?: string, engine?: string|null }} [backup]  the backup to restore: only
+ *   containers / direct servers of a matching engine are offered (see lib/engines)
  * @returns {object} state, setters, `ready` and the /api/ops `payload`
  */
-export function useRestoreTarget(initialDb = '') {
+export function useRestoreTarget(initialDb = '', backup = null) {
   const [serverId, setServerId] = useState('local')
   const [container, setContainer] = useState('')
   const [db, setDb] = useState(initialDb)
   const [dropExisting, setDropExisting] = useState(false)
-  const { data: servers, loading: loadingServers } = useFetch(api.servers.list)
+  const { data: allServers, loading: loadingServers } = useFetch(api.servers.list)
 
+  const matches = (engine) => !backup?.name || isCompatibleBackup(backup.name, backup.engine, engine)
+  const servers = allServers && allServers.filter((s) => s.kind === 'docker' || matches(s.engine))
   const server = (servers || []).find((s) => s.id === serverId) || null
   const isDocker = !server || server.kind === 'docker'
-  const containers = useList(isDocker ? () => api.containers.list(serverId) : null, `${serverId}:${isDocker}`)
+  const allContainers = useList(isDocker ? () => api.containers.list(serverId) : null, `${serverId}:${isDocker}`)
+  const containers = { ...allContainers, items: allContainers.items.filter((c) => matches(c.engine)) }
   const engine = isDocker
     ? containers.items.find((c) => c.name === container)?.engine || 'postgres'
     : server.engine
@@ -68,10 +74,15 @@ export function useRestoreTarget(initialDb = '') {
 function ContainerField({ target }) {
   if (target.containers.loading) return <Spinner size="sm" />
   return (
-    <select value={target.container} onChange={(e) => target.setContainer(e.target.value)} className={SELECT_CLASS}>
-      <option value="">— select container —</option>
-      {target.containers.items.map((c) => <option key={c.idFull} value={c.name}>{c.name}</option>)}
-    </select>
+    <>
+      <select value={target.container} onChange={(e) => target.setContainer(e.target.value)} className={SELECT_CLASS}>
+        <option value="">— select container —</option>
+        {target.containers.items.map((c) => <option key={c.idFull} value={c.name}>{c.name} ({engineLabel(c.engine)})</option>)}
+      </select>
+      {target.containers.items.length === 0 && (
+        <p className="text-xs text-zinc-500 mt-1">No running container with a matching database engine on this server.</p>
+      )}
+    </>
   )
 }
 

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button } from '../components/UI'
-import { ServerSelect } from '../components/servers/ServerBits'
+import { ServerSelect, EngineBadge } from '../components/servers/ServerBits'
 
 /** Container detail link that carries the server and engine along. */
 function containerHref(c, serverId) {
@@ -24,6 +24,7 @@ function ContainerCard({ c, serverId }) {
             <p className="font-semibold text-zinc-100 group-hover:text-emerald-300 transition-colors truncate">{c.name}</p>
             <p className="text-xs text-zinc-500 font-mono mt-0.5 truncate">{c.image}</p>
           </div>
+          <EngineBadge engine={c.engine} />
           <div className="hidden md:block shrink-0 text-right">
             <p className="text-xs text-zinc-600 font-mono">{c.id}</p>
             <p className="text-xs text-zinc-600 mt-0.5">{c.status}</p>
@@ -89,7 +90,7 @@ export default function Containers() {
         <EmptyState
           icon="🐘"
           title="No database containers found"
-          description={search ? 'Try a different search term.' : 'No running containers with a supported database image detected. Supported PostgreSQL images: postgres, postgis, bitnami/postgresql, supabase/postgres, timescaledb.'}
+          description={search ? 'Try a different search term.' : 'No running containers with a supported database image detected. Supported images: PostgreSQL (postgres, postgis, bitnami/postgresql, supabase/postgres, timescaledb), MySQL (mysql, mariadb, percona) and MongoDB (mongo).'}
         />
       )}
 
