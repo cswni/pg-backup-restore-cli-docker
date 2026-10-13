@@ -20,12 +20,14 @@ RUN rm -rf node_modules && pnpm install --frozen-lockfile --prod
 # ─── Stage 2: Runtime image ───────────────────────────────────────────────────
 FROM alpine:3.24
 
-# Install bash, curl, docker CLI, postgresql-client, and Node.js
+# Install bash, curl, docker CLI, OpenSSH client (remote Docker hosts and
+# SSH tunnels), postgresql-client, and Node.js
 RUN apk add --no-cache \
     bash \
     curl \
     docker-cli \
     nodejs \
+    openssh-client \
     postgresql18-client
 
 # Create working directory for SQL dump files
