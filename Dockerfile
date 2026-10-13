@@ -2,13 +2,12 @@
 FROM node:24-alpine AS ui-builder
 
 # Keep in sync with "packageManager" in ui/package.json
-ARG PNPM_VERSION=12.8.1
+ARG PNPM_VERSION=12.11.2
 RUN npm install -g pnpm@${PNPM_VERSION}
 
 WORKDIR /build
 
-# pnpm-workspace.yaml holds the install-script policy (allowBuilds)
-COPY ui/package.json ui/pnpm-lock.yaml ui/pnpm-workspace.yaml ./
+COPY ui/package.json ui/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build

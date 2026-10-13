@@ -156,6 +156,10 @@ function UploadRestoreModal({ onClose, onDone }) {
   const [progress, setProgress] = useState(0)
   const [uploadError, setUploadError] = useState(null)
   const fileRef = useRef()
+  const abortRef = useRef(null)
+
+  // Abort an in-flight upload if the dialog unmounts
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   function pickFile(f) {
     setFile(f)
@@ -169,23 +173,26 @@ function UploadRestoreModal({ onClose, onDone }) {
     setRunning(true)
     setProgress(0)
     setUploadError(null)
+    abortRef.current = new AbortController()
     try {
-      // Text fields go first so they are parsed before the file stream
-      const fd = new FormData()
-      if (restoreNow) {
-        fd.append('restore', 'true')
-        fd.append('container', container)
-        fd.append('database', db)
-        fd.append('dropExisting', String(dropExisting))
-      }
-      fd.append('file', file)
-      const result = await api.backups.upload(fd, setProgress)
+      const engine = (containers || []).find((c) => c.name === container)?.engine || 'postgres'
+      const result = await api.backups.upload(file, {
+        restore: restoreNow ? { container, engine, database: db, dropExisting } : undefined,
+        onProgress: setProgress,
+        signal: abortRef.current.signal,
+      })
       onDone(result)
     } catch (e) {
       setUploadError(e.message)
     } finally {
+      abortRef.current = null
       setRunning(false)
     }
+  }
+
+  function cancel() {
+    if (abortRef.current) abortRef.current.abort()
+    else onClose()
   }
 
   const canSubmit = file && (!restoreNow || (container && DB_NAME_PATTERN.test(db))) && !running
@@ -289,7 +296,7 @@ function UploadRestoreModal({ onClose, onDone }) {
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
-          <Button variant="ghost" onClick={onClose} disabled={running}>Cancel</Button>
+          <Button variant="ghost" onClick={cancel}>{running ? "Cancel upload" : "Cancel"}</Button>
           <Button variant={restoreNow && dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
             {running
               ? <><span className="animate-spin inline-block mr-1">⟳</span> Uploading… {progress}%</>

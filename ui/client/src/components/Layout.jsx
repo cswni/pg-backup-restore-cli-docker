@@ -1,13 +1,16 @@
 import React from 'react'
 import { NavLink } from 'react-router'
+import { routes } from '../routes'
 
-const nav = [
-  { to: '/',           label: 'Dashboard',   icon: '⬛' },
-  { to: '/containers', label: 'Containers',  icon: '🐳' },
-  { to: '/backups',    label: 'Backups',     icon: '🗄️'  },
-]
+/** Sidebar entries from the route registry. `isAdmin` hides admin-only pages. */
+function navItems(isAdmin) {
+  return routes
+    .filter((r) => r.nav && (!r.adminOnly || isAdmin))
+    .map((r) => ({ to: r.path, ...r.nav }))
+}
 
-export default function Layout({ children }) {
+export default function Layout({ children, isAdmin = true }) {
+  const nav = navItems(isAdmin)
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
       {/* Sidebar */}
