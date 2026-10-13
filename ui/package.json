@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "croner": "^10.0.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mongodb": "^7.7.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
