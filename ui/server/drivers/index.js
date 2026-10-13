@@ -15,9 +15,11 @@
  *   listDatabases(target) -> Promise<string[]>
  *   dump(job, target, { database, outFile }) -> Promise<void>
  *   restore(job, target, { database, inFile, dropExisting }) -> Promise<void>
- *   create(job, target, { database }) -> Promise<void>
+ *   create(job, target, { database }) -> Promise<void>    // optional (MongoDB has none)
  *   drop(job, target, { database }) -> Promise<void>
  *   unblock(job, target, { database }) -> Promise<void>   // optional
+ *   testConnection(target) -> Promise<{ version }>         // direct servers
+ * Missing optional methods are hidden in the UI (listEngines().operations).
  * }
  * `job` is the object from jobs.startJob: use job.log() / jobs.runCommand(job, …).
  * Every method receives already-validated database names (validation.isValidDbName).
