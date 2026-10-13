@@ -15,11 +15,15 @@ export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn
 }
 
+// Sent on every request; the server requires it for cookie-authenticated
+// POST/PUT/PATCH/DELETE (CSRF protection: cross-site forms cannot set it).
+const CSRF_HEADERS = { 'X-Requested-With': 'pgui' }
+
 export async function req(method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
     method,
     credentials: 'same-origin',
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: body ? { ...CSRF_HEADERS, 'Content-Type': 'application/json' } : CSRF_HEADERS,
     body: body ? JSON.stringify(body) : undefined,
   })
   if (!res.ok) {
@@ -47,11 +51,13 @@ function putChunk(uploadId, offset, blob, onChunkProgress, signal) {
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', `${BASE}/api/uploads/${uploadId}?offset=${offset}`)
     xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    for (const [name, value] of Object.entries(CSRF_HEADERS)) xhr.setRequestHeader(name, value)
     xhr.upload.onprogress = (e) => onChunkProgress(e.loaded)
     xhr.onload = () => {
       let body = null
       try { body = JSON.parse(xhr.responseText) } catch { /* non-JSON response */ }
       if (xhr.status >= 200 && xhr.status < 300) return resolve(body)
+      if (xhr.status === 401 && onUnauthorized) onUnauthorized()
       reject(new ApiError(body?.error || xhr.statusText || `Upload failed (${xhr.status})`, xhr.status, body))
     }
     xhr.onerror = () => reject(new ApiError('Network error during upload', 0))
@@ -103,6 +109,20 @@ async function upload(file, { restore, onProgress, signal } = {}) {
 }
 
 export const api = {
+  auth: {
+    me: () => req('GET', '/api/auth/me'),
+    login: (username, password) => req('POST', '/api/auth/login', { username, password }),
+    logout: () => req('POST', '/api/auth/logout'),
+    updateProfile: (profile) => req('PUT', '/api/auth/me', profile),
+    changePassword: (currentPassword, newPassword) =>
+      req('PUT', '/api/auth/me/password', { currentPassword, newPassword }),
+  },
+  users: {
+    list: () => req('GET', '/api/users'),
+    create: (user) => req('POST', '/api/users', user),
+    update: (id, changes) => req('PUT', `/api/users/${id}`, changes),
+    delete: (id) => req('DELETE', `/api/users/${id}`),
+  },
   servers: {
     list: () => req('GET', '/api/servers'),
   },
