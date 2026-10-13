@@ -54,7 +54,9 @@ router.get('/storage/defaults', handle(async (req, res) => {
     encryptionAvailable: enc.passphraseConfigured,
     destinations: destinations.listDestinations()
       .filter((d) => d.enabled)
-      .map(({ id, name, type, isDefault }) => ({ id, name, type, isDefault })),
+      .map(({ id, name, type, isDefault, config: c }) => ({
+        id, name, type, isDefault, ready: type !== 'gdrive' || !!c.refreshToken,
+      })),
   })
 }))
 

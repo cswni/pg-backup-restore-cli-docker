@@ -117,7 +117,7 @@ test('defaults endpoint feeds the export modal', async () => {
   assert.equal(res.json.encrypt, true)
   assert.equal(res.json.encryptionAvailable, true)
   assert.equal(res.json.destinations.length, 1)
-  assert.deepEqual(Object.keys(res.json.destinations[0]).sort(), ['id', 'isDefault', 'name', 'type'])
+  assert.deepEqual(Object.keys(res.json.destinations[0]).sort(), ['id', 'isDefault', 'name', 'ready', 'type'])
 })
 
 test('deleting a destination forgets its copies in the catalog', async () => {
