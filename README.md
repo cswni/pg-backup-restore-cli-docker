@@ -313,6 +313,158 @@ which forgets it automatically) and test again to trust the new key.
 
 ---
 
+## Scheduled backups
+
+The **Schedules** page (`/schedules`) runs backups automatically. Each schedule has a
+target (server, engine, container, database, optional output name), backup options
+(compress / encrypt / remote destinations, passed through to the backup pipeline), a
+cron expression and a timezone. Admins create, edit, enable/disable and delete
+schedules; any signed-in user can see them and use **Run now**.
+
+**Cron syntax** — standard 5 fields, evaluated with [croner](https://github.com/hexagon/croner):
+
+```
+┌───────────── minute (0-59)
+│ ┌─────────── hour (0-23)
+│ │ ┌───────── day of month (1-31)
+│ │ │ ┌─────── month (1-12 or JAN-DEC)
+│ │ │ │ ┌───── day of week (0-7 or SUN-SAT, 0 and 7 = Sunday)
+│ │ │ │ │
+0 2 * * *      daily at 02:00
+15 * * * *     every hour at :15
+30 3 * * 1-5   weekdays at 03:30
+0 4 1 * *      on the 1st of every month at 04:00
+```
+
+`@hourly`, `@daily`, `@weekly`, `@monthly` and `@yearly` are accepted too. Seconds
+fields are rejected. The form offers presets and shows the next 5 run times
+(`GET /api/schedules/preview?cron=…&tz=…`).
+
+**Timezone** — every schedule stores an IANA timezone (e.g. `Europe/Madrid`); runs follow
+local time in that zone including daylight-saving changes (times skipped by a DST jump
+do not run, repeated times run once). New schedules default to the browser's timezone in
+the UI, or the server's `TZ` (falling back to `UTC`) through the API.
+
+**Behaviour**
+
+- A single timer checks for due schedules every 15 seconds.
+- **No overlap:** if the previous run of a schedule is still running when the next one is
+  due, that run is skipped (logged as a warning) and the schedule moves to its next slot.
+  **Run now** is refused with `409` while a run is in progress.
+- **Catch-up after downtime:** missed runs are *not* replayed. If one or more runs were
+  missed while the server was down, the schedule runs **once** shortly after startup and
+  then continues on its normal cadence.
+- Disabled schedules never run; re-enabling one schedules it from the next matching time.
+- Scheduled jobs run as user `scheduler` and are tagged with the schedule in the job
+  history; the schedule shows the last status with a link to the job log.
+- Set `SCHEDULER_ENABLED=false` to turn off the timer (and overdue checks) on extra
+  replicas so only one instance runs schedules. The API and **Run now** keep working.
+
+API: `GET /api/schedules`, `GET /api/schedules/:id`, `POST /api/schedules` (admin),
+`PUT /api/schedules/:id` (admin, partial bodies allowed), `DELETE /api/schedules/:id`
+(admin), `POST /api/schedules/:id/run`.
+
+---
+
+## Monitoring
+
+### Job history and logs
+
+The **Jobs** page (`/jobs`) lists every operation with type/status filters, user,
+duration and a link to its log. Job log lines are written to
+`$DATA_DIR/logs/<jobId>.log` (JSON lines) while the job runs, so logs remain available
+after the job leaves memory and across restarts. Log files older than
+`JOB_LOG_RETENTION_DAYS` (default `30`) are deleted daily.
+
+### Health check
+
+`GET /api/health` needs no authentication and returns no secrets:
+
+```json
+{ "status": "ok", "version": "1.0.0", "uptimeSeconds": 3600, "time": "…",
+  "checks": { "database": { "ok": true }, "docker": { "reachable": true, "serverVersion": "27.1.0" } } }
+```
+
+`status` is `ok`, `degraded` (local Docker daemon unreachable — checked with a 3 s
+timeout, cached 30 s) or `error` (app database unusable; HTTP `503`). Use it for Docker
+`HEALTHCHECK`s or load-balancer probes.
+
+### Prometheus metrics
+
+`GET /api/metrics` returns the Prometheus text format:
+
+| Metric | Description |
+|--------|-------------|
+| `pgbackup_jobs_total{type,status}` | Jobs recorded by type and status |
+| `pgbackup_jobs_running` | Jobs currently running |
+| `pgbackup_job_duration_seconds{type}` | Histogram of finished job durations |
+| `pgbackup_last_successful_backup_timestamp_seconds{server,database}` | Last successful backup per database |
+| `pgbackup_schedule_last_success_timestamp_seconds{schedule_id,schedule}` | Last successful run per schedule (0 = never) |
+| `pgbackup_schedule_next_run_timestamp_seconds{schedule_id,schedule}` | Next planned run |
+| `pgbackup_schedule_overdue{schedule_id,schedule}` | `1` when the schedule is overdue (see below) |
+| `pgbackup_schedule_enabled{schedule_id,schedule}` | `1` enabled, `0` disabled |
+| `pgbackup_backup_files`, `pgbackup_backup_bytes` | Backup files in the backups directory |
+| `pgbackup_up`, `pgbackup_process_uptime_seconds` | Liveness |
+
+Authentication: set `METRICS_TOKEN` and scrape with `Authorization: Bearer <token>`
+(no other credentials needed). Without the token header the endpoint requires the
+normal UI login.
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: pg-backup
+    metrics_path: /api/metrics
+    scheme: https
+    authorization:
+      type: Bearer
+      credentials: <METRICS_TOKEN>
+    static_configs:
+      - targets: ['backups.example.com']
+```
+
+Example alert: `time() - pgbackup_last_successful_backup_timestamp_seconds > 2 * 86400`
+or `pgbackup_schedule_overdue == 1`.
+
+### Notifications
+
+**Notifications** (`/settings/notifications`, admins only) manages webhooks. Each webhook
+has a name, URL, payload format and the events it receives:
+
+| Format | Payload |
+|--------|---------|
+| Generic JSON | `{ event, title, text, timestamp, jobId, status, database, error, … }` |
+| Slack | `{ "text": "…" }` (Slack / Mattermost incoming webhooks) |
+| Discord | `{ "content": "…" }` |
+| Microsoft Teams | Adaptive Card message (Teams *Workflows* "post to a channel when a webhook request is received") |
+
+Events: **job failed**, **job succeeded**, **schedule missed / overdue**. A schedule is
+overdue when its last successful run is older than twice its interval (measured from the
+last edit for new schedules) or when a planned run is more than 10 minutes late; each
+incident is notified once and re-arms after the schedule is healthy again.
+
+Webhook URLs are treated as secrets: stored encrypted, never returned by the API and
+never logged. Delivery uses a 10 s timeout and up to 3 retries with backoff (network
+errors, `429`, `5xx`) and never blocks or fails the job. **Send test** posts a test
+message with a single attempt. Set `PUBLIC_URL` (e.g. `https://backups.example.com`) to
+include a link to the job log in notifications.
+
+### Logging and environment variables
+
+Server logs from the scheduler and monitoring modules are structured.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
+| `LOG_FORMAT` | text | `json` writes one JSON object per line (for Loki, ELK, CloudWatch…) |
+| `JOB_LOG_RETENTION_DAYS` | `30` | Days to keep persisted job logs |
+| `TZ` | `UTC` | Default timezone for new schedules created through the API |
+| `SCHEDULER_ENABLED` | `true` | `false` disables the schedule timer and overdue checks |
+| `METRICS_TOKEN` | — | Bearer token accepted by `/api/metrics` |
+| `PUBLIC_URL` | — | Base URL used for links in notifications |
+
+---
+
 ## Docker Compose Usage
 
 Run `pg-backup` side by side with your PostgreSQL container using a shared network.
