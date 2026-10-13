@@ -10,6 +10,7 @@
 module.exports = [
   require('./jobs'),
   require('./catalog'),
+  require('./settings'),
   require('./routes/containers'),
   require('./routes/backups'),
   require('./routes/ops'),
