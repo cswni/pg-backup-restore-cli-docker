@@ -103,8 +103,8 @@ router.delete('/monitoring/settings/webhooks/:id', requireAdmin, handle(async (r
 }))
 
 router.post('/monitoring/settings/webhooks/:id/test', requireAdmin, handle(async (req, res) => {
-  const result = await sendTo(webhooks.findWebhook(req.params.id), testEvent())
-  res.json(result)
+  // Single attempt so the admin gets immediate feedback
+  res.json(await sendTo(webhooks.findWebhook(req.params.id), testEvent(), { retries: 0 }))
 }))
 
 module.exports = { init, router, publicRouter }

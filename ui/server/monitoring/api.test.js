@@ -58,11 +58,14 @@ async function startRoleApp(role) {
 }
 
 before(async () => {
-  setDeliveryOptions({ timeoutMs: 500, retries: 0, backoffMs: 0 })
+  setDeliveryOptions({ timeoutMs: 500, retries: 2, backoffMs: 0 })
   hook = http.createServer((req, res) => {
     let body = ''
     req.on('data', (c) => { body += c })
-    req.on('end', () => { received.push({ path: req.url, body: JSON.parse(body || 'null') }); res.end('ok') })
+    req.on('end', () => {
+      received.push({ path: req.url, body: JSON.parse(body || 'null') })
+      res.writeHead(req.url.startsWith('/fail') ? 500 : 200).end('ok')
+    })
   })
   await new Promise((r) => hook.listen(0, '127.0.0.1', r))
   hookUrl = `http://127.0.0.1:${hook.address().port}`
@@ -198,6 +201,18 @@ test('test endpoint sends a test notification to the webhook', async () => {
   assert.equal(res.json.ok, true)
   assert.equal(received[0].path, '/teams')
   assert.match(received[0].body.attachments[0].content.body[0].text, /Test notification/)
+  await srv.request('DELETE', `/api/monitoring/settings/webhooks/${w.id}`)
+})
+
+test('test endpoint makes a single attempt and reports the failure', async () => {
+  const { json: w } = await srv.request('POST', '/api/monitoring/settings/webhooks', {
+    body: { name: 'broken', url: `${hookUrl}/fail`, format: 'generic', events: [] },
+  })
+  received.length = 0
+  const res = await srv.request('POST', `/api/monitoring/settings/webhooks/${w.id}/test`)
+  assert.deepEqual(res.json, { ok: false, status: 500, attempts: 1, error: 'HTTP 500' })
+  assert.equal(received.length, 1)
+  assert.equal((await srv.request('POST', '/api/monitoring/settings/webhooks/missing/test')).status, 404)
   await srv.request('DELETE', `/api/monitoring/settings/webhooks/${w.id}`)
 })
 

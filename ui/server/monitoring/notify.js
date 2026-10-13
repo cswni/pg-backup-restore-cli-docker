@@ -145,12 +145,15 @@ async function deliver(url, body, opts = deliveryOptions) {
 
 /**
  * Send to a single webhook. Never throws; never logs the URL.
+ * @param {object} webhook
+ * @param {object} event
+ * @param {{ retries?: number, timeoutMs?: number }} [overrides]  e.g. { retries: 0 } for interactive tests
  * @returns {Promise<object>} delivery result
  */
-async function sendTo(webhook, event) {
+async function sendTo(webhook, event, overrides = {}) {
   const { url, ...meta } = webhooks.webhookWithUrl(webhook)
   if (!url) return { ok: false, status: null, attempts: 0, error: 'No URL configured' }
-  const result = await deliver(url, renderPayload(meta.format, event))
+  const result = await deliver(url, renderPayload(meta.format, event), { ...deliveryOptions, ...overrides })
   const fields = { webhook: meta.name, webhookId: meta.id, event: event.type, attempts: result.attempts }
   if (result.ok) log.info('Notification sent', fields)
   else log.warn('Notification failed', { ...fields, error: result.error })
