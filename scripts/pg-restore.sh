@@ -112,28 +112,18 @@ count_user_tables() {
 # ---------------------------------------------------------------------------
 # retarget_dump <target>
 #   Reads a plain SQL dump on stdin and makes it restore into <target>:
-#   - drops the header "CREATE DATABASE <src>" and "\connect <src>" lines
-#     emitted by `pg_dump -C` (we connect to the target ourselves)
-#   - rewrites "ALTER DATABASE <src> ..." / "COMMENT ON DATABASE <src> ..."
-#     so they apply to the target database
-#   Dumps without -C pass through unchanged.
+#   drops the `pg_dump -C` CREATE DATABASE / \connect header and rewrites
+#   ALTER / COMMENT ON DATABASE <src>. The logic lives in pg-retarget.awk
+#   (next to this script) and is shared with the Web UI's direct driver.
 # ---------------------------------------------------------------------------
+RETARGET_AWK="$(dirname "${BASH_SOURCE[0]}")/pg-retarget.awk"
+if [[ ! -f "$RETARGET_AWK" ]]; then
+  echo "[pg-restore] ERROR: ${RETARGET_AWK} not found (it must sit next to this script)." >&2
+  exit 1
+fi
+
 retarget_dump() {
-  awk -v qtarget="\"$1\"" '
-    BEGIN { header = 1; src = "" }
-    header && NR <= 200 && /^CREATE DATABASE / { src = $3; next }
-    header && NR <= 200 && /^\\connect / { header = 0; next }
-    src != "" {
-      alter = "ALTER DATABASE " src " "
-      comment = "COMMENT ON DATABASE " src " "
-      if (index($0, alter) == 1) {
-        $0 = "ALTER DATABASE " qtarget " " substr($0, length(alter) + 1)
-      } else if (index($0, comment) == 1) {
-        $0 = "COMMENT ON DATABASE " qtarget " " substr($0, length(comment) + 1)
-      }
-    }
-    { print }
-  '
+  awk -v qtarget="\"$1\"" -f "$RETARGET_AWK"
 }
 
 # ---------------------------------------------------------------------------

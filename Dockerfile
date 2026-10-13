@@ -2,13 +2,12 @@
 FROM node:24-alpine AS ui-builder
 
 # Keep in sync with "packageManager" in ui/package.json
-ARG PNPM_VERSION=12.8.1
+ARG PNPM_VERSION=12.11.2
 RUN npm install -g pnpm@${PNPM_VERSION}
 
 WORKDIR /build
 
-# pnpm-workspace.yaml holds the install-script policy (allowBuilds)
-COPY ui/package.json ui/pnpm-lock.yaml ui/pnpm-workspace.yaml ./
+COPY ui/package.json ui/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
@@ -21,12 +20,18 @@ RUN rm -rf node_modules && pnpm install --frozen-lockfile --prod
 # ─── Stage 2: Runtime image ───────────────────────────────────────────────────
 FROM alpine:3.24
 
-# Install bash, curl, docker CLI, postgresql-client, and Node.js
+# Install bash, curl, docker CLI, OpenSSH client (remote Docker hosts and
+# SSH tunnels), the PostgreSQL / MariaDB clients and MongoDB database tools
+# (direct database servers), and Node.js. mongodb-tools comes from the
+# community repository, which the alpine image enables by default.
 RUN apk add --no-cache \
     bash \
     curl \
     docker-cli \
+    mariadb-client \
+    mongodb-tools \
     nodejs \
+    openssh-client-default \
     postgresql18-client
 
 # Create working directory for SQL dump files
@@ -51,6 +56,8 @@ COPY ui/server/ ./server/
 COPY --from=ui-builder /build/dist ./dist
 
 VOLUME ["/backups"]
+
+ENV NODE_ENV=production
 
 EXPOSE 3000
 

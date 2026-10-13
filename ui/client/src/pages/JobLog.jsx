@@ -2,6 +2,18 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { api } from '../lib/api'
 import { StatusBadge, Button, Spinner } from '../components/UI'
+import { formatDateTime } from '../lib/format'
+
+/** "server / container → database · by user · started …" */
+function describeJob(job) {
+  const m = job.meta || {}
+  const target = [m.serverName, job.container].filter(Boolean).join(' / ')
+  const parts = [`${target ? `${target} → ` : ''}${job.database ?? ''}`]
+  if (m.scheduleName) parts.push(`schedule ${m.scheduleName}`)
+  if (job.username) parts.push(`by ${job.username}`)
+  if (job.startedAt) parts.push(formatDateTime(job.startedAt))
+  return parts.join(' · ')
+}
 
 export default function JobLog() {
   const { jobId } = useParams()
@@ -69,7 +81,7 @@ export default function JobLog() {
             <StatusBadge status={status} />
           </div>
           <p className="text-xs text-zinc-500 font-mono mt-0.5 truncate">
-            {meta ? `${meta.container} → ${meta.database}` : jobId}
+            {meta ? describeJob(meta) : jobId}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -110,6 +122,11 @@ export default function JobLog() {
           <div className="flex items-center gap-2 text-zinc-600">
             <span className="pulse-dot">●</span> Waiting for output…
           </div>
+        )}
+        {lines.length === 0 && status !== 'running' && (
+          <p className="text-zinc-600">
+            No log output is stored for this job (logs are kept for a limited number of days).
+          </p>
         )}
         {lines.map((line, i) => (
           <div key={i} className={`whitespace-pre-wrap break-all ${lineClass(line.type)}`}>

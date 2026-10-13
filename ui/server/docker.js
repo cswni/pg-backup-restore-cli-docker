@@ -1,58 +1,71 @@
-const Docker = require('dockerode')
 const { execFile } = require('child_process')
 
-const docker = new Docker({ socketPath: '/var/run/docker.sock' })
+// Docker access goes through the docker CLI (not the Engine API) so that
+// DOCKER_HOST=ssh://… works for remote hosts exactly like the local socket.
 
-const POSTGRES_IMAGES = ['postgres', 'postgis', 'bitnami/postgresql', 'supabase/postgres', 'timescale/timescaledb']
+const ENGINE_IMAGES = {
+  postgres: ['postgres', 'postgis', 'bitnami/postgresql', 'supabase/postgres', 'timescale/timescaledb'],
+}
 
-function isPostgresContainer(container) {
-  const image = (container.Image || '').toLowerCase()
-  return POSTGRES_IMAGES.some((pg) => image.includes(pg))
+/** Engine name for a container image, or null when unsupported. */
+function detectEngine(image) {
+  const img = (image || '').toLowerCase()
+  for (const [engine, patterns] of Object.entries(ENGINE_IMAGES)) {
+    if (patterns.some((p) => img.includes(p))) return engine
+  }
+  return null
+}
+
+/** Register extra image patterns for an engine (used by engine drivers). */
+function registerEngineImages(engine, patterns) {
+  ENGINE_IMAGES[engine] = [...(ENGINE_IMAGES[engine] || []), ...patterns]
 }
 
 /**
- * Returns all running containers that are running a postgres image.
+ * Run the docker CLI and resolve with stdout.
+ * @param {string[]} args
+ * @param {{ env?: object, timeout?: number, input?: string }} [opts]
  */
-async function listContainers() {
-  const containers = await docker.listContainers({ all: false })
-  return containers
-    .filter(isPostgresContainer)
-    .map((c) => ({
-      id: c.Id.slice(0, 12),
-      idFull: c.Id,
-      name: (c.Names[0] || '').replace(/^\//, ''),
-      image: c.Image,
-      status: c.Status,
-      state: c.State,
-      labels: c.Labels || {},
-      created: c.Created,
-    }))
-}
-
-/**
- * Returns database list for a given container (must be running postgres).
- * Runs: docker exec -u postgres <container> psql -lqt
- */
-function listDatabases(containerName) {
+function docker(args, { env, timeout = 15000 } = {}) {
   return new Promise((resolve, reject) => {
-    execFile(
-      'docker',
-      ['exec', '-u', 'postgres', containerName, 'psql', '-lqt'],
-      { timeout: 10000 },
+    execFile('docker', args, { env: { ...process.env, ...env }, timeout, maxBuffer: 16 * 1024 * 1024 },
       (err, stdout, stderr) => {
-        if (err) {
-          return reject(new Error(stderr || err.message))
-        }
-        // psql -lqt output: "name | owner | encoding | ..."
-        const dbs = stdout
-          .split('\n')
-          .map((line) => line.split('|')[0].trim())
-          .filter((name) => name && !['template0', 'template1', ''].includes(name))
-        resolve(dbs)
-      }
-    )
+        if (err) return reject(new Error((stderr || err.message).trim()))
+        resolve(stdout)
+      })
   })
 }
 
-module.exports = { listContainers, listDatabases }
+/**
+ * Running containers with a supported database engine.
+ * @param {object} env  from servers.execEnv(server)
+ */
+async function listContainers(env) {
+  const out = await docker(['ps', '--no-trunc', '--format', '{{json .}}'], { env })
+  return out
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .map((c) => ({
+      id: c.ID.slice(0, 12),
+      idFull: c.ID,
+      name: c.Names.split(',')[0],
+      image: c.Image,
+      engine: detectEngine(c.Image),
+      status: c.Status,
+      state: c.State,
+      labels: parseLabels(c.Labels),
+      created: c.CreatedAt,
+    }))
+    .filter((c) => c.engine)
+}
 
+function parseLabels(labels) {
+  if (!labels) return {}
+  return Object.fromEntries(labels.split(',').map((kv) => {
+    const i = kv.indexOf('=')
+    return i === -1 ? [kv, ''] : [kv.slice(0, i), kv.slice(i + 1)]
+  }))
+}
+
+module.exports = { docker, listContainers, detectEngine, registerEngineImages }

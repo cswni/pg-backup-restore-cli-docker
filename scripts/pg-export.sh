@@ -2,7 +2,9 @@
 # ============================================================
 # pg-export.sh  –  Dump a PostgreSQL database
 # ============================================================
-# Usage: pg-export.sh -c <container> -d <database> [-n <name>]
+# Usage: pg-export.sh -c <container> -d <database> [-n <name>] [-o <file>]
+#
+#   -o  Exact output path (overrides -n and the default location).
 #
 #   -n  Name used for the dump file (defaults to <database>).
 #       Restore uses the file name prefix as the default target
@@ -15,19 +17,21 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 -c <container> -d <database> [-n <name>]"
+  echo "Usage: $0 -c <container> -d <database> [-n <name>] [-o <file>]"
   exit 1
 }
 
 CONTAINER=""
 DATABASE=""
 NAME=""
+OUTPUT_FILE=""
 
-while getopts ":c:d:n:" opt; do
+while getopts ":c:d:n:o:" opt; do
   case $opt in
     c) CONTAINER="$OPTARG" ;;
     d) DATABASE="$OPTARG" ;;
     n) NAME="$OPTARG" ;;
+    o) OUTPUT_FILE="$OPTARG" ;;
     *) usage ;;
   esac
 done
@@ -40,8 +44,10 @@ if [[ ! "$NAME" =~ ^[A-Za-z0-9_][A-Za-z0-9_$-]{0,62}$ ]]; then
   exit 1
 fi
 
-TIMESTAMP=$(date +%d-%m-%Y_%H_%M_%S)
-OUTPUT_FILE="/backups/${NAME}_${TIMESTAMP}.sql"
+if [[ -z "$OUTPUT_FILE" ]]; then
+  TIMESTAMP=$(date +%d-%m-%Y_%H_%M_%S)
+  OUTPUT_FILE="/backups/${NAME}_${TIMESTAMP}.sql"
+fi
 
 echo "[pg-export] Exporting database '${DATABASE}' from container '${CONTAINER}'..."
 echo "[pg-export] Output file: ${OUTPUT_FILE}"
