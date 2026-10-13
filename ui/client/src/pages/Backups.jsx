@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import {
-  PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button,
-  DbNameInput, Toggle, ProgressBar, DB_NAME_PATTERN, dropTargetHint,
+  PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toggle, ProgressBar,
 } from '../components/UI'
+import RestoreTargetFields, { useRestoreTarget } from '../components/servers/RestoreTarget'
 
 function formatBytes(b) {
   if (b < 1024) return `${b} B`
@@ -23,74 +23,17 @@ function parseDbName(filename) {
   return m ? m[1] : filename.replace(/\.sql$/, '')
 }
 
-/** Existing databases of the selected container, for name suggestions. */
-function useContainerDatabases(container) {
-  const [databases, setDatabases] = useState([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    setDatabases([])
-    if (!container) return
-    let cancelled = false
-    setLoading(true)
-    api.containers.databases(container)
-      .then((dbs) => { if (!cancelled) setDatabases(dbs) })
-      .catch(() => { if (!cancelled) setDatabases([]) })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [container])
-
-  return { databases, loading }
-}
-
-function TargetDbFields({ id, container, db, setDb, dropExisting, setDropExisting }) {
-  const { databases, loading } = useContainerDatabases(container)
-  const exists = databases.includes(db)
-  return (
-    <>
-      <div>
-        <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
-          Target Database
-          {loading && <span className="ml-2 text-zinc-600 normal-case tracking-normal">loading…</span>}
-        </label>
-        <DbNameInput
-          id={id}
-          value={db}
-          onChange={setDb}
-          options={databases}
-          placeholder={container ? 'existing or new database name' : 'Select a container first'}
-        />
-        {container && db && !loading && (
-          <p className="text-xs text-zinc-500 mt-1">
-            {exists ? 'Database exists on this container.' : 'Database will be created.'}
-          </p>
-        )}
-      </div>
-      <Toggle
-        danger
-        checked={dropExisting}
-        onChange={setDropExisting}
-        label="Drop target database before restore"
-        hint={dropTargetHint(db, exists, dropExisting)}
-      />
-    </>
-  )
-}
-
 function RestoreModal({ backup, onClose, onRestore }) {
-  const { data: containers, loading } = useFetch(api.containers.list)
-  const [container, setContainer] = useState('')
-  const [db, setDb] = useState(parseDbName(backup.name))
-  const [dropExisting, setDropExisting] = useState(false)
+  const target = useRestoreTarget(parseDbName(backup.name))
   const [running, setRunning] = useState(false)
 
-  const canSubmit = container && DB_NAME_PATTERN.test(db) && !running
+  const canSubmit = target.ready && !running
 
   async function submit() {
     if (!canSubmit) return
     setRunning(true)
     try {
-      await onRestore({ container, database: db, file: backup.name, dropExisting })
+      await onRestore({ ...target.payload, file: backup.name })
     } finally {
       setRunning(false)
     }
@@ -109,34 +52,12 @@ function RestoreModal({ backup, onClose, onRestore }) {
         </div>
 
         <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">Target Container</label>
-            {loading ? <Spinner size="sm" /> : (
-              <select
-                value={container}
-                onChange={(e) => setContainer(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors"
-              >
-                <option value="">— select container —</option>
-                {(containers || []).map((c) => (
-                  <option key={c.idFull} value={c.name}>{c.name}</option>
-                ))}
-              </select>
-            )}
-          </div>
-          <TargetDbFields
-            id="restore-db"
-            container={container}
-            db={db}
-            setDb={setDb}
-            dropExisting={dropExisting}
-            setDropExisting={setDropExisting}
-          />
+          <RestoreTargetFields id="restore-db" target={target} />
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant={dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
+          <Button variant={target.dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
             {running ? <><span className="animate-spin">⟳</span> Running…</> : 'Restore'}
           </Button>
         </div>
@@ -146,10 +67,7 @@ function RestoreModal({ backup, onClose, onRestore }) {
 }
 
 function UploadRestoreModal({ onClose, onDone }) {
-  const { data: containers, loading: loadingContainers } = useFetch(api.containers.list)
-  const [container, setContainer] = useState('')
-  const [db, setDb] = useState('')
-  const [dropExisting, setDropExisting] = useState(false)
+  const target = useRestoreTarget('')
   const [file, setFile] = useState(null)
   const [restoreNow, setRestoreNow] = useState(true)
   const [running, setRunning] = useState(false)
@@ -165,7 +83,7 @@ function UploadRestoreModal({ onClose, onDone }) {
     setFile(f)
     setUploadError(null)
     // Default the target to the dump's database name; user can rename it
-    if (f && !db) setDb(parseDbName(f.name))
+    if (f && !target.db) target.setDb(parseDbName(f.name))
   }
 
   async function submit() {
@@ -175,9 +93,8 @@ function UploadRestoreModal({ onClose, onDone }) {
     setUploadError(null)
     abortRef.current = new AbortController()
     try {
-      const engine = (containers || []).find((c) => c.name === container)?.engine || 'postgres'
       const result = await api.backups.upload(file, {
-        restore: restoreNow ? { container, engine, database: db, dropExisting } : undefined,
+        restore: restoreNow ? target.payload : undefined,
         onProgress: setProgress,
         signal: abortRef.current.signal,
       })
@@ -195,7 +112,7 @@ function UploadRestoreModal({ onClose, onDone }) {
     else onClose()
   }
 
-  const canSubmit = file && (!restoreNow || (container && DB_NAME_PATTERN.test(db))) && !running
+  const canSubmit = file && (!restoreNow || target.ready) && !running
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
@@ -264,40 +181,17 @@ function UploadRestoreModal({ onClose, onDone }) {
           {/* Restore now toggle */}
           <Toggle checked={restoreNow} onChange={setRestoreNow} label="Restore immediately after upload" />
 
-          {/* Container + DB selectors (shown only when restore=true) */}
+          {/* Server, container and target database (shown only when restore=true) */}
           {restoreNow && (
             <div className="space-y-4 pt-1">
-              <div>
-                <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">Target Container</label>
-                {loadingContainers ? <Spinner size="sm" /> : (
-                  <select
-                    value={container}
-                    onChange={(e) => setContainer(e.target.value)}
-                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors"
-                  >
-                    <option value="">— select container —</option>
-                    {(containers || []).map((c) => (
-                      <option key={c.idFull} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <TargetDbFields
-                id="upload-db"
-                container={container}
-                db={db}
-                setDb={setDb}
-                dropExisting={dropExisting}
-                setDropExisting={setDropExisting}
-              />
+              <RestoreTargetFields id="upload-db" target={target} />
             </div>
           )}
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
           <Button variant="ghost" onClick={cancel}>{running ? "Cancel upload" : "Cancel"}</Button>
-          <Button variant={restoreNow && dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
+          <Button variant={restoreNow && target.dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
             {running
               ? <><span className="animate-spin inline-block mr-1">⟳</span> Uploading… {progress}%</>
               : restoreNow ? '⬆️ Upload & Restore' : '⬆️ Upload'}
