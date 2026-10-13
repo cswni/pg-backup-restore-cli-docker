@@ -11,6 +11,7 @@ module.exports = [
   require('./jobs'),
   require('./catalog'),
   require('./settings'),
+  require('./users'),
   require('./routes/containers'),
   require('./routes/backups'),
   require('./routes/ops'),
