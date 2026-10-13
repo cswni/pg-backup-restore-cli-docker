@@ -165,22 +165,55 @@ docker run --rm \
 
 ## Web UI authentication
 
-The Web UI (`serve`, the default command) protects the UI, the API and backup
-downloads with HTTP Basic authentication. **Credentials are required**: the server
-refuses to start unless both variables are set.
+The Web UI (`serve`, the default command) uses **user accounts** stored in its
+SQLite database (`$DATA_DIR/app.db`, by default `/backups/.pgui/app.db`, so it
+persists with the backups volume). Users sign in on a login page and get a
+session cookie (`pgui_session`: HttpOnly, SameSite=Lax, Secure over HTTPS,
+7-day sliding expiry). The page and its assets are public; every `/api`
+endpoint except login requires authentication.
+
+**First admin (fail closed).** On startup, if there are no users yet, an admin is
+created from these variables; with no users and no credentials the server
+refuses to start:
 
 | Variable | Description |
 |----------|-------------|
-| `BASIC_AUTH_USER` | Username (required) |
-| `BASIC_AUTH_PASSWORD` | Password (required) |
-| `BASIC_AUTH_DISABLED` | Set to `true` to run without authentication (local development only) |
+| `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | Initial admin username and password (names kept for backward compatibility) |
+| `ADMIN_USER` / `ADMIN_PASSWORD` | Same, takes precedence when set |
+| `BASIC_AUTH_DISABLED` | Set to `true` to run without authentication: every request is an admin (local development only) |
 
-Always serve the UI over HTTPS (e.g. behind Traefik), since Basic auth sends
-credentials on every request. Browsers remember Basic credentials until they are
-closed, so after a redeploy you may not be prompted again in an already-open browser.
+> The variables only **seed** the first admin. Once any user exists they are
+> ignored, so changing `BASIC_AUTH_PASSWORD` later does **not** change an existing
+> password — change it on the Profile page (or have another admin reset it).
 
-For local development run the server with `BASIC_AUTH_DISABLED=true` (or set
-credentials) before `pnpm run dev:server`.
+**Users and roles.** Only admins create accounts (Users page, no public
+sign-up). Every user can edit their own display name, email and password on the
+Profile page. Passwords need at least 10 characters and are stored as scrypt
+hashes.
+
+| Role | Can |
+|------|-----|
+| `admin` | Everything, including managing users and deleting backups |
+| `user` | View, back up, restore, upload and download |
+
+Disabling a user or resetting/changing a password signs that user out
+everywhere (the user who changes their own password stays signed in). The last
+active admin cannot be deleted, disabled or demoted. Failed logins are limited
+to 5 per username and IP every 15 minutes (HTTP 429).
+
+**Scripts and CI** can keep using HTTP Basic auth with any account — no session
+or extra header needed:
+
+```bash
+curl -u admin:secret http://localhost:3000/api/backups
+```
+
+Browser requests authenticated by the session cookie must send
+`X-Requested-With: pgui` on POST/PUT/PATCH/DELETE (CSRF protection; the UI does
+this automatically). Always serve the UI over HTTPS (e.g. behind Traefik).
+
+For local development run the server with credentials (or
+`BASIC_AUTH_DISABLED=true`) before `pnpm run dev:server`.
 
 ---
 

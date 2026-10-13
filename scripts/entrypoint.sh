@@ -126,8 +126,12 @@ Restore file resolution (-f):
   If -f is omitted, the latest dump for the database is used.
 
 Web UI authentication (serve):
-  BASIC_AUTH_USER / BASIC_AUTH_PASSWORD   Required: HTTP Basic auth credentials
+  Users sign in on a login page; admins manage accounts in the UI.
+  BASIC_AUTH_USER / BASIC_AUTH_PASSWORD   Initial admin, required while no users exist
+  ADMIN_USER / ADMIN_PASSWORD             Same, takes precedence when set
+                                          (only seed the first admin; ignored once users exist)
   BASIC_AUTH_DISABLED=true                Run without auth (local development only)
+  Scripts may use HTTP Basic auth with any account: curl -u user:pass .../api/backups
 EOF
     ;;
   *)
