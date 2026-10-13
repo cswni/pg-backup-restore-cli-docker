@@ -30,8 +30,11 @@ router.get('/jobs/:jobId/stream', (req, res) => {
     res.end()
   }
 
-  // Finished jobs no longer in memory: only the final status is known
-  if (!job) return done(summary.exitCode)
+  // Finished jobs no longer in memory: replay the persisted log (if any)
+  if (!job) {
+    summary.lines.forEach(send)
+    return done(summary.exitCode)
+  }
 
   job.lines.forEach(send)
   if (job.status !== 'running') return done(job.exitCode)

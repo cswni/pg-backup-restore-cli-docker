@@ -9,8 +9,31 @@ const live = new Map()
 const LIVE_RETENTION_MS = 10 * 60 * 1000
 const MAX_LOG_LINES = 5000
 
-// Listeners for finished jobs (monitoring/notifications hook in here).
+// Job lifecycle events (monitoring/notifications hook in here):
+//   'line'     (jobId, line)  every log line, including the final 'done' line
+//   'finished' (summary)      once per job, after the DB row is updated
+// Listeners must not throw.
 const events = new EventEmitter()
+
+// Optional reader for log lines of jobs no longer in memory (persisted logs).
+let logReader = null
+
+/**
+ * Register a function returning the stored log lines of a finished job.
+ * @param {(id: string) => Array<{type: string, text: string, ts: number}>} fn
+ */
+function setLogReader(fn) {
+  logReader = fn
+}
+
+function storedLines(id) {
+  if (!logReader) return []
+  try {
+    return logReader(id) || []
+  } catch {
+    return []
+  }
+}
 
 function init() {
   migrate('jobs-001-table', `
@@ -58,6 +81,7 @@ function startJob(type, meta, work, opts = {}) {
         const line = { type: stream, text: l, ts: Date.now() }
         if (job.lines.length < MAX_LOG_LINES) job.lines.push(line)
         job.emitter.emit('line', line)
+        events.emit('line', id, line)
       })
     },
   }
@@ -84,6 +108,7 @@ function finish(job, exitCode, error) {
   const line = { type: 'done', text: `Process exited with code ${exitCode}`, ts: Date.now() }
   job.lines.push(line)
   job.emitter.emit('line', line)
+  events.emit('line', job.id, line)
   job.emitter.emit('done', exitCode)
   getDb().prepare(
     'UPDATE jobs SET status = ?, exit_code = ?, error = ?, finished_at = ?, meta = ? WHERE id = ?'
@@ -157,7 +182,7 @@ function getJob(id) {
   const j = live.get(id)
   if (j) return { ...publicJob(j), lines: j.lines }
   const row = getDb().prepare('SELECT * FROM jobs WHERE id = ?').get(id)
-  return row ? { ...rowToJob(row), lines: [] } : null
+  return row ? { ...rowToJob(row), lines: storedLines(id) } : null
 }
 
 function listJobs({ limit = 50, offset = 0, type, status } = {}) {
@@ -170,4 +195,4 @@ function listJobs({ limit = 50, offset = 0, type, status } = {}) {
   return getDb().prepare(sql).all(...params, limit, offset).map(rowToJob)
 }
 
-module.exports = { init, startJob, runCommand, getJob, getLiveJob, listJobs, events }
+module.exports = { init, startJob, runCommand, getJob, getLiveJob, listJobs, setLogReader, events }

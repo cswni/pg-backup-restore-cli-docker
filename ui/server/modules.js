@@ -17,4 +17,5 @@ module.exports = [
   require('./routes/uploads'),
   require('./routes/jobs'),
   require('./scheduler'),
+  require('./monitoring'),
 ]
