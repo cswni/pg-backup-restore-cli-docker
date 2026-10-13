@@ -76,6 +76,9 @@ docker run --rm \
 
 ## Commands
 
+The CLI commands below are **PostgreSQL-only**. MySQL / MariaDB and MongoDB are
+supported through the Web UI (see [MySQL / MariaDB and MongoDB](#mysql--mariadb-and-mongodb)).
+
 ### export
 Dump a database to `/backups/<name>_<DD-MM-YYYY_HH_MM_SS>.sql`.
 `-n <name>` is optional and defaults to the database name. Restore uses the file
@@ -269,7 +272,8 @@ over the SSH connection.
 
 ### Direct database connections
 
-**Servers → Add server → Direct database**: engine (PostgreSQL), host, port,
+**Servers → Add server → Direct database**: engine (PostgreSQL, MySQL / MariaDB
+or MongoDB — see [below](#mysql--mariadb-and-mongodb)), host, port,
 username, password, maintenance database (default `postgres`, used for
 `CREATE/DROP DATABASE`) and `sslmode` (`disable`, `prefer`, `require`,
 `verify-full`). The user needs `CREATEDB` (and ownership or superuser rights to
@@ -320,6 +324,97 @@ fingerprint (`SHA256:…`) is shown on the Servers page — compare it with
 `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the host. If the host was
 legitimately reinstalled, use **Forget host key** (or change the server's host,
 which forgets it automatically) and test again to trust the new key.
+
+---
+
+## MySQL / MariaDB and MongoDB
+
+The **Web UI** (not the bash CLI, which stays PostgreSQL-only) also backs up and
+restores MySQL / MariaDB and MongoDB, both in Docker containers and on direct
+servers (optionally through an SSH tunnel). Pick the engine when adding a direct
+server (default ports 3306 / 27017); containers are detected by image:
+
+| Engine | Images detected | Raw backup file | Operations |
+|---|---|---|---|
+| MySQL / MariaDB | `mysql`, `mariadb`, `percona` (any name containing them) | `.sql` | export, restore, create, delete, unblock |
+| MongoDB | `mongo` (any name containing it, e.g. `mongo`, `bitnami/mongodb`) | `.archive` | export, restore, delete |
+
+Operations a driver does not support are hidden (MongoDB has no `CREATE
+DATABASE` — a database exists once it holds data — and no per-database
+connection kill). Restore dialogs only offer backups / targets of a matching
+engine: the catalog engine is used when known, uploads are inferred from the
+extension (`.archive` → MongoDB; a `.sql` of unknown origin can go to PostgreSQL
+or MySQL — pick the right target).
+
+**Rename semantics** (restore a dump of `shop` as `shop_qa`):
+
+- *MySQL*: exports dump ONE database **without** `--databases`
+  (`mysqldump --single-transaction --quick --routines --triggers --events
+  --hex-blob --no-tablespaces --default-character-set=utf8mb4 <db>`), so the file
+  has no `CREATE DATABASE` / `USE`. A restore creates the target if missing and
+  pipes the file into `mysql <target>`. Top-level `CREATE DATABASE …;` / `` USE `x`; ``
+  lines (dumps made elsewhere with `--databases`) and the MariaDB 11
+  sandbox-mode marker are stripped on the fly; a dump with **several** databases
+  is refused.
+- *MongoDB*: exports are `mongodump --archive --db <db>`. A restore reads the
+  source database name from the archive's own prelude (so uploads without a
+  catalog row work, including `mongodump --gzip --archive` files) and runs
+  `mongorestore --archive --nsInclude '<src>.*' --nsFrom '<src>.*' --nsTo
+  '<target>.*' --stopOnError`. Archives with several databases are refused.
+
+Like PostgreSQL: *Drop target database* drops the target first; without it a
+restore into an existing database that has tables (MySQL) / collections
+(MongoDB) is refused; a tool exiting non-zero, any `ERROR …` line from `mysql`, or
+`N document(s) failed to restore` fails the job, and partial export files are
+removed.
+
+**Credentials for containers** are read inside the container from the official
+images' environment — never passed on a command line:
+
+- MySQL / MariaDB / Percona: user `root`, password from `MARIADB_ROOT_PASSWORD` or
+  `MYSQL_ROOT_PASSWORD` (or the `*_FILE` variants). They are written to a
+  `mktemp` option file (`--defaults-extra-file`, removed afterwards). Both the
+  `mariadb`/`mariadb-dump` and `mysql`/`mysqldump` tool names are supported.
+  `MYSQL_RANDOM_ROOT_PASSWORD` / `MARIADB_ROOT_PASSWORD_HASH` setups cannot be
+  discovered.
+- MongoDB: `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` (or
+  `*_FILE`), authSource `admin`; no authentication when unset. The password
+  reaches mongodump/mongorestore via a `mktemp` `--config` YAML file and mongosh
+  via its environment. Listing / dropping databases uses the container's
+  `mongosh` (MongoDB **6.0+** images); mongod must listen on the default port 27017.
+
+**Direct servers** use the tools in this image: `mariadb` / `mariadb-dump`
+(MariaDB client, works against MySQL 5.7+/8.x and MariaDB) with user and password
+in a private option file (mode `0600`, deleted afterwards) and `--sandbox` for
+restores (shell meta-commands such as `\!` in a dump are refused);
+`mongodump` / `mongorestore` (mongodb-tools) with the connection string in a
+private `--config` YAML file. MongoDB listing / dropping / connection tests use
+the official Node.js driver (`mongodb` npm package), because `mongosh` is not in
+the image; *Test* reports the server version and the `mongodump` version.
+The maintenance-database field is the MongoDB auth database (default `admin`;
+unused for MySQL). Connections use `directConnection=true`, so point a MongoDB
+server at the **primary**. `sslmode` maps to `--skip-ssl` (disable),
+unverified TLS when offered (prefer), `--ssl --skip-ssl-verify-server-cert` /
+`tls=true&tlsInsecure=true` (require) and full verification (verify-full);
+MongoDB has no opportunistic TLS, so `prefer` connects without TLS.
+`verify-full` through an SSH tunnel is not supported for these engines (the
+tools cannot verify the real host name over `127.0.0.1`) — use `require`.
+
+**Required privileges**: MySQL export — `SELECT`, `SHOW VIEW`, `TRIGGER`,
+`EVENT`, `LOCK TABLES` (and `PROCESS` is avoided via `--no-tablespaces`);
+restore/create/delete — `CREATE`, `DROP`, `ALTER`, `INSERT`, `CREATE ROUTINE`,
+`EVENT`, `TRIGGER` and, for routines/views with a `DEFINER` other than the
+restoring user, `SET_USER_ID`/`SUPER`; unblock — `CONNECTION_ADMIN`/`PROCESS`
+(or `SUPER`). MongoDB: `backup` for exports, `restore` + `dropDatabase` on the
+target for restores/deletes, `listDatabases` for listing (e.g. the built-in
+`backup`, `restore` and `readAnyDatabase` roles, or `root`).
+
+**Limitations**: MySQL users and grants are **not** part of a single-database
+dump (re-create them on the target); dumps from a GTID-enabled MySQL server may
+contain `SET @@GLOBAL.GTID_PURGED`, which can fail on a target with its own GTID
+history; MongoDB exports do not include users/roles (`--dumpDbUsersAndRoles` is
+not used); scheduled backups, compression, encryption and remote copies work the
+same for all engines.
 
 ---
 

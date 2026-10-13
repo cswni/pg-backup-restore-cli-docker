@@ -34,6 +34,7 @@ export default function ServerDatabases() {
           />
           <DatabaseWorkspace
             target={{ serverId: server.id, engine: server.engine }}
+            kind="direct"
             targetLabel={`${server.name} (${server.host}:${server.port})`}
             databases={databases}
             emptyDescription="The configured user cannot see any databases on this server."

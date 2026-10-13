@@ -43,7 +43,7 @@ function DatabaseField({ op, databases, db, setDb, customDb, setCustomDb, exists
   )
 }
 
-function ExportNameField({ db, outputName, setOutputName, storageOptions }) {
+function ExportNameField({ db, outputName, setOutputName, storageOptions, fileExtension }) {
   return (
     <div>
       <label className={LABEL_CLASS}>
@@ -51,7 +51,7 @@ function ExportNameField({ db, outputName, setOutputName, storageOptions }) {
       </label>
       <DbNameInput id="op-export-name" value={outputName} onChange={setOutputName} placeholder={db || 'e.g. premas_qa'} />
       <p className="text-xs text-zinc-500 mt-1 font-mono">
-        → {(outputName || db || '<name>')}_DD-MM-YYYY_HH_MM_SS{exportSuffix(storageOptions)}
+        → {(outputName || db || '<name>')}_DD-MM-YYYY_HH_MM_SS{exportSuffix(storageOptions, fileExtension)}
       </p>
     </div>
   )
@@ -77,8 +77,9 @@ function DangerConfirm({ db, confirm, setConfirm }) {
 /**
  * Dialog for one operation. `targetLabel` describes where it runs (container
  * or server); `onRun(opId, params)` receives { database, file, outputName, options, dropExisting }.
+ * `fileExtension` is the raw dump extension of the target's engine ('.sql', '.archive').
  */
-export default function OperationModal({ op, targetLabel, databases, presetDb, backups, onClose, onRun }) {
+export default function OperationModal({ op, targetLabel, databases, presetDb, backups, fileExtension = '.sql', onClose, onRun }) {
   const [db, setDb] = useState(presetDb || '')
   const [customDb, setCustomDb] = useState(presetDb || '')
   const [file, setFile] = useState('')
@@ -142,7 +143,10 @@ export default function OperationModal({ op, targetLabel, databases, presetDb, b
               customDb={customDb} setCustomDb={setCustomDb} exists={exists} />
           </div>
 
-          {isExport && <ExportNameField db={db} outputName={outputName} setOutputName={setOutputName} storageOptions={storageOptions} />}
+          {isExport && (
+            <ExportNameField db={db} outputName={outputName} setOutputName={setOutputName}
+              storageOptions={storageOptions} fileExtension={fileExtension} />
+          )}
 
           {/* Export: compression / encryption / cloud copies */}
           {isExport && isAdmin && <ExportStorageOptions onChange={setStorageOptions} />}

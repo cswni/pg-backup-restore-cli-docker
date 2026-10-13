@@ -11,6 +11,8 @@ const DB_USER_RE = /^[^\s\x00-\x1f\x7f]{1,128}$/
 const NAME_RE = /^[^\x00-\x1f\x7f]{1,64}$/
 const SSL_MODES = ['disable', 'prefer', 'require', 'verify-full']
 const DEFAULT_PORTS = { postgres: 5432, mysql: 3306, mariadb: 3306, mongodb: 27017 }
+// PostgreSQL: database for admin statements; MySQL: unused; MongoDB: authSource
+const DEFAULT_DATABASES = { postgres: 'postgres', mysql: 'mysql', mongodb: 'admin' }
 const MAX_KEY_LENGTH = 16 * 1024
 
 function str(value) {
@@ -82,7 +84,7 @@ function dockerRecord(body, existing) {
 function directRecord(body, existing, engines) {
   const engine = str(body.engine) || existing?.engine || 'postgres'
   if (!engines.includes(engine)) throw httpError(400, `Unsupported engine: ${engine}`)
-  const database = str(body.database) || 'postgres'
+  const database = str(body.database) || DEFAULT_DATABASES[engine] || 'postgres'
   if (!isValidDbName(database)) throw httpError(400, `Invalid database name: ${database}`)
   const sslmode = str(body.sslmode) || 'prefer'
   if (!SSL_MODES.includes(sslmode)) throw httpError(400, `Invalid sslmode: ${sslmode}`)

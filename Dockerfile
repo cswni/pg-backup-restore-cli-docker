@@ -21,11 +21,15 @@ RUN rm -rf node_modules && pnpm install --frozen-lockfile --prod
 FROM alpine:3.24
 
 # Install bash, curl, docker CLI, OpenSSH client (remote Docker hosts and
-# SSH tunnels), postgresql-client, and Node.js
+# SSH tunnels), the PostgreSQL / MariaDB clients and MongoDB database tools
+# (direct database servers), and Node.js. mongodb-tools comes from the
+# community repository, which the alpine image enables by default.
 RUN apk add --no-cache \
     bash \
     curl \
     docker-cli \
+    mariadb-client \
+    mongodb-tools \
     nodejs \
     openssh-client-default \
     postgresql18-client

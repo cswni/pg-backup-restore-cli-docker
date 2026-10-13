@@ -4,6 +4,13 @@ import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { PageHeader, Button } from '../components/UI'
 import DatabaseWorkspace from '../components/ops/DatabaseWorkspace'
+import { EngineBadge } from '../components/servers/ServerBits'
+
+const EMPTY_HINTS = {
+  postgres: "This may not be a PostgreSQL container, or the user 'postgres' has no accessible databases.",
+  mysql: 'No user databases found. Credentials are read from MYSQL_ROOT_PASSWORD / MARIADB_ROOT_PASSWORD in the container.',
+  mongodb: 'No user databases found (empty databases do not exist in MongoDB). Credentials are read from MONGO_INITDB_ROOT_USERNAME / _PASSWORD.',
+}
 
 // /containers/:name?server=<id>&engine=<engine>  (server defaults to local)
 export default function ContainerDetail() {
@@ -29,14 +36,20 @@ export default function ContainerDetail() {
       </div>
       <PageHeader
         title={containerName}
-        subtitle={`Container on ${serverName} · select a database and run an operation`}
+        subtitle={
+          <span className="inline-flex items-center gap-2">
+            <EngineBadge engine={engine} />
+            <span>Container on {serverName} · select a database and run an operation</span>
+          </span>
+        }
         action={<Button variant="secondary" size="sm" onClick={databases.reload}>↻ Refresh</Button>}
       />
       <DatabaseWorkspace
         target={{ serverId, engine, container: containerName }}
+        kind="docker"
         targetLabel={`${serverName} / ${containerName}`}
         databases={databases}
-        emptyDescription="This may not be a PostgreSQL container, or the user 'postgres' has no accessible databases."
+        emptyDescription={EMPTY_HINTS[engine] || EMPTY_HINTS.postgres}
       />
     </div>
   )

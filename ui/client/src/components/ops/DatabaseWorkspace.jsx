@@ -4,6 +4,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { Card, Spinner, ErrorAlert, EmptyState } from '../UI'
+import { useEngines, engineInfo, isCompatibleBackup } from '../../lib/engines'
 import OperationModal, { OPERATIONS } from './OperationModal'
 
 function Toast({ toast }) {
@@ -20,8 +21,8 @@ function Toast({ toast }) {
 }
 
 /** Restores and schema changes are admin-only (the API enforces it too). */
-function visibleOperations(isAdmin) {
-  return isAdmin ? OPERATIONS : OPERATIONS.filter((op) => op.id === 'export')
+function visibleOperations(operations, isAdmin) {
+  return isAdmin ? operations : operations.filter((op) => op.id === 'export')
 }
 
 function OperationGrid({ operations, onSelect }) {
@@ -79,15 +80,21 @@ function DatabaseRow({ db, operations, onSelect }) {
  * @param {string} props.targetLabel   shown in the dialog
  * @param {{ data: string[]|null, loading: boolean, error: string|null, reload: Function }} props.databases
  * @param {string} props.emptyDescription
+ * @param {string} props.kind  server kind ('docker' | 'direct'), selects the driver capabilities
  */
-export default function DatabaseWorkspace({ target, targetLabel, databases, emptyDescription }) {
+export default function DatabaseWorkspace({ target, targetLabel, databases, emptyDescription, kind }) {
   const navigate = useNavigate()
-  const { data: backups } = useFetch(api.backups.list)
+  const { data: allBackups } = useFetch(api.backups.list)
+  const engines = useEngines()
   const { isAdmin } = useAuth()
-  const operations = visibleOperations(isAdmin)
   const [activeOp, setActiveOp] = useState(null)
   const [toast, setToast] = useState(null)
   const { data: dbs, loading, error, reload } = databases
+
+  // Only what this engine's driver supports, and only backups it can restore
+  const { operations: supported, fileExtension } = engineInfo(engines, target.engine, kind)
+  const operations = visibleOperations(OPERATIONS.filter((op) => supported.includes(op.id)), isAdmin)
+  const backups = (allBackups || []).filter((b) => isCompatibleBackup(b.name, b.engine, target.engine))
 
   async function handleRun(operation, params) {
     try {
@@ -134,6 +141,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
           databases={modalDatabases}
           presetDb={activeOp.presetDb}
           backups={backups}
+          fileExtension={fileExtension}
           onClose={() => setActiveOp(null)}
           onRun={handleRun}
         />
