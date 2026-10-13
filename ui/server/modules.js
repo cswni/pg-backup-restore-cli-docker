@@ -16,4 +16,5 @@ module.exports = [
   require('./routes/ops'),
   require('./routes/uploads'),
   require('./routes/jobs'),
+  require('./storage'),
 ]
