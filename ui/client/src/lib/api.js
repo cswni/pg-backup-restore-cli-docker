@@ -125,6 +125,14 @@ export const api = {
   },
   servers: {
     list: () => req('GET', '/api/servers'),
+    get: (id) => req('GET', `/api/servers/${encodeURIComponent(id)}`),
+    create: (server) => req('POST', '/api/servers', server),
+    // Empty secret fields (privateKey, password) keep the stored values
+    update: (id, server) => req('PUT', `/api/servers/${encodeURIComponent(id)}`, server),
+    remove: (id) => req('DELETE', `/api/servers/${encodeURIComponent(id)}`),
+    test: (id) => req('POST', `/api/servers/${encodeURIComponent(id)}/test`),
+    forgetHostKey: (id) => req('DELETE', `/api/servers/${encodeURIComponent(id)}/host-key`),
+    databases: (id) => req('GET', `/api/servers/${encodeURIComponent(id)}/databases`),
   },
   engines: {
     list: () => req('GET', '/api/engines'),

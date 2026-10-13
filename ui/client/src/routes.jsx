@@ -5,6 +5,8 @@ import Backups from './pages/Backups'
 import JobLog from './pages/JobLog'
 import Users from './pages/Users'
 import Profile from './pages/Profile'
+import Servers from './pages/Servers'
+import ServerDatabases from './pages/ServerDatabases'
 
 // Page registry used by App (routes) and Layout (sidebar).
 //   path     — react-router path
@@ -18,6 +20,8 @@ export const routes = [
   { path: '/containers', element: <Containers />, nav: { label: 'Containers', icon: '🐳' } },
   { path: '/containers/:name', element: <ContainerDetail /> },
   { path: '/backups', element: <Backups />, nav: { label: 'Backups', icon: '🗄️' } },
+  { path: '/servers', element: <Servers />, nav: { label: 'Servers', icon: '🖧' } },
+  { path: '/servers/:id/databases', element: <ServerDatabases /> },
   { path: '/jobs/:jobId', element: <JobLog /> },
   { path: '/users', element: <Users />, nav: { label: 'Users', icon: '👥' }, adminOnly: true },
   { path: '/profile', element: <Profile /> },

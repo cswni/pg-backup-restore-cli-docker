@@ -217,6 +217,102 @@ For local development run the server with credentials (or
 
 ---
 
+## Remote servers & SSH tunnels
+
+Besides the Docker socket of the host it runs on (**Local Docker**, always
+present), the Web UI can back up and restore databases on other machines.
+Add them on the **Servers** page (admins only; every user can see the list).
+There are two kinds:
+
+| Kind | How it connects | Where the tools run |
+|------|-----------------|---------------------|
+| **Docker host over SSH** | `DOCKER_HOST=ssh://…` — the same container workflow as the local socket | `docker exec` inside the remote containers (the bash scripts) |
+| **Direct database** | TCP to `host:port` with a username/password, optionally through an SSH tunnel | `psql` / `pg_dump` inside this image (`postgresql18-client`) |
+
+Credentials (private keys, database passwords) are stored encrypted (AES-256-GCM,
+key from `APP_SECRET` or `DATA_DIR/secret.key`) and are never sent back to the
+browser — the UI only shows "•••• configured". When editing a server, leave a
+secret field empty to keep the stored value. Deleting a server keeps every
+backup that was made from it. Use **⚡ Test** on a server to check connectivity
+(latency and server version, or a readable error).
+
+### Adding a remote Docker host
+
+1. On the remote host, create (or reuse) a user that can run `docker` without
+   sudo (member of the `docker` group). The docker CLI must be installed there:
+   the connection runs `docker system dial-stdio` over SSH.
+2. Generate a dedicated, **unencrypted** deploy key (passphrase-protected keys
+   are rejected because SSH runs non-interactively):
+
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C pg-backup-ui -f pgui_deploy
+   ssh-copy-id -i pgui_deploy.pub deploy@docker.example.com   # or append it to ~/.ssh/authorized_keys
+   ```
+
+3. In the UI: **Servers → Add server → Docker host over SSH**, enter host, port
+   (22), user and paste the contents of `pgui_deploy` (the private key).
+4. Pick the server in the selector on the **Containers** page; export, restore,
+   create, delete and unblock work exactly as for local containers.
+
+Backups are always written to this container's `/backups` volume; dumps stream
+over the SSH connection.
+
+### Direct database connections
+
+**Servers → Add server → Direct database**: engine (PostgreSQL), host, port,
+username, password, maintenance database (default `postgres`, used for
+`CREATE/DROP DATABASE`) and `sslmode` (`disable`, `prefer`, `require`,
+`verify-full`). The user needs `CREATEDB` (and ownership or superuser rights to
+drop databases / terminate connections), e.g. a managed-database admin user.
+
+The server's databases are listed under **Servers → Databases →**, with the same
+operations as a container. Semantics match the CLI scripts: dumps are
+`pg_dump -C`, restores are retargeted to the chosen database name (the shared
+`scripts/pg-retarget.awk`), the target is created if missing, *Drop target*
+drops it `WITH (FORCE)` first, a restore into an existing database with tables is
+refused, and any `ERROR:` reported by `psql` fails the job. Passwords are passed
+through `PGPASSWORD`, never on the command line.
+
+### SSH tunnels
+
+Enable **Connect through an SSH tunnel** on a direct server for databases that
+are only reachable from a bastion/jump host (private subnets, VPCs). For each
+operation the UI runs
+`ssh -N -L 127.0.0.1:<free port>:<db host>:<db port> <bastion>` with
+`ExitOnForwardFailure=yes`, waits until the local port accepts connections,
+runs the tools against it and always closes the tunnel afterwards (also on
+errors). The database host is resolved **from the bastion**, so internal names
+such as `db.internal` work. With `sslmode=verify-full` the certificate is still
+checked against the real database host name. The bastion needs
+`AllowTcpForwarding yes`; the key setup is the same as for Docker hosts (the
+bastion user does not need Docker).
+
+### How SSH is configured (and the host-key trust model)
+
+The UI manages its own OpenSSH configuration in `DATA_DIR/ssh/` (default
+`/backups/.pgui/ssh/`) and never touches `~/.ssh`:
+
+- `config` — one `Host pgui-<id>` block per server (HostName, Port, User,
+  `IdentityFile`, `IdentitiesOnly yes`, `BatchMode yes`, `ServerAliveInterval`),
+  regenerated whenever servers change.
+- `<id>.key` — each server's private key (mode `0600`), written from the
+  encrypted database copy.
+- `known_hosts` — trusted host keys.
+- `bin/ssh` — a wrapper that runs the system `ssh` with `-F DATA_DIR/ssh/config`.
+  The docker CLI has no option to pass ssh flags, so docker/script processes for
+  a remote host get `DOCKER_HOST=ssh://pgui-<id>` and this directory first on
+  `PATH`. Keep `DATA_DIR` on a filesystem that allows executables (not `noexec`).
+
+Host keys use **trust on first use** (`StrictHostKeyChecking accept-new`): the
+first successful connection records the host's key, and later connections fail
+if the key changes (possible man-in-the-middle). Each server's stored
+fingerprint (`SHA256:…`) is shown on the Servers page — compare it with
+`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the host. If the host was
+legitimately reinstalled, use **Forget host key** (or change the server's host,
+which forgets it automatically) and test again to trust the new key.
+
+---
+
 ## Docker Compose Usage
 
 Run `pg-backup` side by side with your PostgreSQL container using a shared network.

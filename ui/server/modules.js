@@ -12,6 +12,7 @@ module.exports = [
   require('./catalog'),
   require('./settings'),
   require('./users'),
+  require('./connectivity'),
   require('./routes/containers'),
   require('./routes/backups'),
   require('./routes/ops'),
