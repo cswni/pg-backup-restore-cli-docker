@@ -1,183 +1,164 @@
-# pg-backup: database backup and restore Docker image
+# PG Backup & Restore
 
-An Alpine-based Docker image with two parts:
+A Docker image (`pg-backup-restore-cli`) with two parts:
 
 - A **web UI** (the default `serve` command) that backs up and restores
   PostgreSQL, MySQL / MariaDB and MongoDB databases, in Docker containers or on
-  remote servers, with schedules, storage destinations and monitoring.
-- A **bash CLI** (`export`, `restore`, `unblock`, `delete`, `create`) for
-  PostgreSQL only, for scripts and CI/CD pipelines.
+  remote servers, with schedules, remote destinations and monitoring.
+- A **bash CLI** (`pg-backup export`, `restore`, `unblock`, `delete`, `create`)
+  for PostgreSQL only, for scripts and CI/CD pipelines.
 
----
-
-## Prerequisites: Docker Hub Authentication
-
-All `docker pull` / `docker push` operations require a valid Docker Hub session.
-If you see:
-
-```
-Error response from daemon: Head "https://registry-1.docker.io/v2/cswni/pg-backup/manifests/latest":
-unauthorized: personal access token is expired
-```
-
-your token has expired. Follow these steps to re-authenticate:
-
-### 1. Create a new Personal Access Token (PAT)
-
-1. Log in to [hub.docker.com](https://hub.docker.com).
-2. Go to **Account Settings → Security → Personal Access Tokens**.
-3. Click **Generate new token**, give it a description (e.g. `pg-backup-ci`), choose **Read & Write** scope, and click **Generate**.
-4. **Copy the token now**. It will not be shown again.
-
-### 2. Log in from the CLI
-
-```bash
-docker login -u <your-dockerhub-username>
-# Paste the new PAT when prompted for the password
-```
-
-Or pass the token directly (useful for CI/CD):
-
-```bash
-echo "<your-pat>" | docker login -u <your-dockerhub-username> --password-stdin
-```
-
-### 3. Verify
-
-```bash
-docker pull cswni/pg-backup:latest
-```
-
----
-
-## Build
-
-```bash
-docker build -t cswni/pg-backup:latest .
-```
-
-## Push
-
-```bash
-docker push cswni/pg-backup:latest
-```
+The image is published as `ghcr.io/cswni/pg-backup-restore-cli` and
+`cswni/pg-backup-restore-cli` (Docker Hub).
 
 ---
 
 ## Usage
 
-Mount the Docker socket so the container can talk to other containers,
-and mount a host directory to `/backups` to persist dump files.
+### Web UI
+
+Mount the Docker socket so the UI can reach database containers, and a host
+directory on `/backups` so backups (and the app's own data in
+`/backups/.pgui`) persist:
+
+```bash
+docker run -d --name pg-backup -p 3000:3000 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd)/backups:/backups \
+  -e BASIC_AUTH_USER=admin \
+  -e BASIC_AUTH_PASSWORD='<at least 10 characters>' \
+  -e APP_SECRET='<long random string>' \
+  ghcr.io/cswni/pg-backup-restore-cli:latest
+```
+
+Open `http://localhost:3000` and sign in as `admin`. The two `BASIC_AUTH_*`
+variables only create the first admin (see [Web UI authentication](#web-ui-authentication));
+`APP_SECRET` encrypts stored credentials (see [Backup storage](#backup-storage-compression-encryption-remote-copies-retention)).
+
+With Docker Compose:
+
+```yaml
+# docker-compose.yml
+services:
+  pg-backup:
+    image: ghcr.io/cswni/pg-backup-restore-cli:latest
+    command: serve
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backups:/backups
+    environment:
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-admin}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:?BASIC_AUTH_PASSWORD must be set}
+      APP_SECRET: ${APP_SECRET:?APP_SECRET must be set}
+      PUBLIC_URL: ${PUBLIC_URL:-}   # external https URL, needed for Google Drive
+      TZ: ${TZ:-UTC}                # default timezone for new schedules
+```
+
+The repository's `docker-compose.yml` is a Swarm stack behind Traefik. On
+Swarm the Docker socket is only the one of the node the task runs on, so pin
+the service to a node with a placement constraint.
+
+### CLI (PostgreSQL only)
 
 ```bash
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(pwd)/backups:/backups \
-  cswni/pg-backup <command> [options]
+  ghcr.io/cswni/pg-backup-restore-cli <command> [options]
 ```
 
----
+Inside a running container (for example the web UI one) the same commands are
+available as `pg-backup <command>`:
 
-## Commands
+```bash
+docker exec pg-backup pg-backup export -c postgres -d your_db
+docker compose exec pg-backup pg-backup restore -c postgres -d your_db -x
+```
 
-The CLI commands below are **PostgreSQL-only**. MySQL / MariaDB and MongoDB are
-supported through the Web UI (see [MySQL / MariaDB and MongoDB](#mysql--mariadb-and-mongodb)).
+MySQL / MariaDB and MongoDB are handled by the web UI only (see
+[MySQL / MariaDB and MongoDB](#mysql--mariadb-and-mongodb)).
 
-### export
-Dump a database to `/backups/<name>_<DD-MM-YYYY_HH_MM_SS>.sql`.
-`-n <name>` is optional and defaults to the database name. Restore uses the file
-name prefix as the default target database, so `-d premas -n premas_qa` produces
-a dump that restores as `premas_qa` by default.
+#### export
+
+Back up a database to `/backups/<name>_<DD-MM-YYYY_HH_MM_SS>.sql` (a
+`pg_dump -C` dump). `-n <name>` is optional and defaults to the database name.
+Restore uses the file name prefix as the default target database, so
+`-d premas -n premas_qa` produces a backup that restores as `premas_qa`.
 
 ```bash
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(pwd)/backups:/backups \
-  cswni/pg-backup export -c <container> -d <database> [-n <name>]
+  ghcr.io/cswni/pg-backup-restore-cli export -c <container> -d <database> [-n <name>]
 ```
 
-### unblock
-Terminate all active connections to a database (useful before drop/restore).
+#### restore
 
-```bash
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  cswni/pg-backup unblock -c <container> -d <database>
-```
+Restore a database from a backup. `-f` is optional; without it the newest
+`<database>_*.sql` in `/work` or `/backups` is used.
 
-### delete
-Drop a database with `FORCE` (terminates remaining connections automatically).
-
-```bash
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  cswni/pg-backup delete -c <container> -d <database>
-```
-
-### create
-Create a new database.
-
-```bash
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  cswni/pg-backup create -c <container> -d <database>
-```
-
-### restore
-Restore a database from a dump file.  
-`-f` is optional. If omitted, the latest dump for that database is used.
-
-- `-d` is the **target** database. The dump is always restored into it, whatever
-  database it was exported from (e.g. a `premas` dump restored into `premas_qa`).
-  The target is created if it does not exist.
-- `-x` drops the target database (`WITH (FORCE)`) before restoring, so the restore
-  starts from an empty database instead of failing with "already exists" errors.
+- `-d` is the **target** database. The backup is always restored into it,
+  whatever database it was taken from (e.g. a `premas` backup restored into
+  `premas_qa`). The target is created if it does not exist.
+- `-x` drops the target database (`WITH (FORCE)`) first, so the restore starts
+  from an empty database. This replaces the old unblock, delete, create,
+  restore sequence.
 - Without `-x`, restoring into an existing database that already has tables is
   refused. The command exits non-zero if psql reports any SQL error.
 
 ```bash
-# Restore a dump of "premas" into "premas_qa", replacing it
+# Replace "premas_qa" with a backup of "premas"
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(pwd)/backups:/backups \
-  cswni/pg-backup restore -c <container> -d premas_qa -x -f premas_01-01-2025_12_00_00.sql
+  ghcr.io/cswni/pg-backup-restore-cli restore -c <container> -d premas_qa -x -f premas_01-01-2025_12_00_00.sql
 ```
 
-**File resolution order for `-f <file>`:**
+File resolution order for `-f <file>`:
+
 1. `/work/<file>`: mount your current directory with `-v $(pwd):/work`
-2. `/backups/<file>`: mount your backups dir with `-v /path/to/backups:/backups`
-3. `<file>` as-is: absolute path already inside the container
+2. `/backups/<file>`: mount your backups directory with `-v /path/to/backups:/backups`
+3. `<file>` as-is: an absolute path inside the container
+
+#### unblock, delete, create
 
 ```bash
-# Restore from a file in the CURRENT directory (most common for ad-hoc restores)
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $(pwd):/work \
-  cswni/pg-backup restore -c <container> -d <database> -f <file.sql>
-
-# Restore from the backups directory
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $(pwd)/backups:/backups \
-  cswni/pg-backup restore -c <container> -d <database> -f <file.sql>
-
-# Restore latest dump automatically (searches /work then /backups)
-docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $(pwd):/work \
-  cswni/pg-backup restore -c <container> -d <database>
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/cswni/pg-backup-restore-cli unblock -c <container> -d <database>   # terminate active connections
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/cswni/pg-backup-restore-cli delete -c <container> -d <database>    # DROP DATABASE ... WITH (FORCE)
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/cswni/pg-backup-restore-cli create -c <container> -d <database>    # CREATE DATABASE
 ```
+
+On Swarm, container names follow `<stack>_<service>.<task_number>.<task_id>`;
+use `docker ps --filter name=<stack>_postgres` on the node to find the exact name.
+
+---
+
+## Engines
+
+| Engine | Docker containers | Direct servers (tools in this image) | Backup file |
+|---|---|---|---|
+| PostgreSQL | the CLI scripts (`psql`, `pg_dump` inside the container) | `psql`, `pg_dump` | `.sql` |
+| MySQL / MariaDB | `mariadb` / `mariadb-dump` or `mysql` / `mysqldump` inside the container | `mariadb`, `mariadb-dump` | `.sql` |
+| MongoDB | `mongodump` / `mongorestore` and `mongosh` inside the container | `mongodump`, `mongorestore` and the Node.js driver | `.archive` |
+
+Web UI backups can be compressed (`.gz`) and encrypted (`.enc`), e.g.
+`shop_<ts>.archive.gz.enc`. The CLI writes plain `.sql` files.
 
 ---
 
 ## Web UI authentication
 
-The Web UI (`serve`, the default command) uses **user accounts** stored in its
-SQLite database (`$DATA_DIR/app.db`, by default `/backups/.pgui/app.db`, so it
-persists with the backups volume). Users sign in on a login page and get a
-session cookie (`pgui_session`: HttpOnly, SameSite=Lax, Secure over HTTPS,
-7-day sliding expiry). The page and its assets are public; every `/api`
-endpoint except login requires authentication.
+The web UI uses **user accounts** stored in its SQLite database
+(`$DATA_DIR/app.db`, by default `/backups/.pgui/app.db`, so it persists with the
+backups volume). Users sign in on a login page and get a session cookie
+(`pgui_session`: HttpOnly, SameSite=Lax, Secure over HTTPS, 7-day sliding
+expiry). The page and its assets are public; every `/api` endpoint except login
+requires authentication.
 
 **First admin (fail closed).** On startup, if there are no users yet, an admin is
 created from these variables; with no users and no credentials the server
@@ -204,8 +185,8 @@ hashes.
 | `user` | View, back up, upload, download and run schedules |
 
 Restores are admin-only on purpose: `psql` and `mysql` execute meta-commands
-embedded in a dump (e.g. `\!` runs a shell command), and this container has
-the Docker socket mounted. Only restore dumps you trust.
+embedded in a backup (e.g. `\!` runs a shell command), and this container has
+the Docker socket mounted. Only restore backups you trust.
 
 Disabling a user or resetting/changing a password signs that user out
 everywhere (the user who changes their own password stays signed in). The last
@@ -234,23 +215,23 @@ For local development run the server with credentials (or
 
 ---
 
-## Remote servers & SSH tunnels
+## Remote servers and SSH tunnels
 
 Besides the Docker socket of the host it runs on (**Local Docker**, always
-present), the Web UI can back up and restore databases on other machines.
+present), the web UI can back up and restore databases on other machines.
 Add them on the **Servers** page (admins only; every user can see the list).
 There are two kinds:
 
 | Kind | How it connects | Where the tools run |
 |------|-----------------|---------------------|
-| **Docker host over SSH** | `DOCKER_HOST=ssh://…`, the same container workflow as the local socket | `docker exec` inside the remote containers (the bash scripts) |
-| **Direct database** | TCP to `host:port` with a username/password, optionally through an SSH tunnel | `psql` / `pg_dump` inside this image (`postgresql18-client`) |
+| **Docker host over SSH** | `DOCKER_HOST=ssh://…`, the same container workflow as the local socket | `docker exec` inside the remote containers |
+| **Direct database** | TCP to `host:port` with a username/password, optionally through an SSH tunnel | inside this image: `psql` / `pg_dump`, `mariadb` / `mariadb-dump` or `mongodump` / `mongorestore` (see [Engines](#engines)) |
 
 Credentials (private keys, database passwords) are stored encrypted (AES-256-GCM,
 key from `APP_SECRET` or `DATA_DIR/secret.key`) and are never sent back to the
 browser: the UI only shows "•••• configured". When editing a server, leave a
 secret field empty to keep the stored value. Deleting a server keeps every
-backup that was made from it. Use **⚡ Test** on a server to check connectivity
+backup that was made from it. Use **Test** on a server to check connectivity
 (latency and server version, or a readable error).
 
 ### Adding a remote Docker host
@@ -268,7 +249,7 @@ backup that was made from it. Use **⚡ Test** on a server to check connectivity
 
 3. In the UI: **Servers → Add server → Docker host over SSH**, enter host, port
    (22), user and paste the contents of `pgui_deploy` (the private key).
-4. Pick the server in the selector on the **Containers** page; export, restore,
+4. Pick the server in the selector on the **Containers** page; back up, restore,
    create, delete and unblock work exactly as for local containers.
 
 Backups are always written to this container's `/backups` volume; dumps stream
@@ -280,12 +261,14 @@ over the SSH connection.
 or MongoDB, see [below](#mysql--mariadb-and-mongodb)), host, port,
 username, password, maintenance database (default `postgres`, used for
 `CREATE/DROP DATABASE`) and `sslmode` (`disable`, `prefer`, `require`,
-`verify-full`). The user needs `CREATEDB` (and ownership or superuser rights to
-drop databases / terminate connections), e.g. a managed-database admin user.
+`verify-full`). The PostgreSQL user needs `CREATEDB` (and ownership or superuser
+rights to drop databases / terminate connections), e.g. a managed-database admin
+user.
 
-The server's databases are listed under **Servers → Databases →**, with the same
-operations as a container. Semantics match the CLI scripts: dumps are
-`pg_dump -C`, restores are retargeted to the chosen database name (the shared
+Each direct server's databases are listed on its **Databases** page (the link on
+its card on the Servers page), with the same operations as a container. For
+PostgreSQL the semantics match the CLI scripts: dumps are `pg_dump -C`, restores
+are retargeted to the chosen database name (the shared
 `scripts/pg-retarget.awk`), the target is created if missing, *Drop target*
 drops it `WITH (FORCE)` first, a restore into an existing database with tables is
 refused, and any `ERROR:` reported by `psql` fails the job. Passwords are passed
@@ -333,34 +316,36 @@ which forgets it automatically) and test again to trust the new key.
 
 ## MySQL / MariaDB and MongoDB
 
-The **Web UI** (not the bash CLI, which stays PostgreSQL-only) also backs up and
+The **web UI** (not the bash CLI, which stays PostgreSQL-only) also backs up and
 restores MySQL / MariaDB and MongoDB, both in Docker containers and on direct
-servers (optionally through an SSH tunnel). Pick the engine when adding a direct
-server (default ports 3306 / 27017); containers are detected by image:
+servers (optionally through an SSH tunnel). Scheduled backups, compression,
+encryption and remote copies work the same as for PostgreSQL. Pick the engine
+when adding a direct server (default ports 3306 / 27017); containers are
+detected by image:
 
 | Engine | Images detected | Raw backup file | Operations |
 |---|---|---|---|
-| MySQL / MariaDB | `mysql`, `mariadb`, `percona` (any name containing them) | `.sql` | export, restore, create, delete, unblock |
-| MongoDB | `mongo` (any name containing it, e.g. `mongo`, `bitnami/mongodb`) | `.archive` | export, restore, delete |
+| MySQL / MariaDB | `mysql`, `mariadb`, `percona` (any name containing them) | `.sql` | back up, restore, create, delete, unblock |
+| MongoDB | `mongo` (any name containing it, e.g. `mongo`, `bitnami/mongodb`) | `.archive` | back up, restore, delete |
 
-Operations a driver does not support are hidden (MongoDB has no `CREATE
+Operations a driver does not support are hidden: MongoDB has no `CREATE
 DATABASE` (a database exists once it holds data) and no per-database
-connection kill). Restore dialogs only offer backups / targets of a matching
+connection kill. Restore dialogs only offer backups and targets of a matching
 engine: the catalog engine is used when known, uploads are inferred from the
 extension (`.archive` → MongoDB; a `.sql` of unknown origin can go to PostgreSQL
 or MySQL, so pick the right target).
 
-**Rename semantics** (restore a dump of `shop` as `shop_qa`):
+**Rename semantics** (restore a backup of `shop` as `shop_qa`):
 
-- *MySQL*: exports dump ONE database **without** `--databases`
-  (`mysqldump --single-transaction --quick --routines --triggers --events
-  --hex-blob --no-tablespaces --default-character-set=utf8mb4 <db>`), so the file
-  has no `CREATE DATABASE` / `USE`. A restore creates the target if missing and
-  pipes the file into `mysql <target>`. Top-level `CREATE DATABASE …;` / `` USE `x`; ``
-  lines (dumps made elsewhere with `--databases`) and the MariaDB 11
-  sandbox-mode marker are stripped on the fly; a dump with **several** databases
-  is refused.
-- *MongoDB*: exports are `mongodump --archive --db <db>`. A restore reads the
+- *MySQL*: backups dump one database **without** `--databases`
+  (`mariadb-dump` or `mysqldump` with `--single-transaction --quick --routines
+  --triggers --events --hex-blob --no-tablespaces --default-character-set=utf8mb4
+  <db>`), so the file has no `CREATE DATABASE` / `USE`. A restore creates the
+  target if missing and pipes the file into the client for `<target>`. Top-level
+  `CREATE DATABASE …;` / `` USE `x`; `` lines (dumps made elsewhere with
+  `--databases`) and the MariaDB 11 sandbox-mode marker are stripped on the fly;
+  a dump with **several** databases is refused.
+- *MongoDB*: backups are `mongodump --archive --db <db>`. A restore reads the
   source database name from the archive's own prelude (so uploads without a
   catalog row work, including `mongodump --gzip --archive` files) and runs
   `mongorestore --archive --nsInclude '<src>.*' --nsFrom '<src>.*' --nsTo
@@ -368,9 +353,9 @@ or MySQL, so pick the right target).
 
 Like PostgreSQL: *Drop target database* drops the target first; without it a
 restore into an existing database that has tables (MySQL) / collections
-(MongoDB) is refused; a tool exiting non-zero, any `ERROR …` line from `mysql`, or
-`N document(s) failed to restore` fails the job, and partial export files are
-removed.
+(MongoDB) is refused; a tool exiting non-zero, any `ERROR …` line from the MySQL
+client, or `N document(s) failed to restore` fails the job, and partial backup
+files are removed.
 
 **Credentials for containers** are read inside the container from the official
 images' environment, never passed on a command line:
@@ -404,21 +389,20 @@ MongoDB has no opportunistic TLS, so `prefer` connects without TLS.
 `verify-full` through an SSH tunnel is not supported for these engines (the
 tools cannot verify the real host name over `127.0.0.1`). Use `require`.
 
-**Required privileges**: MySQL export: `SELECT`, `SHOW VIEW`, `TRIGGER`,
-`EVENT`, `LOCK TABLES` (and `PROCESS` is avoided via `--no-tablespaces`);
+**Required privileges**: MySQL backup: `SELECT`, `SHOW VIEW`, `TRIGGER`,
+`EVENT`, `LOCK TABLES` (`PROCESS` is avoided via `--no-tablespaces`);
 restore/create/delete: `CREATE`, `DROP`, `ALTER`, `INSERT`, `CREATE ROUTINE`,
 `EVENT`, `TRIGGER` and, for routines/views with a `DEFINER` other than the
 restoring user, `SET_USER_ID`/`SUPER`; unblock: `CONNECTION_ADMIN`/`PROCESS`
-(or `SUPER`). MongoDB: `backup` for exports, `restore` + `dropDatabase` on the
+(or `SUPER`). MongoDB: `backup` to back up, `restore` + `dropDatabase` on the
 target for restores/deletes, `listDatabases` for listing (e.g. the built-in
 `backup`, `restore` and `readAnyDatabase` roles, or `root`).
 
 **Limitations**: MySQL users and grants are **not** part of a single-database
 dump (re-create them on the target); dumps from a GTID-enabled MySQL server may
 contain `SET @@GLOBAL.GTID_PURGED`, which can fail on a target with its own GTID
-history; MongoDB exports do not include users/roles (`--dumpDbUsersAndRoles` is
-not used); scheduled backups, compression, encryption and remote copies work the
-same for all engines.
+history; MongoDB backups do not include users/roles (`--dumpDbUsersAndRoles` is
+not used).
 
 ---
 
@@ -574,30 +558,30 @@ Server logs from the scheduler and monitoring modules are structured.
 
 ---
 
-## Backup storage: compression, encryption, cloud copies, retention
+## Backup storage: compression, encryption, remote copies, retention
 
-Configured in the Web UI under **Storage** (`/settings/storage`, admin only).
-Every Web UI export runs through this pipeline:
+Configured in the web UI under **Storage** (`/settings/storage`, admin only).
+Every web UI backup runs through this pipeline:
 
 ```
-pg_dump → db_<ts>.sql → gzip → db_<ts>.sql.gz → encrypt → db_<ts>.sql.gz.enc → upload → retention
+dump tool → db_<ts>.sql (.archive for MongoDB) → gzip → .sql.gz → encrypt → .sql.gz.enc → upload → retention
 ```
 
 Restores run the reverse automatically (download if the file is only remote →
 decrypt → decompress) using temporary files in `$DATA_DIR/tmp` that are deleted
-afterwards. Compression and encryption defaults can be overridden per export in
-the Export dialog, which also lets you pick the destinations to upload to.
+afterwards. Compression and encryption defaults can be overridden per backup in
+the backup dialog, which also lets you pick the remote destinations to upload to.
 
 | Variable | Description |
 |----------|-------------|
 | `BACKUP_ENCRYPTION_PASSPHRASE` | Encryption passphrase. When set it **overrides** the passphrase stored in the UI |
 | `PUBLIC_URL` | External URL of the UI, e.g. `https://backups.example.com`. Used to build the Google OAuth redirect URI. If unset it is derived from the request (`X-Forwarded-Proto`/`Host` behind a proxy) |
-| `APP_SECRET` | Key used to encrypt stored credentials (S3 keys, OAuth secrets/tokens, the passphrase). If unset a key is generated in `$DATA_DIR/secret.key`: back it up or set `APP_SECRET` |
+| `APP_SECRET` | Key used to encrypt stored credentials (database passwords, SSH keys, S3 keys, OAuth secrets/tokens, the passphrase). If unset a key is generated in `$DATA_DIR/secret.key`: back it up or set `APP_SECRET` |
 
 ### Compression
 
-Streaming gzip (`.sql.gz`), on by default at level 6 (1 = fastest … 9 = smallest).
-Uploaded `.sql.gz` files can be restored like plain dumps.
+Streaming gzip (`.gz`), on by default at level 6 (1 = fastest … 9 = smallest).
+Uploaded `.sql.gz` files can be restored like plain `.sql` backups.
 
 ### Encryption
 
@@ -617,14 +601,14 @@ File format (version 1):
 | 28 | 12 | AES-GCM nonce |
 | 40 | 16 | key check (lets a wrong passphrase fail immediately) |
 | 56 | … | ciphertext |
-| end − 16 | 16 | GCM authentication tag |
+| end - 16 | 16 | GCM authentication tag |
 
 The 56-byte header is authenticated together with the data, so any modification
 of the file is detected. On restore the file is decrypted to a temporary file
 which is only used after the authentication tag has verified. A single file is
 limited to 64 GiB (AES-GCM limit).
 
-> ⚠️ **Losing the passphrase makes encrypted backups unrecoverable.** Store it in
+> **Losing the passphrase makes encrypted backups unrecoverable.** Store it in
 > a password manager or vault, outside the backup server.
 
 **Changing the passphrase** only affects new backups. Replaced passphrases are
@@ -638,7 +622,7 @@ they were created. Keep a record of every passphrase you have used.
 `node_modules`. Inside the image:
 
 ```bash
-docker run --rm -it -v $(pwd)/backups:/backups --entrypoint node cswni/pg-backup \
+docker run --rm -it -v $(pwd)/backups:/backups --entrypoint node ghcr.io/cswni/pg-backup-restore-cli \
   /ui/server/storage/decrypt-cli.js --gunzip /backups/premas_01-10-2026_02_00_00.sql.gz.enc /backups/premas.sql
 ```
 
@@ -651,12 +635,12 @@ The output file is removed if the passphrase is wrong or the file was tampered w
 
 ### Remote destinations
 
-Add destinations under **Storage → Remote destinations**. Destinations marked
-*default* receive every backup unless the export selects destinations
+Add remote destinations under **Storage → Remote destinations**. Destinations
+marked *default* receive every backup unless the backup selects destinations
 explicitly. Each upload is recorded in the backup catalog; the Backups page shows
-☁ badges, and backups whose local file was deleted (e.g. by retention) stay
-listed as *remote only* and can still be restored (they are downloaded and their
-SHA-256 checksum is verified first).
+the remote copies of each backup, and backups whose local file was deleted (e.g.
+by retention) stay listed as *remote only* and can still be restored (they are
+downloaded and their SHA-256 checksum is verified first).
 
 If an upload fails, the job **fails by default** (the local backup is kept and
 catalogued, successful uploads are recorded). Switch *When an upload fails* to
@@ -673,8 +657,8 @@ uploads stream from disk.
 | Endpoint | empty for AWS · `https://<account>.r2.cloudflarestorage.com` · `https://s3.<region>.backblazeb2.com` · `https://s3.<region>.wasabisys.com` · `http://minio:9000` |
 | Region | `us-east-1` · `auto` for R2 |
 | Bucket / Prefix | `my-backups` / `postgres/prod/` |
-| Access key ID / Secret | an access key limited to that bucket (needs `PutObject`, `GetObject`, `DeleteObject`) |
-| Force path style | enable for MinIO and most self-hosted servers |
+| Access key ID / Secret access key | an access key limited to that bucket (needs `PutObject`, `GetObject`, `DeleteObject`) |
+| Force path-style URLs | enable for MinIO and most self-hosted servers |
 
 #### Google Drive (OAuth with your Google account)
 
@@ -690,8 +674,8 @@ Works with a normal Gmail account; files are uploaded with the
    `https://<your PUBLIC_URL>/api/storage/gdrive/oauth/callback`.
 4. Set `PUBLIC_URL` on the container to the URL you open the UI with (the
    redirect URI must match exactly).
-5. In **Storage → + Google Drive** paste the client ID and secret, optionally a
-   folder ID (the last part of the folder URL), and save.
+5. In **Storage → + Google Drive** paste the OAuth client ID and secret,
+   optionally a folder ID (the last part of the folder URL), and save.
 6. Click **Connect Google Drive**, sign in and allow access. You are redirected
    back to the Storage page; the refresh token is stored encrypted.
 
@@ -701,188 +685,58 @@ connecting again.
 ### Retention
 
 Policies: keep the **newest N** backups and/or backups **younger than D days**,
-for local files (Storage → Retention) and separately for each destination (in
-its form). Retention runs after every backup and once a day (and on demand with
-*Run retention now*); every deletion is written to the job log.
+for local files (Storage → Retention) and separately for each remote destination
+(in its form). Retention runs after every backup and once a day (and on demand
+with *Run retention now*); every deletion is written to the job log.
 
 - Policies apply per **group**: same server + container + source database.
 - A copy is deleted only if it is outside **every** configured rule.
 - The newest copy of each group in each place (local / each destination) and
   the backup just created are never deleted.
 - Deleting a local file keeps the catalog entry while remote copies exist.
-- Files without catalog metadata (uploads, CLI exports) are only touched when
+- Files without catalog metadata (uploads, CLI backups) are only touched when
   their `name_DD-MM-YYYY_HH_MM_SS` prefix matches exactly one group; anything
   else is left alone.
 
 ---
 
-## Docker Compose Usage
+## Maintainers
 
-Run `pg-backup` side by side with your PostgreSQL container using a shared network.
-The Docker socket is mounted so `pg-backup` can reach the `postgres` container by name.
+### Build and publish
 
-```yaml
-# docker-compose.yml
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: postgres
-    environment:
-      POSTGRES_USER: your_user
-      POSTGRES_PASSWORD: your_password
-      POSTGRES_DB: your_db
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - db_network
+Every push to `main` runs `.github/workflows/publish.yml`: unit tests and the
+frontend build, CLI and web UI integration tests against a PostgreSQL container,
+then a push to `ghcr.io/cswni/pg-backup-restore-cli` and
+`cswni/pg-backup-restore-cli` (tags `latest` and `sha-<commit>`).
 
-  pg-backup:
-    image: cswni/pg-backup:latest
-    container_name: pg-backup
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./backups:/backups
-      - .:/work                 # mounts compose project dir so any local .sql file is accessible
-    networks:
-      - db_network
-    # Keep the container alive so you can exec commands on demand
-    entrypoint: ["tail", "-f", "/dev/null"]
-    depends_on:
-      - postgres
-
-networks:
-  db_network:
-    driver: bridge
-
-volumes:
-  pgdata:
-```
-
-### Running commands via Compose
-
-The image includes a `pg-backup` command (a link to its entrypoint), so the CLI
-commands also run inside an already running container:
+Local build:
 
 ```bash
-# Export
-docker compose exec pg-backup pg-backup export -c postgres -d your_db
-
-# Restore from a file in the current directory (via /work mount)
-docker compose exec pg-backup pg-backup restore -c postgres -d your_db -f your_file.sql
-
-# Restore from the /backups directory
-docker compose exec pg-backup pg-backup restore -c postgres -d your_db -f your_db_01-01-2025_12_00_00.sql
-
-# Restore latest dump automatically (searches /work then /backups)
-docker compose exec pg-backup pg-backup restore -c postgres -d your_db
-
-# Full restore pipeline
-docker compose exec pg-backup pg-backup unblock -c postgres -d your_db
-docker compose exec pg-backup pg-backup delete  -c postgres -d your_db
-docker compose exec pg-backup pg-backup create  -c postgres -d your_db
-docker compose exec pg-backup pg-backup restore -c postgres -d your_db -f your_file.sql
+docker build -t pg-backup-restore-cli .
 ```
 
----
+### Docker Hub authentication
 
-## Docker Swarm Usage
+Pushing to Docker Hub (and pulling when rate-limited) needs a valid session. If
+you see:
 
-In Swarm mode the Docker socket is available on the manager node.
-Use an overlay network so all services can communicate across nodes.
-
-> **Note:** The Docker socket (`/var/run/docker.sock`) is only available on the
-> node where the task is scheduled. Pin `pg-backup` to the manager node with
-> a placement constraint so it can always reach the socket and other containers.
-
-```yaml
-# docker-compose.swarm.yml
-version: "3.9"
-
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: your_user
-      POSTGRES_PASSWORD: your_password
-      POSTGRES_DB: your_db
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - db_network
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints:
-          - node.role == manager
-
-  pg-backup:
-    image: cswni/pg-backup:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/backups:/backups        # host path on the manager node
-      - /opt/work:/work              # drop any .sql file here for ad-hoc restores
-    networks:
-      - db_network
-    entrypoint: ["tail", "-f", "/dev/null"]
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints:
-          - node.role == manager      # must run on the manager for socket access
-
-networks:
-  db_network:
-    driver: overlay
-    attachable: true                  # allows `docker run` / one-off tasks to join
-
-volumes:
-  pgdata:
-    driver: local
+```
+Error response from daemon: Head "https://registry-1.docker.io/v2/cswni/pg-backup-restore-cli/manifests/latest":
+unauthorized: personal access token is expired
 ```
 
-### Deploy to Swarm
+the personal access token (PAT) has expired:
 
-```bash
-docker stack deploy -c docker-compose.swarm.yml pg
-```
+1. Log in to [hub.docker.com](https://hub.docker.com), open **Account Settings →
+   Security → Personal Access Tokens** and click **Generate new token** (e.g.
+   `pg-backup-ci`, **Read & Write** scope). Copy it now; it is shown only once.
+2. Log in from the CLI and paste the token as the password:
 
-### Running commands in Swarm
+   ```bash
+   docker login -u <your-dockerhub-username>
+   # or, in CI:
+   echo "<your-pat>" | docker login -u <your-dockerhub-username> --password-stdin
+   ```
 
-```bash
-# Find the pg-backup task container ID on the manager node
-CONTAINER=$(docker ps --filter name=pg_pg-backup --format "{{.ID}}" | head -1)
-
-# Export
-docker exec "$CONTAINER" pg-backup export -c pg_postgres.<replica_id> -d your_db
-
-# Full restore pipeline
-docker exec "$CONTAINER" pg-backup unblock -c pg_postgres.<replica_id> -d your_db
-docker exec "$CONTAINER" pg-backup delete  -c pg_postgres.<replica_id> -d your_db
-docker exec "$CONTAINER" pg-backup create  -c pg_postgres.<replica_id> -d your_db
-docker exec "$CONTAINER" pg-backup restore -c pg_postgres.<replica_id> -d your_db
-```
-
-> **Tip:** In Swarm, container names follow the pattern `<stack>_<service>.<task_number>.<task_id>`.
-> Use `docker ps --filter name=pg_postgres` on the manager node to find the exact name.
-
----
-
-## Typical pipeline sequence (full restore)
-
-```bash
-# 1. Unblock existing connections
-docker run ... pg-backup unblock -c postgres_container -d my_db
-
-# 2. Drop the old database
-docker run ... pg-backup delete -c postgres_container -d my_db
-
-# 3. Create an empty database
-docker run ... pg-backup create -c postgres_container -d my_db
-
-# 4. Restore from the latest backup
-docker run ... pg-backup restore -c postgres_container -d my_db
-```
+3. Update the `DOCKERHUB_TOKEN` repository secret used by the publish workflow.
+4. Verify with `docker pull cswni/pg-backup-restore-cli:latest`.

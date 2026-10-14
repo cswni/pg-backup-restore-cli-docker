@@ -5,8 +5,8 @@ This note records why, and how it could be built later.
 
 ## Why the current tool can't do incrementals
 
-Every backup this tool makes is a **logical dump** (`pg_dump`, `mysqldump`,
-`mongodump`): a full, self-contained snapshot of one database as SQL/BSON.
+Every backup this tool makes is a **logical dump** (`pg_dump`, `mariadb-dump` /
+`mysqldump`, `mongodump`): a full, self-contained snapshot of one database as SQL/BSON.
 Logical dumps have no notion of "what changed since the last dump", so they
 can't be incremental. Compression (gzip) and retention already keep their
 storage cost manageable.
