@@ -1,5 +1,7 @@
 # TODO
 
+Work in progress: [docs/plan/2026-10-14-antislop-and-db-explorer.md](docs/plan/2026-10-14-antislop-and-db-explorer.md) (antislop MEDIUM/LOW fixes, Database Explorer).
+
 - [x] Add authentication and authorization (session login + HTTP Basic for scripts, admin/user roles)
 - [x] Add support for multiple database connections and server (multiple containers on distinct hosts): Servers page: remote Docker hosts over SSH + direct connections
 - [x] Add support for ssh tunnels for remote database connections
