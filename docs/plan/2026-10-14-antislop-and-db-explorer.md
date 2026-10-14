@@ -154,12 +154,12 @@ API (admin only):
 - `GET /api/containers` adds `credentialKey` and `credentialsConfigured` to each container.
 
 Tasks:
-- [ ] D1 store + key derivation + resolution helper (`ui/server/containercreds/`), migration, tests
-- [ ] D2 bash scripts honour `PG_EXEC_USER` (OS user; empty = none), `PGUSER`, `PGPASSWORD`, `PGHOST` (passed with `docker exec -e`), defaults unchanged; `bash -n`; CLI help documents them
-- [ ] D3 drivers + Explorer use the override (postgres/mysql/mongodb Docker), tests with fakes
-- [ ] D4 API routes + permission/validation tests
-- [ ] D5 UI: "Container credentials" section per Docker server on the Servers page (list running containers + saved keys, status: saved / from container env), edit dialog per engine, test button; "Credentials" button on the container page; admin-only
-- [ ] D6 README section, tests + build green, deploy, verify on s1 with `legacy_legacydb` and `mcp-postgres-core` (user enters the real credentials)
+- [x] D1 store + key derivation + resolution helper (`ui/server/containercreds/`), migration, tests (commits 5d591bd, b41913f)
+- [x] D2 bash scripts honour `PG_EXEC_USER` (OS user; empty = none), `PGUSER`, `PGPASSWORD`, `PGHOST` (passed with `docker exec -e`), defaults unchanged; `bash -n`; CLI help documents them (commit 8310067)
+- [x] D3 drivers + Explorer use the override (postgres/mysql/mongodb Docker), tests with fakes (commit 5d591bd)
+- [x] D4 API routes + permission/validation tests (commit b41913f)
+- [x] D5 UI: "Container credentials" section per Docker server on the Servers page (list running containers + saved keys, status: saved / from container env), edit dialog per engine, test button; "Credentials" button on the container page; admin-only (commit 99c5147)
+- [ ] D6 README section (done, 3eae0cb), tests + build green (done), deploy, verify on s1 with `legacy_legacydb` and `mcp-postgres-core` (user enters the real credentials)
 
 ## Phase C: release
 
@@ -176,6 +176,7 @@ Tasks:
 - 2026-10-14: B2 client done (aef64f9, 5148f4b, fdcf243, bd4d7ec): `/explorer` page with URL state, object list, Data/Structure/Query tabs, Explore action on database rows; checked against a throwaway mock of the contract at desktop and 375px; build + 256 tests green.
 - 2026-10-14: B3 done. Local smoke test: Explorer deep link, real errors with Retry, console guards (one statement, no meta-commands, MongoDB 400, user 403). Next: deploy and B4 check against s1 databases.
 - 2026-10-14: B4/B5 and Phase C done. Explorer verified on s1 against MariaDB and PostgreSQL containers. Deployed image 3f5d077f32ec.
+- 2026-10-14: D1 to D5 + README done (8310067, 5d591bd, b41913f, 99c5147, 3eae0cb); tests 331/331, build passes. Checked locally with a faked docker CLI (desktop + 375px): save, wrong/right password test, clear password, delete, not-running key, container page button. Not yet run against real containers; next: deploy and D6 check on s1. Note: pg-create/delete/unblock now pass `-d postgres` explicitly (same database psql picked before for the postgres user).
 
 ## Follow-ups (not started)
 
