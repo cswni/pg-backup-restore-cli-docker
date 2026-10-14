@@ -7,6 +7,7 @@ const { handle } = require('../routes/util')
 const { validateServerInput, endpointChanged } = require('./validate')
 const { syncSshConfig, hostKeys, forgetHostKey } = require('./ssh-config')
 const { testServer } = require('./test-connection')
+const { deleteForServer } = require('../containercreds/store')
 
 // Servers API
 //   GET    /api/servers                  all roles, secrets masked
@@ -14,7 +15,7 @@ const { testServer } = require('./test-connection')
 //   GET    /api/servers/:id/databases    all roles, direct servers only
 //   POST   /api/servers                  admin
 //   PUT    /api/servers/:id              admin (empty secret fields keep the stored value)
-//   DELETE /api/servers/:id              admin (backups made from it are kept)
+//   DELETE /api/servers/:id              admin (backups made from it are kept; saved container credentials are removed)
 //   POST   /api/servers/:id/test         admin
 //   DELETE /api/servers/:id/host-key     admin (forget the trusted SSH host key)
 
@@ -70,6 +71,7 @@ router.put('/servers/:id', requireAdmin, handle(async (req, res) => {
 router.delete('/servers/:id', requireAdmin, handle(async (req, res) => {
   const server = editableServer(req.params.id)
   servers.deleteServer(server.id)
+  deleteForServer(server.id)
   forgetHostKey(server.id)
   syncSshConfig()
   res.json({ ok: true })

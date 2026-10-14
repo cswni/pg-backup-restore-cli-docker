@@ -132,4 +132,4 @@ function endpointChanged(before, after) {
   return a.host !== b.host || a.port !== b.port
 }
 
-module.exports = { validateServerInput, endpointChanged, privateKey, SSL_MODES }
+module.exports = { validateServerInput, endpointChanged, privateKey, SSL_MODES, HOST_RE, DB_USER_RE }

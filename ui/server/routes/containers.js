@@ -4,6 +4,7 @@ const { listContainers } = require('../docker')
 const { getDriver, listEngines } = require('../drivers')
 const { httpError, isValidContainerName } = require('../validation')
 const { handle } = require('./util')
+const { credentialKey, listCredentials } = require('../containercreds/store')
 
 const router = express.Router()
 
@@ -25,7 +26,12 @@ router.get('/engines', handle(async (req, res) => {
 // Containers on a Docker server (default: local)
 router.get('/containers', handle(async (req, res) => {
   const server = requireDockerServer(req.query.serverId)
-  res.json(await listContainers(await execEnv(server)))
+  const containers = await listContainers(await execEnv(server))
+  const savedEngines = new Map(listCredentials(server.id).map((c) => [c.key, c.engine]))
+  res.json(containers.map((c) => {
+    const key = credentialKey(c.name)
+    return { ...c, credentialKey: key, credentialsConfigured: savedEngines.get(key) === c.engine }
+  }))
 }))
 
 router.get('/containers/:name/databases', handle(async (req, res) => {

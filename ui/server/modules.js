@@ -13,6 +13,7 @@ module.exports = [
   require('./settings'),
   require('./users'),
   require('./connectivity'),
+  require('./containercreds'),
   require('./routes/containers'),
   require('./routes/backups'),
   require('./routes/ops'),
