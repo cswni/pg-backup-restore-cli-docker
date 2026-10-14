@@ -122,6 +122,45 @@ B3-B5:
 - [x] B4 check against real databases on s1 (MariaDB + PostgreSQL containers, read-only API checks) and local browser check; README section "Database Explorer" (d56cc4a)
 - [x] B5 antislop Delivery Gate for the new UI (`anti-slop/explorer-2026-10-14-delivery.md`)
 
+## Phase D: container credentials (requested 2026-10-14)
+
+Problem: Docker targets only use the container's own env vars (`MYSQL_ROOT_PASSWORD`,
+`MARIADB_ROOT_PASSWORD`, `MONGO_INITDB_ROOT_*`) and PostgreSQL always runs as OS user
+`postgres`. On s1 `legacy_legacydb` fails (stale env password) and `mcp-postgres-core`
+fails (image has no `postgres` OS user). Admins need to set credentials per server/container.
+
+Design (decided):
+- Stored per **server + container key**, encrypted with `secrets.js`, admin-only.
+  Key = Swarm **service name** when the container name looks like a Swarm task
+  (`<service>.<slot>.<25-char task id>`, e.g. `legacy_legacydb.1.oznkxm16y64xdhboove8qazir`
+  → `legacy_legacydb`), otherwise the container name. So credentials survive redeploys.
+- Fields: `engine`; PostgreSQL: `username` (default postgres), `password`, `osUser`
+  (OS user for `docker exec -u`; default `postgres`; empty = the image's default user),
+  `host` (optional, e.g. `127.0.0.1` to force TCP + password); MySQL/MariaDB: `username`,
+  `password`; MongoDB: `username`, `password`, `authSource` (default `admin`).
+- Without an override nothing changes (current env-var behaviour is the fallback).
+- Secrets never on argv: set them in the env of the local `docker` process and pass them
+  with `docker exec -e NAME` (no value; Docker copies it from the client env). Never return
+  passwords to the browser (`passwordConfigured: true`).
+- Used everywhere a Docker target runs a client: `postgres-docker` driver (listDatabases
+  and the bash scripts via env vars the scripts honour), `mysql-docker` and `mongodb-docker`
+  drivers (their in-container `sh -c` wrappers prefer the override vars), Explorer adapters.
+
+API (admin only):
+- `GET /api/servers/:id/container-credentials` → `[{ key, engine, username, osUser, host, authSource, passwordConfigured, updatedAt }]`
+- `PUT /api/servers/:id/container-credentials/:key` body `{ engine, username, password?, osUser?, host?, authSource? }` (blank password keeps the stored one; `password: null` clears it)
+- `DELETE /api/servers/:id/container-credentials/:key`
+- `POST /api/servers/:id/container-credentials/:key/test` body `{ container }` → `{ ok, databases?: number, error? }` (lists databases with the saved credentials)
+- `GET /api/containers` adds `credentialKey` and `credentialsConfigured` to each container.
+
+Tasks:
+- [ ] D1 store + key derivation + resolution helper (`ui/server/containercreds/`), migration, tests
+- [ ] D2 bash scripts honour `PG_EXEC_USER` (OS user; empty = none), `PGUSER`, `PGPASSWORD`, `PGHOST` (passed with `docker exec -e`), defaults unchanged; `bash -n`; CLI help documents them
+- [ ] D3 drivers + Explorer use the override (postgres/mysql/mongodb Docker), tests with fakes
+- [ ] D4 API routes + permission/validation tests
+- [ ] D5 UI: "Container credentials" section per Docker server on the Servers page (list running containers + saved keys, status: saved / from container env), edit dialog per engine, test button; "Credentials" button on the container page; admin-only
+- [ ] D6 README section, tests + build green, deploy, verify on s1 with `legacy_legacydb` and `mcp-postgres-core` (user enters the real credentials)
+
 ## Phase C: release
 
 - [x] push `ui` and fast-forward `main`; CI green (70a4761, run 38543533600)
