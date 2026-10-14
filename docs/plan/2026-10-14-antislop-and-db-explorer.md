@@ -57,8 +57,8 @@ A2, server, scripts, docs (everything outside `ui/client`):
 - [x] #24 README structure: Usage (web UI first) at the top, maintainer Docker Hub section at the end, `restore -x` instead of the old pipeline sequence, engine coverage (mariadb-dump/mongodump, `.archive`), Limitations cleanup, dangling arrow; TODO heading/casing (commit fcb1fdd)
 
 A3:
-- [ ] merge A1 + A2 into `ui`, tests + build green, browser check (desktop + 375px)
-- [ ] follow-up report `anti-slop/audit-001-2026-10-14-followup-medium-low.md` with Delivery Gate
+- [x] merge A1 + A2 into `ui`, tests + build green, browser check (desktop + 375px) (merge 6edd63a; schedule destination picker fix aa54b50)
+- [x] follow-up report `anti-slop/audit-001-2026-10-14-followup-medium-low.md` with Delivery Gate
 
 ## Phase B: Database Explorer
 
@@ -132,3 +132,4 @@ B3-B5:
 - 2026-10-14: plan created (after commit 487f365, deployed image `1407cde51d83`).
 - 2026-10-14: A2 done (d9e2dba, 63abe85, dd5b640, fcb1fdd): server/scripts/CI comment cleanup, form-label validation messages, README restructure; tests 256/256, build passes. README image name now matches CI (`pg-backup-restore-cli`, was `cswni/pg-backup`).
 - 2026-10-14: A1 client fixes #12 to #22 done in 4b57b5c and 860c88e (lucide-react devDependency, build + 256 tests green, browser check desktop + 375px).
+- 2026-10-14: Phase A complete (A1+A2 merged in 6edd63a, picker fix aa54b50, follow-up report written). B1 and B2 running in parallel.
