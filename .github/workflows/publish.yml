@@ -12,7 +12,7 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────────────────
-  # JOB 0 – Web UI unit tests + frontend build
+  # JOB 0: Web UI unit tests + frontend build
   # ──────────────────────────────────────────────────────────────
   unit:
     runs-on: ubuntu-latest
@@ -42,7 +42,7 @@ jobs:
         run: pnpm run build
 
   # ──────────────────────────────────────────────────────────────
-  # JOB 1 – Integration tests
+  # JOB 1: Integration tests
   # ──────────────────────────────────────────────────────────────
   test:
     runs-on: ubuntu-latest
@@ -75,7 +75,7 @@ jobs:
             sleep 2
           done
 
-      # Shared run helper – mounts the Docker socket + backups dir
+      # Each step mounts the Docker socket and the backups dir itself.
       # The CLI container can reach $PG_CONTAINER because both share the host Docker daemon
       - name: "[create] Create database"
         run: |
@@ -231,7 +231,7 @@ jobs:
         run: docker rm -f ${{ env.PG_CONTAINER }} || true
 
   # ──────────────────────────────────────────────────────────────
-  # JOB 2 – Build & publish (only if tests pass)
+  # JOB 2: Build & publish (only if tests pass)
   # ──────────────────────────────────────────────────────────────
   publish:
     runs-on: ubuntu-latest

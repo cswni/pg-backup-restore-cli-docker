@@ -23,7 +23,7 @@ function getDb() {
 
 /**
  * Apply a named migration once. Names must be globally unique; prefix them
- * with the owning module, e.g. "auth-001-users".
+ * with the owning module, e.g. "users-001-users".
  */
 function migrate(name, sql) {
   const conn = getDb()

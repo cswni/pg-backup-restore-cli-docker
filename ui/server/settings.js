@@ -3,7 +3,7 @@ const { encrypt, decrypt } = require('./secrets')
 
 // Shared application settings (key → JSON value). Secret values are stored
 // encrypted and must be read with getSecret(). Namespace keys by module,
-// e.g. 'storage.compression', 'notifications.webhookUrl'.
+// e.g. 'monitoring.webhooks'.
 
 function init() {
   migrate('settings-001-table', `

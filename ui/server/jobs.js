@@ -141,7 +141,7 @@ function publicJob(job) {
   return {
     id: job.id,
     type: job.type,
-    // Kept for older clients that read `operation`, `container`, `database`
+    // Flat copies of meta fields; the Dashboard and JobLog pages read these
     operation: job.type,
     container: job.meta.container,
     database: job.meta.database,
