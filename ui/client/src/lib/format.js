@@ -49,3 +49,17 @@ export function formatInZone(iso, timeZone) {
     return new Date(iso).toLocaleString()
   }
 }
+
+/** Byte count as B, KB, MB or GB; "unknown" when the size is not known. */
+export function formatBytes(bytes) {
+  if (bytes == null) return 'unknown'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+}
+
+/** Whole number with thousands separators, e.g. 12,480. */
+export function formatCount(n) {
+  return Number(n).toLocaleString()
+}
