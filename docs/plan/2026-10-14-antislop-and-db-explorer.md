@@ -109,13 +109,13 @@ B1, server (`ui/server/explorer/**`, one line in `modules.js`, small exports fro
 - [ ] routes + validation + permissions, tests with fake tools (no real DB locally)
 
 B2, client (`ui/client/**`):
-- [ ] `/explorer` page (nav "Explorer"): pick server → container (Docker) → database; deep link via query string
-- [ ] object list with search (tree on desktop, select on mobile), row-count/size hints
-- [ ] Data tab: paginated table, sort by column, page size, cell detail for truncated/binary/JSON values, MongoDB filter box
-- [ ] Structure tab: columns + indexes
-- [ ] Query tab (admins, PostgreSQL/MySQL only): textarea, run, result grid, timing, truncation notice
-- [ ] "Explore" action on database rows (DatabaseWorkspace) linking to `/explorer?…`
-- [ ] accessible + responsive (antislop rules: real `<table>`, `th scope`, keyboard, 375px)
+- [x] `/explorer` page (nav "Explorer"): pick server → container (Docker) → database; deep link via query string (commit 5148f4b)
+- [x] object list with search (tree on desktop, select on mobile), row-count/size hints (commit 5148f4b)
+- [x] Data tab: paginated table, sort by column, page size, cell detail for truncated/binary/JSON values, MongoDB filter box (commits aef64f9, 5148f4b)
+- [x] Structure tab: columns + indexes (commit 5148f4b)
+- [x] Query tab (admins, PostgreSQL/MySQL only): textarea, run, result grid, timing, truncation notice (commits 5148f4b, bd4d7ec)
+- [x] "Explore" action on database rows (DatabaseWorkspace) linking to `/explorer?…` (commit fdcf243)
+- [x] accessible + responsive (antislop rules: real `<table>`, `th scope`, keyboard, 375px) (commit 5148f4b)
 
 B3-B5:
 - [ ] B3 merge B1 + B2, tests + build green
@@ -132,3 +132,4 @@ B3-B5:
 - 2026-10-14: plan created (after commit 487f365, deployed image `1407cde51d83`).
 - 2026-10-14: A2 done (d9e2dba, 63abe85, dd5b640, fcb1fdd): server/scripts/CI comment cleanup, form-label validation messages, README restructure; tests 256/256, build passes. README image name now matches CI (`pg-backup-restore-cli`, was `cswni/pg-backup`).
 - 2026-10-14: A1 client fixes #12 to #22 done in 4b57b5c and 860c88e (lucide-react devDependency, build + 256 tests green, browser check desktop + 375px).
+- 2026-10-14: B2 client done (aef64f9, 5148f4b, fdcf243, bd4d7ec): `/explorer` page with URL state, object list, Data/Structure/Query tabs, Explore action on database rows; checked against a throwaway mock of the contract at desktop and 375px; build + 256 tests green.
