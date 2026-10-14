@@ -78,7 +78,9 @@ export default function QueryTab({ base, sql, onSqlChange }) {
       />
       <div className="flex flex-wrap items-center justify-between gap-3 mt-2 mb-4">
         <p id={hintId} className="text-xs text-zinc-400 max-w-prose">
-          Runs read only, stops after 10 seconds and returns at most {ROW_LIMIT} rows. {SHORTCUT} runs it.
+          {base.engine === 'postgres' ? 'One query per run (SELECT, WITH, VALUES or TABLE)' : 'One statement per run'},
+          with a semicolon only at the end. It runs read only, stops after 10 seconds and returns at most {ROW_LIMIT} rows.
+          {' '}{SHORTCUT} runs it.
         </p>
         <Button onClick={run} disabled={running || !sql.trim()} className={`min-h-[44px] ${FOCUS_RING}`}>
           {running ? <BusyIcon /> : <Icon as={Play} />} {running ? 'Running…' : 'Run'}
