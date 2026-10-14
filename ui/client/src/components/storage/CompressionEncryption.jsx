@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useId } from 'react'
 import { Card, Button, Toggle } from '../UI'
 import { Label, TextField, SectionTitle, Notice } from './fields'
 
@@ -9,6 +9,7 @@ export function CompressionCard({ settings, onSave }) {
   const [level, setLevel] = useState(settings.compression.level)
   const [saving, setSaving] = useState(false)
   const dirty = enabled !== settings.compression.enabled || level !== settings.compression.level
+  const levelId = useId()
 
   async function save() {
     setSaving(true)
@@ -21,12 +22,12 @@ export function CompressionCard({ settings, onSave }) {
       <div className="space-y-4">
         <Toggle checked={enabled} onChange={setEnabled} label="Compress new backups by default" />
         <div className={enabled ? '' : 'opacity-40 pointer-events-none'}>
-          <Label hint={`— ${level} (1 = fastest, 9 = smallest)`}>Level</Label>
+          <Label htmlFor={levelId} hint={`${level} (1 = fastest, 9 = smallest)`}>Level:</Label>
           <input
+            id={levelId}
             type="range" min={1} max={9} value={level}
             onChange={(e) => setLevel(Number(e.target.value))}
             className="w-full accent-emerald-500"
-            aria-label="Compression level"
           />
         </div>
         <div className="flex justify-end">
@@ -49,7 +50,7 @@ function PassphraseStatus({ encryption }) {
       </Notice>
     )
   }
-  return <Notice>No passphrase configured yet — encryption is unavailable.</Notice>
+  return <Notice>No passphrase configured yet, so encryption is unavailable.</Notice>
 }
 
 export function EncryptionCard({ settings, onSave }) {
@@ -83,7 +84,7 @@ export function EncryptionCard({ settings, onSave }) {
       <div className="space-y-4">
         <Notice tone="warn">
           <strong className="font-semibold">⚠️ Keep the passphrase somewhere safe, outside this server.</strong> Encrypted
-          backups cannot be restored without it — not by this app, not by anyone. If this server is lost, you will need
+          backups can't be restored without it, by this app or any other tool. If this server is lost, you will need
           the passphrase and the offline decryption tool (<span className="font-mono">node /ui/server/storage/decrypt-cli.js</span>, see README).
         </Notice>
         <PassphraseStatus encryption={encryption} />
@@ -106,7 +107,7 @@ export function EncryptionCard({ settings, onSave }) {
             onChange={setAcknowledged}
             label="I have stored this passphrase safely"
             hint={encryption.passphraseConfigured
-              ? 'New backups will use the new passphrase. The old one is kept for older backups — keep your own copy of it too.'
+              ? 'New backups will use the new passphrase. The old one is kept for older backups; keep your own copy of it too.'
               : 'Losing it makes every encrypted backup unrecoverable.'}
           />
         )}

@@ -38,7 +38,7 @@ export function engineInfo(engines, engine, kind) {
 /**
  * Engine of a backup: the catalog's when known, else inferred from the
  * file name (.archive → mongodb). null = a .sql dump of unknown origin
- * (PostgreSQL or MySQL – the user picks a matching target).
+ * (PostgreSQL or MySQL; the user picks a matching target).
  */
 export function backupEngine(name, catalogEngine) {
   if (catalogEngine) return catalogEngine

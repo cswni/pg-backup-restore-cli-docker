@@ -1,217 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import {
-  PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toggle, ProgressBar,
-} from '../components/UI'
-import RestoreTargetFields, { useRestoreTarget } from '../components/servers/RestoreTarget'
+import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toast } from '../components/UI'
 import BackupBadges from '../components/storage/BackupBadges'
-
-// Dumps the server accepts: plain SQL or MongoDB archive, optionally gzipped and/or encrypted
-const UPLOAD_NAME = /\.(sql|archive)(\.gz)?(\.enc)?$/i
-
-function formatBytes(b) {
-  if (b == null) return '—'
-  if (b < 1024) return `${b} B`
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
-  return `${(b / 1024 / 1024).toFixed(2)} MB`
-}
+import { RestoreModal, UploadRestoreModal, formatBytes } from '../components/backups/BackupDialogs'
 
 function formatDate(ms) {
   return new Date(ms).toLocaleString()
-}
-
-function parseDbName(filename) {
-  // e.g. mydb_12-03-2025_14_30_00.sql → mydb
-  const m = filename.match(/^(.+?)_\d{2}-\d{2}-\d{4}/)
-  return m ? m[1] : filename.replace(/\.(sql|archive)$/, '')
-}
-
-function RestoreModal({ backup, onClose, onRestore }) {
-  const target = useRestoreTarget(parseDbName(backup.name), { name: backup.name, engine: backup.engine })
-  const [running, setRunning] = useState(false)
-
-  const canSubmit = target.ready && !running
-
-  async function submit() {
-    if (!canSubmit) return
-    setRunning(true)
-    try {
-      await onRestore({ ...target.payload, file: backup.name })
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
-          <span className="text-2xl">♻️</span>
-          <div>
-            <p className="font-semibold text-zinc-100">Restore</p>
-            <p className="text-xs text-zinc-500 font-mono mt-0.5 truncate max-w-[280px]">{backup.name}</p>
-          </div>
-          <button onClick={onClose} className="ml-auto text-zinc-600 hover:text-zinc-300 text-xl leading-none">✕</button>
-        </div>
-
-        <div className="px-6 py-5 space-y-4">
-          <RestoreTargetFields id="restore-db" target={target} />
-        </div>
-
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant={target.dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
-            {running ? <><span className="animate-spin">⟳</span> Running…</> : 'Restore'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function UploadRestoreModal({ onClose, onDone }) {
-  const { isAdmin } = useAuth()
-  const [file, setFile] = useState(null)
-  // Uploads have no catalog row: the engine is inferred from the extension
-  const target = useRestoreTarget('', file ? { name: file.name } : null)
-  // Restores are admin-only; other users can still upload
-  const [restoreNow, setRestoreNow] = useState(isAdmin)
-  const [running, setRunning] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [uploadError, setUploadError] = useState(null)
-  const fileRef = useRef()
-  const abortRef = useRef(null)
-
-  // Abort an in-flight upload if the dialog unmounts
-  useEffect(() => () => abortRef.current?.abort(), [])
-
-  function pickFile(f) {
-    setFile(f)
-    setUploadError(null)
-    // Default the target to the dump's database name; user can rename it
-    if (f && !target.db) target.setDb(parseDbName(f.name))
-  }
-
-  async function submit() {
-    if (!canSubmit) return
-    setRunning(true)
-    setProgress(0)
-    setUploadError(null)
-    abortRef.current = new AbortController()
-    try {
-      const result = await api.backups.upload(file, {
-        restore: restoreNow ? target.payload : undefined,
-        onProgress: setProgress,
-        signal: abortRef.current.signal,
-      })
-      onDone(result)
-    } catch (e) {
-      setUploadError(e.message)
-    } finally {
-      abortRef.current = null
-      setRunning(false)
-    }
-  }
-
-  function cancel() {
-    if (abortRef.current) abortRef.current.abort()
-    else onClose()
-  }
-
-  const canSubmit = file && (!restoreNow || target.ready) && !running
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-lg shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
-          <span className="text-2xl">⬆️</span>
-          <div>
-            <p className="font-semibold text-zinc-100">Upload &amp; Restore</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Upload a .sql dump or MongoDB .archive and optionally restore it immediately</p>
-          </div>
-          <button onClick={onClose} className="ml-auto text-zinc-600 hover:text-zinc-300 text-xl leading-none">✕</button>
-        </div>
-
-        <div className="px-6 py-5 space-y-5">
-          {/* File drop zone */}
-          <div
-            className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-8 px-4 cursor-pointer transition-colors
-              ${file ? 'border-emerald-500/60 bg-emerald-500/5' : 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/30'}`}
-            onClick={() => fileRef.current?.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault()
-              if (running) return
-              const f = e.dataTransfer.files[0]
-              if (f && UPLOAD_NAME.test(f.name)) pickFile(f)
-            }}
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".sql,.archive,.gz,.enc"
-              className="hidden"
-              disabled={running}
-              onChange={(e) => pickFile(e.target.files[0] || null)}
-            />
-            {file ? (
-              <>
-                <span className="text-3xl">📄</span>
-                <div className="text-center">
-                  <p className="text-sm font-mono text-emerald-400">{file.name}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">{formatBytes(file.size)}</p>
-                </div>
-                <button
-                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors disabled:opacity-40"
-                  disabled={running}
-                  onClick={(e) => { e.stopPropagation(); setFile(null) }}
-                >
-                  ✕ Remove
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="text-3xl text-zinc-600">📂</span>
-                <div className="text-center">
-                  <p className="text-sm text-zinc-400">
-                    Drop a <span className="font-mono">.sql</span> or <span className="font-mono">.archive</span> file
-                    (optionally <span className="font-mono">.gz</span> / <span className="font-mono">.enc</span>) here
-                  </p>
-                  <p className="text-xs text-zinc-600 mt-1">or click to browse</p>
-                </div>
-              </>
-            )}
-          </div>
-
-          {(running || progress > 0) && <ProgressBar percent={progress} />}
-          {uploadError && <ErrorAlert message={uploadError} />}
-
-          {/* Restore now toggle */}
-          {isAdmin && <Toggle checked={restoreNow} onChange={setRestoreNow} label="Restore immediately after upload" />}
-
-          {/* Server, container and target database (shown only when restore=true) */}
-          {restoreNow && (
-            <div className="space-y-4 pt-1">
-              <RestoreTargetFields id="upload-db" target={target} />
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
-          <Button variant="ghost" onClick={cancel}>{running ? "Cancel upload" : "Cancel"}</Button>
-          <Button variant={restoreNow && target.dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
-            {running
-              ? <><span className="animate-spin inline-block mr-1">⟳</span> Uploading… {progress}%</>
-              : restoreNow ? '⬆️ Upload & Restore' : '⬆️ Upload'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export default function Backups() {
@@ -271,28 +68,19 @@ export default function Backups() {
   const totalSize = (backups || []).filter((b) => b.local !== false).reduce((a, b) => a + b.size, 0)
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <PageHeader
         title="Backups"
         subtitle={backups ? `${backups.length} files · ${formatBytes(totalSize)} total` : 'Dump files in /backups'}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="primary" size="sm" onClick={() => setShowUpload(true)}>{isAdmin ? <>⬆️ Upload &amp; Restore</> : '⬆️ Upload'}</Button>
             <Button variant="secondary" size="sm" onClick={reload}>↻ Refresh</Button>
           </div>
         }
       />
 
-      {toast && (
-        <div className={`mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm border ${
-          toast.type === 'error'
-            ? 'bg-red-500/10 border-red-500/20 text-red-400'
-            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-        }`}>
-          <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
-          {toast.msg}
-        </div>
-      )}
+      {toast && <Toast type={toast.type} message={toast.msg} />}
 
       {loading && <div className="flex justify-center py-20"><Spinner /></div>}
       {error && <ErrorAlert message={error} onRetry={reload} />}
@@ -310,7 +98,7 @@ export default function Backups() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-zinc-500 uppercase tracking-wider border-b border-zinc-800 bg-zinc-950/50">
+                <tr className="text-left text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-800 bg-zinc-950/50">
                   <th className="px-5 py-3 font-medium">Filename</th>
                   <th className="px-5 py-3 font-medium">Size</th>
                   <th className="px-5 py-3 font-medium">Date</th>
@@ -322,13 +110,13 @@ export default function Backups() {
                   <tr key={b.name} className="hover:bg-zinc-800/30 transition-colors group">
                     <td className="px-5 py-3.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-base">{b.local === false ? '☁️' : '📄'}</span>
+                        <span aria-hidden="true" className="text-base">{b.local === false ? '☁️' : '📄'}</span>
                         <span className="font-mono text-xs text-zinc-300">{b.name}</span>
                         <BackupBadges backup={b} />
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-zinc-500 text-xs font-mono">{formatBytes(b.size)}</td>
-                    <td className="px-5 py-3.5 text-zinc-500 text-xs">{formatDate(b.mtime)}</td>
+                    <td className="px-5 py-3.5 text-zinc-400 text-xs font-mono">{formatBytes(b.size)}</td>
+                    <td className="px-5 py-3.5 text-zinc-400 text-xs">{formatDate(b.mtime)}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1.5">
                         {b.local !== false && (
@@ -354,6 +142,7 @@ export default function Backups() {
                             size="sm"
                             variant="danger"
                             disabled={deleting === b.name}
+                            aria-label={`Delete ${b.name}`}
                             onClick={() => handleDelete(b)}
                           >
                             {deleting === b.name ? '…' : '🗑️'}

@@ -11,20 +11,20 @@ import ScheduleForm from '../components/ScheduleForm'
 function Target({ s }) {
   return (
     <div className="font-mono text-xs leading-relaxed">
-      <p className="text-zinc-200">{s.database}{s.outputName && <span className="text-zinc-500"> → {s.outputName}</span>}</p>
-      <p className="text-zinc-500">{s.serverId}{s.container && ` / ${s.container}`} · {s.engine}</p>
+      <p className="text-zinc-200">{s.database}{s.outputName && <span className="text-zinc-400"> → {s.outputName}</span>}</p>
+      <p className="text-zinc-400">{s.serverId}{s.container && ` / ${s.container}`} · {s.engine}</p>
     </div>
   )
 }
 
 function LastRun({ s }) {
-  if (!s.lastRunAt) return <span className="text-xs text-zinc-600">never run</span>
+  if (!s.lastRunAt) return <span className="text-xs text-zinc-400">never run</span>
   return (
     <div className="flex flex-col items-start gap-1">
       {s.lastJobId ? (
         <Link to={`/jobs/${s.lastJobId}`} className="hover:opacity-80" title="Open job log"><StatusBadge status={s.lastStatus} /></Link>
       ) : <StatusBadge status={s.lastStatus} />}
-      <span className="text-xs text-zinc-500" title={formatDateTime(s.lastRunAt)}>{timeAgo(s.lastRunAt)}</span>
+      <span className="text-xs text-zinc-400" title={formatDateTime(s.lastRunAt)}>{timeAgo(s.lastRunAt)}</span>
     </div>
   )
 }
@@ -54,23 +54,23 @@ function ScheduleRow({ s, isAdmin, busy, onToggle, ...actions }) {
     <tr className="align-top hover:bg-zinc-800/30 transition-colors">
       <td className="py-3 pr-4">
         <p className="text-zinc-100 font-medium">{s.name}</p>
-        {s.overdue && <p className="text-xs text-amber-400 mt-0.5">⚠ Overdue — {s.overdueReason}</p>}
+        {s.overdue && <p className="text-xs text-amber-400 mt-0.5">⚠ Overdue: {s.overdueReason}</p>}
       </td>
       <td className="py-3 pr-4"><Target s={s} /></td>
       <td className="py-3 pr-4">
         <p className="text-zinc-300 text-xs">{describeCron(s.cron)}</p>
-        <p className="text-zinc-600 text-[11px] font-mono">{s.cron} · {s.timezone}</p>
+        <p className="text-zinc-400 text-[11px] font-mono">{s.cron} · {s.timezone}</p>
       </td>
       <td className="py-3 pr-4 text-xs">
         {s.enabled && s.nextRunAt
           ? <span className="text-zinc-300" title={formatDateTime(s.nextRunAt)}>{timeUntil(s.nextRunAt)}</span>
-          : <span className="text-zinc-600">—</span>}
+          : <span className="text-zinc-400">{s.enabled ? 'none' : 'paused'}</span>}
       </td>
       <td className="py-3 pr-4"><LastRun s={s} /></td>
       <td className="py-3 pr-4">
         {isAdmin
           ? <Toggle checked={s.enabled} onChange={(v) => onToggle(s, v)} label={s.enabled ? 'On' : 'Off'} />
-          : <span className="text-xs text-zinc-500">{s.enabled ? 'on' : 'off'}</span>}
+          : <span className="text-xs text-zinc-400">{s.enabled ? 'on' : 'off'}</span>}
       </td>
       <td className="py-3"><RowActions s={s} isAdmin={isAdmin} busy={busy} {...actions} /></td>
     </tr>
@@ -112,7 +112,7 @@ export default function Schedules() {
   const action = isAdmin && !editing && <Button onClick={() => setEditing('new')}>+ New schedule</Button>
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <PageHeader title="Schedules" subtitle="Automatic backups on a cron schedule" action={action} />
       {editing && (
         <ScheduleForm
@@ -133,7 +133,7 @@ export default function Schedules() {
         <Card className="overflow-x-auto p-0!">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
+              <tr className="text-left text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
                 {['Name', 'Target', 'Schedule', 'Next run', 'Last run', 'Enabled', ''].map((h) => (
                   <th key={h} className="py-3 pr-4 first:pl-5 font-medium whitespace-nowrap">{h}</th>
                 ))}

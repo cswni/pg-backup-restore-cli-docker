@@ -2,13 +2,13 @@ import React, { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
-import { PageHeader, Spinner, ErrorAlert, Button } from '../components/UI'
+import { PageHeader, Spinner, ErrorAlert, Button, Toast } from '../components/UI'
 import { CompressionCard, EncryptionCard } from '../components/storage/CompressionEncryption'
 import { RetentionCard } from '../components/storage/RetentionCard'
 import DestinationsCard from '../components/storage/DestinationsCard'
 
 const GDRIVE_ERRORS = {
-  invalid_state: 'The connect link expired or was already used — try “Connect Google Drive” again.',
+  invalid_state: 'The connect link expired or was already used. Try “Connect Google Drive” again.',
   denied: 'Google access was not granted.',
   unknown_destination: 'The destination no longer exists.',
   exchange_failed: 'Google rejected the authorization (check the client ID/secret and the redirect URI). See the server log for details.',
@@ -22,19 +22,6 @@ function useOAuthResult() {
   if (status === 'connected') return { tone: 'success', msg: 'Google Drive connected.', dismiss }
   if (status === 'error') return { tone: 'error', msg: GDRIVE_ERRORS[params.get('reason')] || 'Google Drive connection failed.', dismiss }
   return null
-}
-
-function Toast({ toast, onClose }) {
-  const cls = toast.tone === 'error'
-    ? 'bg-red-500/10 border-red-500/20 text-red-400'
-    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-  return (
-    <div className={`mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm border ${cls}`}>
-      <span>{toast.tone === 'error' ? '⚠️' : '✅'}</span>
-      <span className="flex-1">{toast.msg}</span>
-      {onClose && <button onClick={onClose} className="text-xs underline opacity-70 hover:opacity-100">dismiss</button>}
-    </div>
-  )
 }
 
 export default function StorageSettings() {
@@ -73,14 +60,14 @@ export default function StorageSettings() {
   const settings = settingsQ.data
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 md:p-8 max-w-4xl">
       <PageHeader
         title="Storage"
         subtitle="Compression, encryption, cloud copies and retention for new backups"
         action={<Button variant="secondary" size="sm" onClick={() => { settingsQ.reload(); destinationsQ.reload() }}>↻ Refresh</Button>}
       />
-      {oauth && <Toast toast={oauth} onClose={oauth.dismiss} />}
-      {toast && <Toast toast={toast} />}
+      {oauth && <Toast type={oauth.tone} message={oauth.msg} onDismiss={oauth.dismiss} />}
+      {toast && <Toast type={toast.tone} message={toast.msg} />}
       {loading && !settings && <div className="flex justify-center py-20"><Spinner /></div>}
       {error && <ErrorAlert message={error} onRetry={() => { settingsQ.reload(); destinationsQ.reload() }} />}
 

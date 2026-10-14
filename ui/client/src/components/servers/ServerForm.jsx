@@ -1,19 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useId } from 'react'
 import { Button, Toggle, ErrorAlert } from '../UI'
+import Modal, { ModalFooter } from '../Modal'
 
 // Add / edit dialog for a remote Docker host (over SSH) or a direct database
 // connection with an optional SSH tunnel. Secrets are never sent back by the
 // API: empty secret fields keep the stored value ("•••• configured").
 
-const INPUT = 'w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-hidden transition-colors'
-const LABEL = 'block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider'
+const INPUT = 'w-full bg-zinc-800 border border-zinc-500 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 outline-hidden transition-colors'
+const LABEL = 'block text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wider'
 const SSL_MODES = ['disable', 'prefer', 'require', 'verify-full']
-const KEY_HINT = 'Unencrypted private key (passphrases are not supported — use a dedicated deploy key).'
+const KEY_HINT = 'Unencrypted private key (passphrases are not supported, so use a dedicated deploy key).'
 
-function Field({ label, children, className = '' }) {
+/** Label + control; `id` must also be passed to the control. */
+function Field({ id, label, children, className = '' }) {
   return (
     <div className={className}>
-      <label className={LABEL}>{label}</label>
+      <label htmlFor={id} className={LABEL}>{label}</label>
       {children}
     </div>
   )
@@ -23,18 +25,20 @@ function TextInput({ value, onChange, mono = true, ...rest }) {
   return <input {...rest} value={value ?? ''} onChange={(e) => onChange(e.target.value)} className={`${INPUT} ${mono ? 'font-mono' : ''}`} />
 }
 
-function KeyInput({ value, onChange, configured }) {
+function KeyInput({ id, value, onChange, configured }) {
   return (
     <>
       <textarea
+        id={id}
+        aria-describedby={`${id}-hint`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
         spellCheck={false}
-        placeholder={configured ? '•••• configured — leave empty to keep' : '-----BEGIN OPENSSH PRIVATE KEY-----\n…'}
+        placeholder={configured ? '•••• configured (leave empty to keep)' : '-----BEGIN OPENSSH PRIVATE KEY-----\n…'}
         className={`${INPUT} font-mono text-xs resize-y`}
       />
-      <p className="text-xs text-zinc-600 mt-1">{KEY_HINT}</p>
+      <p id={`${id}-hint`} className="text-xs text-zinc-400 mt-1">{KEY_HINT}</p>
     </>
   )
 }
@@ -42,12 +46,13 @@ function KeyInput({ value, onChange, configured }) {
 /** SSH host/port/user/key fields shared by Docker hosts and tunnels. */
 function SshFields({ value, onChange, configured, hostLabel = 'SSH host', hostPlaceholder = 'docker.example.com' }) {
   const set = (k) => (v) => onChange({ ...value, [k]: v })
+  const id = useId()
   return (
-    <div className="grid grid-cols-6 gap-3">
-      <Field label={hostLabel} className="col-span-4"><TextInput value={value.host} onChange={set('host')} placeholder={hostPlaceholder} /></Field>
-      <Field label="Port" className="col-span-2"><TextInput value={value.port} onChange={set('port')} placeholder="22" inputMode="numeric" /></Field>
-      <Field label="User" className="col-span-6"><TextInput value={value.user} onChange={set('user')} placeholder="deploy" /></Field>
-      <Field label="Private key" className="col-span-6"><KeyInput value={value.privateKey} onChange={set('privateKey')} configured={configured} /></Field>
+    <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+      <Field id={`${id}-host`} label={hostLabel} className="sm:col-span-4"><TextInput id={`${id}-host`} value={value.host} onChange={set('host')} placeholder={hostPlaceholder} /></Field>
+      <Field id={`${id}-port`} label="Port" className="sm:col-span-2"><TextInput id={`${id}-port`} value={value.port} onChange={set('port')} placeholder="22" inputMode="numeric" /></Field>
+      <Field id={`${id}-user`} label="User" className="sm:col-span-6"><TextInput id={`${id}-user`} value={value.user} onChange={set('user')} placeholder="deploy" /></Field>
+      <Field id={`${id}-key`} label="Private key" className="sm:col-span-6"><KeyInput id={`${id}-key`} value={value.privateKey} onChange={set('privateKey')} configured={configured} /></Field>
     </div>
   )
 }
@@ -73,23 +78,24 @@ function switchEngine(form, engine) {
 
 function DirectFields({ form, set, setForm, server }) {
   const defaults = ENGINE_DEFAULTS[form.engine] || ENGINE_DEFAULTS.postgres
+  const id = useId()
   return (
-    <div className="grid grid-cols-6 gap-3">
-      <Field label="Engine" className="col-span-2">
-        <select value={form.engine} onChange={(e) => setForm((f) => switchEngine(f, e.target.value))} className={INPUT}>
+    <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+      <Field id={`${id}-engine`} label="Engine" className="sm:col-span-2">
+        <select id={`${id}-engine`} value={form.engine} onChange={(e) => setForm((f) => switchEngine(f, e.target.value))} className={INPUT}>
           {Object.entries(ENGINE_DEFAULTS).map(([id, d]) => <option key={id} value={id}>{d.label}</option>)}
         </select>
       </Field>
-      <Field label="Host" className="col-span-3"><TextInput value={form.host} onChange={set('host')} placeholder="db.example.com" /></Field>
-      <Field label="Port" className="col-span-1"><TextInput value={form.port} onChange={set('port')} placeholder={String(defaults.port)} inputMode="numeric" /></Field>
-      <Field label="Username" className="col-span-3"><TextInput value={form.username} onChange={set('username')} placeholder={defaults.user} autoComplete="off" /></Field>
-      <Field label="Password" className="col-span-3">
-        <TextInput type="password" value={form.password} onChange={set('password')} autoComplete="new-password"
+      <Field id={`${id}-host`} label="Host" className="sm:col-span-3"><TextInput id={`${id}-host`} value={form.host} onChange={set('host')} placeholder="db.example.com" /></Field>
+      <Field id={`${id}-port`} label="Port" className="sm:col-span-1"><TextInput id={`${id}-port`} value={form.port} onChange={set('port')} placeholder={String(defaults.port)} inputMode="numeric" /></Field>
+      <Field id={`${id}-user`} label="Username" className="sm:col-span-3"><TextInput id={`${id}-user`} value={form.username} onChange={set('username')} placeholder={defaults.user} autoComplete="off" /></Field>
+      <Field id={`${id}-password`} label="Password" className="sm:col-span-3">
+        <TextInput id={`${id}-password`} type="password" value={form.password} onChange={set('password')} autoComplete="new-password"
           placeholder={server?.passwordConfigured ? '•••• configured' : ''} />
       </Field>
-      <Field label={defaults.dbLabel} className="col-span-3"><TextInput value={form.database} onChange={set('database')} placeholder={defaults.database} /></Field>
-      <Field label="SSL mode" className="col-span-3">
-        <select value={form.sslmode} onChange={(e) => set('sslmode')(e.target.value)} className={INPUT}>
+      <Field id={`${id}-db`} label={defaults.dbLabel} className="sm:col-span-3"><TextInput id={`${id}-db`} value={form.database} onChange={set('database')} placeholder={defaults.database} /></Field>
+      <Field id={`${id}-ssl`} label="SSL mode" className="sm:col-span-3">
+        <select id={`${id}-ssl`} value={form.sslmode} onChange={(e) => set('sslmode')(e.target.value)} className={INPUT}>
           {SSL_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </Field>
@@ -130,13 +136,13 @@ function KindPicker({ kind, onChange }) {
     { id: 'direct', title: 'Direct database', desc: 'Host / port / user, optionally through an SSH tunnel' },
   ]
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {options.map((o) => (
-        <button key={o.id} type="button" onClick={() => onChange(o.id)}
+        <button key={o.id} type="button" aria-pressed={kind === o.id} onClick={() => onChange(o.id)}
           className={`text-left p-3 rounded-xl border transition-colors ${kind === o.id
             ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/40'}`}>
           <p className="text-sm font-medium text-zinc-100">{o.title}</p>
-          <p className="text-xs text-zinc-500 mt-0.5">{o.desc}</p>
+          <p className="text-xs text-zinc-400 mt-0.5">{o.desc}</p>
         </button>
       ))}
     </div>
@@ -166,44 +172,37 @@ export default function ServerForm({ server, onClose, onSave }) {
     }
   }
 
+  const nameId = useId()
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div role="dialog" aria-modal="true" className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
-          <span className="text-2xl">🖧</span>
-          <p className="font-semibold text-zinc-100">{isEdit ? `Edit ${server.name}` : 'Add server'}</p>
-          <button type="button" onClick={onClose} className="ml-auto text-zinc-600 hover:text-zinc-300 text-xl leading-none">✕</button>
-        </div>
+    <Modal icon="🖧" title={isEdit ? `Edit ${server.name}` : 'Add server'} size="xl" onClose={onClose}>
+      <div className="px-6 py-5 space-y-5">
+        {!isEdit && <KindPicker kind={form.kind} onChange={set('kind')} />}
+        <Field id={nameId} label="Name"><TextInput id={nameId} mono={false} value={form.name} onChange={set('name')} placeholder="e.g. Production" /></Field>
 
-        <div className="px-6 py-5 space-y-5 overflow-y-auto">
-          {!isEdit && <KindPicker kind={form.kind} onChange={set('kind')} />}
-          <Field label="Name"><TextInput mono={false} value={form.name} onChange={set('name')} placeholder="e.g. Production" /></Field>
+        {form.kind === 'docker' && (
+          <SshFields value={form.ssh} onChange={set('ssh')} configured={server?.ssh?.keyConfigured} />
+        )}
 
-          {form.kind === 'docker' && (
-            <SshFields value={form.ssh} onChange={set('ssh')} configured={server?.ssh?.keyConfigured} />
-          )}
+        {form.kind === 'direct' && (
+          <>
+            <DirectFields form={form} set={set} setForm={setForm} server={server} />
+            <Toggle checked={form.tunnelEnabled} onChange={set('tunnelEnabled')} label="Connect through an SSH tunnel"
+              hint="The database host and port are then resolved from the bastion host." />
+            {form.tunnelEnabled && (
+              <SshFields value={form.tunnel} onChange={set('tunnel')} configured={server?.tunnel?.keyConfigured} hostLabel="Bastion host" hostPlaceholder="bastion.example.com" />
+            )}
+          </>
+        )}
 
-          {form.kind === 'direct' && (
-            <>
-              <DirectFields form={form} set={set} setForm={setForm} server={server} />
-              <Toggle checked={form.tunnelEnabled} onChange={set('tunnelEnabled')} label="Connect through an SSH tunnel"
-                hint="The database host and port are then resolved from the bastion host." />
-              {form.tunnelEnabled && (
-                <SshFields value={form.tunnel} onChange={set('tunnel')} configured={server?.tunnel?.keyConfigured} hostLabel="Bastion host" hostPlaceholder="bastion.example.com" />
-              )}
-            </>
-          )}
-
-          {error && <ErrorAlert message={error} />}
-        </div>
-
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={saving || !form.name.trim()} onClick={submit}>
-            {saving ? <><span className="animate-spin">⟳</span> Saving…</> : isEdit ? 'Save changes' : 'Add server'}
-          </Button>
-        </div>
+        {error && <ErrorAlert message={error} />}
       </div>
-    </div>
+
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" disabled={saving || !form.name.trim()} onClick={submit}>
+          {saving ? <><span aria-hidden="true" className="animate-spin">⟳</span> Saving…</> : isEdit ? 'Save changes' : 'Add server'}
+        </Button>
+      </ModalFooter>
+    </Modal>
   )
 }

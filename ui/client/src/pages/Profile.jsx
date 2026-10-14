@@ -31,11 +31,11 @@ function ProfileForm({ user, onSaved }) {
         <h2 className="text-sm font-semibold text-zinc-200">Profile</h2>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-1">Username</p>
+            <p className="text-xs text-zinc-400 uppercase tracking-wider font-medium mb-1">Username</p>
             <p className="font-mono text-zinc-200">{user.username}</p>
           </div>
           <div>
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-1">Role</p>
+            <p className="text-xs text-zinc-400 uppercase tracking-wider font-medium mb-1">Role</p>
             <p className="text-zinc-200 capitalize">{user.role}</p>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function Profile() {
   const { user, authDisabled, setUser } = useAuth()
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 md:p-8 max-w-2xl">
       <PageHeader title="Profile" subtitle="Your account details and password" />
       {authDisabled ? (
         <Card>

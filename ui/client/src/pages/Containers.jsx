@@ -22,14 +22,14 @@ function ContainerCard({ c, serverId }) {
           <div className="shrink-0 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-500/30" />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-zinc-100 group-hover:text-emerald-300 transition-colors truncate">{c.name}</p>
-            <p className="text-xs text-zinc-500 font-mono mt-0.5 truncate">{c.image}</p>
+            <p className="text-xs text-zinc-400 font-mono mt-0.5 truncate">{c.image}</p>
           </div>
           <EngineBadge engine={c.engine} />
           <div className="hidden md:block shrink-0 text-right">
-            <p className="text-xs text-zinc-600 font-mono">{c.id}</p>
-            <p className="text-xs text-zinc-600 mt-0.5">{c.status}</p>
+            <p className="text-xs text-zinc-400 font-mono">{c.id}</p>
+            <p className="text-xs text-zinc-400 mt-0.5">{c.status}</p>
           </div>
-          <span className="text-zinc-600 group-hover:text-emerald-400 transition-colors text-lg">→</span>
+          <span className="text-zinc-400 group-hover:text-emerald-400 transition-colors text-lg">→</span>
         </div>
       </Card>
     </Link>
@@ -56,7 +56,7 @@ export default function Containers() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <PageHeader
         title="Database Containers"
         subtitle={`Running database containers on ${server?.name || 'the host Docker daemon'}`}
@@ -70,17 +70,18 @@ export default function Containers() {
             kinds={['docker']}
             value={serverId}
             onChange={selectServer}
-            className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-hidden focus:border-emerald-500 transition-colors"
+            className="bg-zinc-900 border border-zinc-500 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-hidden focus:border-emerald-500 transition-colors"
           />
         )}
         <input
           type="text"
           placeholder="Search by name or image..."
+          aria-label="Search containers by name or image"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-hidden focus:border-emerald-500 transition-colors"
+          className="w-full max-w-sm bg-zinc-900 border border-zinc-500 rounded-lg px-4 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-emerald-500 transition-colors"
         />
-        <Link to="/servers" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Manage servers →</Link>
+        <Link to="/servers" className="text-xs text-zinc-400 hover:text-zinc-100 transition-colors">Manage servers →</Link>
       </div>
 
       {loading && <div className="flex justify-center py-20"><Spinner /></div>}

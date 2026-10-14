@@ -36,7 +36,7 @@ export default function ExportStorageOptions({ onChange }) {
 
   useEffect(() => { onChange(options) }, [options, onChange])
 
-  if (error) return <p className="text-xs text-zinc-500">Storage defaults unavailable ({error}) — server defaults apply.</p>
+  if (error) return <p role="alert" className="text-xs text-zinc-400">Storage defaults unavailable ({error}). Server defaults apply.</p>
   if (!defaults || !options) return <Spinner size="sm" />
 
   const update = (patch) => setOptions((o) => ({ ...o, ...patch }))
@@ -56,8 +56,8 @@ export default function ExportStorageOptions({ onChange }) {
         hint={defaults.encryptionAvailable ? 'Restoring needs the configured passphrase.' : 'Set a passphrase in Storage settings first.'}
       />
       {defaults.destinations.length > 0 && (
-        <div>
-          <p className="text-xs text-zinc-500 mb-2 font-medium uppercase tracking-wider">Upload to</p>
+        <fieldset>
+          <legend className="text-xs text-zinc-400 mb-2 font-medium uppercase tracking-wider">Upload to</legend>
           <div className="space-y-1.5">
             {defaults.destinations.map((d) => (
               <label key={d.id} className={`flex items-center gap-2 text-sm text-zinc-300 ${d.ready ? 'cursor-pointer' : 'opacity-50'}`}>
@@ -69,12 +69,12 @@ export default function ExportStorageOptions({ onChange }) {
                   onChange={() => toggleDest(d.id)}
                 />
                 <span>{d.type === 's3' ? '🪣' : '📁'} {d.name}</span>
-                {d.isDefault && <span className="text-[10px] text-zinc-500">default</span>}
+                {d.isDefault && <span className="text-[10px] text-zinc-400">default</span>}
                 {!d.ready && <span className="text-[10px] text-amber-400">not connected</span>}
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
       )}
     </div>
   )

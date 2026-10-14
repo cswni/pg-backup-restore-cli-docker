@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useId, useState } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toggle } from '../components/UI'
@@ -22,6 +22,7 @@ function WebhookForm({ webhook, formats, events, onSaved, onCancel }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
+  const id = useId()
   const toggleEvent = (e) => set({ events: form.events.includes(e) ? form.events.filter((x) => x !== e) : [...form.events, e] })
 
   const submit = async (ev) => {
@@ -41,27 +42,27 @@ function WebhookForm({ webhook, formats, events, onSaved, onCancel }) {
   return (
     <Card className="mb-6">
       <form onSubmit={submit} className="space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-zinc-200">{webhook ? `Edit “${webhook.name}”` : 'New webhook'}</h2>
           <Toggle checked={form.enabled} onChange={(v) => set({ enabled: v })} label={form.enabled ? 'Enabled' : 'Disabled'} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Name</label>
-            <input type="text" value={form.name} maxLength={100} placeholder="#ops-alerts" onChange={(e) => set({ name: e.target.value })} className={inputCls} />
+            <label htmlFor={`${id}-name`} className={labelCls}>Name</label>
+            <input id={`${id}-name`} type="text" value={form.name} maxLength={100} placeholder="#ops-alerts" onChange={(e) => set({ name: e.target.value })} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Format</label>
-            <select value={form.format} onChange={(e) => set({ format: e.target.value })} className={inputCls}>
+            <label htmlFor={`${id}-format`} className={labelCls}>Format</label>
+            <select id={`${id}-format`} value={form.format} onChange={(e) => set({ format: e.target.value })} className={inputCls}>
               {formats.map((f) => <option key={f} value={f}>{FORMAT_LABELS[f] || f}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className={labelCls}>Webhook URL</label>
-            <input type="password" autoComplete="off" value={form.url} onChange={(e) => set({ url: e.target.value })}
-              placeholder={webhook ? 'Stored securely — leave blank to keep the current URL' : 'https://hooks.slack.com/services/…'}
+            <label htmlFor={`${id}-url`} className={labelCls}>Webhook URL</label>
+            <input id={`${id}-url`} aria-describedby={`${id}-url-hint`} type="password" autoComplete="off" value={form.url} onChange={(e) => set({ url: e.target.value })}
+              placeholder={webhook ? 'Stored securely. Leave blank to keep the current URL' : 'https://hooks.slack.com/services/…'}
               className={`${inputCls} font-mono`} />
-            <p className="text-xs text-zinc-600 mt-1">The URL is stored encrypted and never shown again.</p>
+            <p id={`${id}-url-hint`} className="text-xs text-zinc-400 mt-1">The URL is stored encrypted and never shown again.</p>
           </div>
         </div>
         <fieldset>
@@ -79,7 +80,7 @@ function WebhookForm({ webhook, formats, events, onSaved, onCancel }) {
         <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
           <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors">Cancel</button>
           <button type="submit" disabled={saving || !form.name.trim() || (!webhook && !form.url.trim())}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             {saving && <Spinner size="sm" />}{webhook ? 'Save changes' : 'Add webhook'}
           </button>
         </div>
@@ -90,7 +91,7 @@ function WebhookForm({ webhook, formats, events, onSaved, onCancel }) {
 
 function TestResult({ result }) {
   if (!result) return null
-  if (result.pending) return <span className="text-xs text-zinc-500">Sending…</span>
+  if (result.pending) return <span className="text-xs text-zinc-400">Sending…</span>
   return result.ok
     ? <span className="text-xs text-emerald-400">✓ Delivered</span>
     : <span className="text-xs text-red-400" title={result.error}>✗ {result.error || 'Failed'}</span>
@@ -103,9 +104,9 @@ function WebhookRow({ w, onEdit, onDelete, onTest, testResult }) {
       <div className="flex-1 min-w-48">
         <p className="text-zinc-100 font-medium">
           {w.name}
-          {!w.enabled && <span className="ml-2 text-xs text-zinc-500 font-normal">(disabled)</span>}
+          {!w.enabled && <span className="ml-2 text-xs text-zinc-400 font-normal">(disabled)</span>}
         </p>
-        <p className="text-xs text-zinc-500 mt-0.5">
+        <p className="text-xs text-zinc-400 mt-0.5">
           {FORMAT_LABELS[w.format] || w.format} · {w.events.length ? w.events.map((e) => EVENT_LABELS[e] || e).join(', ') : 'no events'}
           {!w.configured && <span className="text-amber-400"> · URL missing</span>}
         </p>
@@ -157,7 +158,7 @@ export default function Notifications() {
 
   const webhooks = data?.webhooks || []
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 md:p-8 max-w-4xl">
       <PageHeader title="Notifications" subtitle="Webhooks for failed backups, successes and overdue schedules"
         action={!editing && data && <Button onClick={() => setEditing('new')}>+ Add webhook</Button>} />
       {editing && (

@@ -13,10 +13,10 @@ import Notifications from './pages/Notifications'
 import StorageSettings from './pages/StorageSettings'
 
 // Page registry used by App (routes) and Layout (sidebar).
-//   path     — react-router path
-//   element  — page component instance
-//   nav      — { label, icon } to show in the sidebar (omit for detail pages)
-//   adminOnly — hide from non-admin users (the API enforces it too)
+//   path:      react-router path
+//   element:   page component instance
+//   nav:       { label, icon } to show in the sidebar (omit for detail pages)
+//   adminOnly: hide from non-admin users (the API enforces it too)
 //
 // To add a page, import it and add one entry.
 export const routes = [

@@ -1,23 +1,26 @@
-import React, { useState } from 'react'
+import React, { useState, useId, useRef } from 'react'
+import { copyText } from '../../lib/clipboard'
 
 // Small form primitives shared by the storage settings components.
 
-const inputCls = 'w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-hidden transition-colors'
+const inputCls = 'w-full bg-zinc-800 border border-zinc-500 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 outline-hidden transition-colors'
 
-export function Label({ children, hint }) {
+export function Label({ htmlFor, children, hint }) {
   return (
-    <label className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
+    <label htmlFor={htmlFor} className="block text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wider">
       {children}
-      {hint && <span className="ml-1 text-zinc-600 normal-case tracking-normal">{hint}</span>}
+      {hint && <span className="ml-1 text-zinc-400 normal-case tracking-normal">{hint}</span>}
     </label>
   )
 }
 
 export function TextField({ label, hint, value, onChange, placeholder, type = 'text', mono = false, autoComplete = 'off' }) {
+  const id = useId()
   return (
     <div>
-      <Label hint={hint}>{label}</Label>
+      <Label htmlFor={id} hint={hint}>{label}</Label>
       <input
+        id={id}
         type={type}
         value={value ?? ''}
         placeholder={placeholder}
@@ -31,10 +34,12 @@ export function TextField({ label, hint, value, onChange, placeholder, type = 't
 
 /** Integer input where empty means "not set" (null). */
 export function CountField({ label, hint, value, onChange, placeholder = 'off', max }) {
+  const id = useId()
   return (
     <div>
-      <Label hint={hint}>{label}</Label>
+      <Label htmlFor={id} hint={hint}>{label}</Label>
       <input
+        id={id}
         type="number"
         min={1}
         max={max}
@@ -47,31 +52,39 @@ export function CountField({ label, hint, value, onChange, placeholder = 'off', 
   )
 }
 
+const COPY_FEEDBACK_MS = 2000
+
 /** Read-only value with a copy button (e.g. the OAuth redirect URI). */
 export function CopyField({ label, value }) {
-  const [copied, setCopied] = useState(false)
+  const id = useId()
+  const inputRef = useRef(null)
+  const [result, setResult] = useState(null) // null | 'copied' | 'failed'
+
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      setCopied(false)
-    }
+    const ok = await copyText(value)
+    setResult(ok ? 'copied' : 'failed')
+    if (ok) setTimeout(() => setResult(null), COPY_FEEDBACK_MS)
+    else inputRef.current?.select()
   }
+
   return (
     <div>
-      <Label>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       <div className="flex gap-2">
-        <input readOnly value={value} onFocus={(e) => e.target.select()} className={`${inputCls} font-mono text-xs text-emerald-300`} />
+        <input id={id} ref={inputRef} readOnly value={value} onFocus={(e) => e.target.select()} className={`${inputCls} font-mono text-xs text-emerald-300`} />
         <button
           type="button"
           onClick={copy}
           className="shrink-0 px-3 rounded-lg text-xs font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
         >
-          {copied ? '✓ Copied' : 'Copy'}
+          {result === 'copied' ? '✓ Copied' : 'Copy'}
         </button>
       </div>
+      {result === 'failed' && (
+        <p role="alert" className="text-xs text-red-400 mt-1">
+          Copy failed. The text is selected, so copy it with Ctrl+C (Cmd+C on a Mac).
+        </p>
+      )}
     </div>
   )
 }
@@ -79,10 +92,10 @@ export function CopyField({ label, value }) {
 export function SectionTitle({ icon, title, subtitle }) {
   return (
     <div className="flex items-start gap-3 mb-4">
-      <span className="text-xl leading-none mt-0.5">{icon}</span>
+      <span aria-hidden="true" className="text-xl leading-none mt-0.5">{icon}</span>
       <div>
         <h2 className="font-semibold text-zinc-100">{title}</h2>
-        {subtitle && <p className="text-xs text-zinc-500 mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
       </div>
     </div>
   )

@@ -38,7 +38,7 @@ function DestinationRow({ d, onEdit, onDelete, onTest, testResult, testing }) {
             <a
               href={api.storage.gdriveConnectUrl(d.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${needsConnect
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950'
                 : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'}`}
             >
               {needsConnect ? '🔗 Connect Google Drive' : '↻ Reconnect'}
@@ -46,10 +46,10 @@ function DestinationRow({ d, onEdit, onDelete, onTest, testResult, testing }) {
           )}
           <Button size="sm" variant="secondary" disabled={testing || needsConnect} onClick={() => onTest(d)}>{testing ? 'Testing…' : 'Test'}</Button>
           <Button size="sm" variant="ghost" onClick={() => onEdit(d)}>Edit</Button>
-          <Button size="sm" variant="ghost" onClick={() => onDelete(d)}>🗑️</Button>
+          <Button size="sm" variant="ghost" aria-label={`Delete destination ${d.name}`} onClick={() => onDelete(d)}>🗑️</Button>
         </div>
       </div>
-      <p className="text-xs text-zinc-500 mt-1.5 font-mono break-all">{target(d)} · {describeRetention(d.retention)}</p>
+      <p className="text-xs text-zinc-400 mt-1.5 font-mono break-all">{target(d)} · {describeRetention(d.retention)}</p>
       {testResult && (
         <p className={`text-xs mt-1.5 ${testResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
           {testResult.ok ? '✓' : '✗'} {testResult.message}
@@ -99,14 +99,14 @@ export default function DestinationsCard({ destinations, redirectUri, onChanged,
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
         <SectionTitle icon="☁️" title="Remote destinations" subtitle="Copies of each backup are uploaded after compression and encryption." />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={() => setForm({ type: 's3' })}>+ S3-compatible</Button>
           <Button size="sm" variant="secondary" onClick={() => setForm({ type: 'gdrive' })}>+ Google Drive</Button>
         </div>
       </div>
 
       {destinations.length === 0 ? (
-        <p className="text-sm text-zinc-500 py-6 text-center">No destinations yet — backups are only stored in /backups.</p>
+        <p className="text-sm text-zinc-400 py-6 text-center">No destinations yet. Backups are only stored in /backups.</p>
       ) : (
         <div className="divide-y divide-zinc-800/60">
           {destinations.map((d) => (
