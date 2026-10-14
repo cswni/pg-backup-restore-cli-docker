@@ -168,6 +168,41 @@ test('the container snippet reads the root password from the environment into an
   })
   const out = res.stdout.toString()
   assert.equal(res.status, 0, res.stderr.toString())
-  assert.match(out, /\[client\]\nuser=root\npassword="p\\"a\\\\ss"\n/)
+  assert.match(out, /\[client\]\nuser="root"\npassword="p\\"a\\\\ss"\n/)
   assert.match(out, /ARGS:--single-transaction shop/)
+
+  const saved = childProcess.spawnSync('sh', ['-s', 'dump', 'shop'], {
+    input: `PATH="$PWD:$PATH"\n${driver._internals.MYSQL_SH}\n`,
+    cwd: bin,
+    env: { ...process.env, MARIADB_ROOT_PASSWORD: 'stale', PGUI_DB_USER: 'backup#1', PGUI_DB_PASSWORD: 's"ecret' },
+  })
+  assert.equal(saved.status, 0, saved.stderr.toString())
+  assert.match(saved.stdout.toString(), /\[client\]\nuser="backup#1"\npassword="s\\"ecret"\n/)
+})
+
+test('saved credentials reach the container through the docker env, never argv', async (t) => {
+  const store = require('../containercreds/store')
+  store.saveCredentials('local', 'legacy_db', { engine: 'mysql', username: 'admin', password: 'top-secret-pw' })
+  t.after(() => store.deleteCredentials('local', 'legacy_db'))
+  fakes.setState({ existing: ['shop'] })
+
+  const task = { server: LOCAL_SERVER, container: 'legacy_db.1.oznkxm16y64xdhboove8qazir' }
+  assert.deepEqual(await driver.listDatabases(task), ['shop'])
+  const [call] = fakes.calls()
+  assert.deepEqual(call.via.env, { PGUI_DB_USER: 'admin', PGUI_DB_PASSWORD: 'top-secret-pw' })
+  assert.deepEqual(call.via.argv.slice(0, 6), ['exec', '-e', 'PGUI_DB_USER', '-e', 'PGUI_DB_PASSWORD', task.container])
+  assert.ok(!call.via.argv.some((a) => a.includes('top-secret-pw')))
+
+  fakes.setState({ existing: ['shop'] })
+  await driver.listDatabases(target)
+  assert.deepEqual(fakes.calls()[0].via.env, {})
+})
+
+test('credentials saved for another engine are ignored', async (t) => {
+  const store = require('../containercreds/store')
+  store.saveCredentials('local', 'shop-db', { engine: 'postgres', username: 'postgres', password: 'pg-pass' })
+  t.after(() => store.deleteCredentials('local', 'shop-db'))
+  fakes.setState({ existing: [] })
+  await driver.listDatabases(target)
+  assert.deepEqual(fakes.calls()[0].via.env, {})
 })

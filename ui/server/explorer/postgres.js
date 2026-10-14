@@ -2,10 +2,11 @@ const { execEnv } = require('../servers')
 const { withConnection } = require('../connectivity/tunnel')
 const { capture, toolEnv } = require('../connectivity/process')
 const { _internals: { pgEnv } } = require('../drivers/postgres-direct')
+const { postgresAccess, postgresExecOptions } = require('../containercreds/access')
 const sql = require('./postgres-sql')
 
 // PostgreSQL explorer. psql runs inside the container for Docker servers
-// (as the postgres OS user, like drivers/postgres-docker.js) and in this
+// (as the postgres OS user or the saved credentials, like drivers/postgres-docker.js) and in this
 // image for direct servers, with the password in PGPASSWORD (pgEnv).
 
 const PSQL_TIMEOUT_MS = 30000
@@ -48,10 +49,10 @@ function createSession(psql, database) {
 const dockerAdapter = {
   supportsQuery: true,
   async open(target, database, fn) {
-    const env = { ...process.env, ...(await execEnv(target.server)) }
-    const psql = (args) => capture('docker',
-      ['exec', '-u', 'postgres', '-e', 'PGCLIENTENCODING=UTF8', target.container, 'psql', ...args],
-      { env, timeout: PSQL_TIMEOUT_MS })
+    const access = postgresAccess(target)
+    const env = { ...process.env, ...(await execEnv(target.server)), ...access.env }
+    const options = [...postgresExecOptions(access), '-e', 'PGCLIENTENCODING=UTF8']
+    const psql = (args) => capture('docker', ['exec', ...options, target.container, 'psql', ...args], { env, timeout: PSQL_TIMEOUT_MS })
     return fn(createSession(psql, database))
   },
 }

@@ -47,7 +47,27 @@ test('the container snippet never puts the password on a command line', () => {
   const { MONGO_SH, MONGO_JS } = driver._internals
   assert.ok(!/--password/.test(MONGO_SH))
   assert.match(MONGO_SH, /--config="\$cfg"/)
-  assert.match(MONGO_JS, /admin\.auth\(env\.PGUI_USER, env\.PGUI_PASSWORD\)/)
+  assert.match(MONGO_JS, /getSiblingDB\(env\.PGUI_AUTHDB \|\| 'admin'\)\.auth\(env\.PGUI_USER, env\.PGUI_PASSWORD\)/)
+  assert.match(MONGO_SH, /--authenticationDatabase="\$authdb"/)
+})
+
+test('saved credentials and authSource are forwarded with docker exec -e', async (t) => {
+  const store = require('../containercreds/store')
+  store.saveCredentials('local', 'app-mongo', { engine: 'mongodb', username: 'ops', password: 'mongo-secret', authSource: 'ops_db' })
+  t.after(() => store.deleteCredentials('local', 'app-mongo'))
+  fakes.setState({ existing: ['shop'] })
+  assert.deepEqual(await driver.listDatabases(target), ['shop'])
+  const [call] = fakes.calls()
+  assert.deepEqual(call.via.env, { PGUI_DB_USER: 'ops', PGUI_DB_PASSWORD: 'mongo-secret', PGUI_DB_AUTHSOURCE: 'ops_db' })
+  assert.ok(!call.via.argv.some((a) => a.includes('mongo-secret')))
+})
+
+test('without saved credentials nothing extra is forwarded', async () => {
+  fakes.setState({ existing: [] })
+  await driver.listDatabases(target)
+  const [call] = fakes.calls()
+  assert.deepEqual(call.via.env, {})
+  assert.equal(call.via.argv[1], 'app-mongo')
 })
 
 test('dump streams mongodump --archive --db to the file; failures remove it', async () => {

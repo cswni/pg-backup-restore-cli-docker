@@ -17,10 +17,17 @@ let args = argv
 let via = null
 let interactive = false
 if (cmd === 'docker') {
-  // docker exec [-i] <container> sh -c <script> sh <tool> ...args
-  interactive = args[1] === '-i'
-  const rest = args.slice(interactive ? 2 : 1)
-  via = { container: rest[0] }
+  // docker exec [-i] [-e NAME]... <container> sh -c <script> sh <tool> ...args
+  // via.env: forwarded variables with the value the docker process received
+  let i = 1
+  const env = {}
+  while (args[i] === '-i' || args[i] === '-e') {
+    if (args[i] === '-i') { interactive = true; i += 1; continue }
+    env[args[i + 1]] = process.env[args[i + 1]] ?? null
+    i += 2
+  }
+  const rest = args.slice(i)
+  via = { container: rest[0], env, argv: argv.slice() }
   cmd = rest[5]
   args = rest.slice(6)
   if (cmd === 'dump') cmd = 'mariadb-dump'

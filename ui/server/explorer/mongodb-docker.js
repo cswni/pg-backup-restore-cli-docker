@@ -1,12 +1,11 @@
 const { BSON } = require('mongodb')
-const { execEnv } = require('../servers')
 const { capture } = require('../connectivity/process')
-const { _internals: { execArgs } } = require('../drivers/mongodb-docker')
+const { _internals: { execArgs, dockerEnv } } = require('../drivers/mongodb-docker')
 const bson = require('./mongodb-bson')
 
 // MongoDB explorer for Docker servers: the container's mongosh runs a fixed
-// program through the backup driver's shell wrapper (credentials from the
-// container's environment). The request travels as JSON in an environment
+// program through the backup driver's shell wrapper (saved credentials or
+// the container's environment). The request travels as JSON in an environment
 // variable (PGUI_ACTION) and the filter as Extended JSON inside it, so user
 // input is never part of the program text. Results come back as canonical
 // Extended JSON to keep BSON types.
@@ -15,8 +14,7 @@ const SHELL_TIMEOUT_MS = 30000
 
 const EXPLORER_JS = String.raw`
 const env = process.env
-const admin = db.getSiblingDB('admin')
-if (env.PGUI_USER) admin.auth(env.PGUI_USER, env.PGUI_PASSWORD)
+if (env.PGUI_USER) db.getSiblingDB(env.PGUI_AUTHDB || 'admin').auth(env.PGUI_USER, env.PGUI_PASSWORD)
 const req = JSON.parse(env.PGUI_ACTION)
 const target = db.getSiblingDB(env.PGUI_DB)
 const maxTimeMS = req.maxTimeMS
@@ -88,10 +86,11 @@ function createSession(shell) {
 const adapter = {
   supportsQuery: false,
   async open(target, database, fn) {
-    const env = { ...process.env, ...(await execEnv(target.server)) }
+    const { env, names } = await dockerEnv(target)
     const shell = async (request) => {
       const action = JSON.stringify({ ...request, maxTimeMS: bson.MAX_TIME_MS })
-      const out = await capture('docker', execArgs(target, 'shell', [EXPLORER_JS, action, database]), { env, timeout: SHELL_TIMEOUT_MS })
+      const args = execArgs(target, 'shell', [EXPLORER_JS, action, database], false, names)
+      const out = await capture('docker', args, { env, timeout: SHELL_TIMEOUT_MS })
       return parseShellResult(out)
     }
     return fn(createSession(shell))
