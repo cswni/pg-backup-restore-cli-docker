@@ -103,10 +103,10 @@ Docker targets run the client inside the container like the drivers do.
 ### Tasks
 
 B1, server (`ui/server/explorer/**`, one line in `modules.js`, small exports from driver helpers if needed):
-- [ ] PostgreSQL adapter (Docker + direct): objects, structure, rows, query
-- [ ] MySQL/MariaDB adapter (Docker + direct): objects, structure, rows, query
-- [ ] MongoDB adapter (Docker via mongosh, direct via `mongodb` driver): objects, structure, rows (+ filter)
-- [ ] routes + validation + permissions, tests with fake tools (no real DB locally)
+- [x] PostgreSQL adapter (Docker + direct): objects, structure, rows, query (commit d56cc4a)
+- [x] MySQL/MariaDB adapter (Docker + direct): objects, structure, rows, query (commit d56cc4a)
+- [x] MongoDB adapter (Docker via mongosh, direct via `mongodb` driver): objects, structure, rows (+ filter) (commit d56cc4a)
+- [x] routes + validation + permissions, tests with fake tools (no real DB locally) (commit d56cc4a)
 
 B2, client (`ui/client/**`):
 - [ ] `/explorer` page (nav "Explorer"): pick server → container (Docker) → database; deep link via query string
@@ -130,3 +130,4 @@ B3-B5:
 ## Log
 
 - 2026-10-14: plan created (after commit 487f365, deployed image `1407cde51d83`).
+- 2026-10-14: B1 done (d56cc4a): ui/server/explorer API + README "Database Explorer" section; mysql drivers export open(); tested with fake tools only, not against real databases.
