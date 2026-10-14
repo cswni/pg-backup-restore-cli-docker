@@ -234,6 +234,44 @@ For local development run the server with credentials (or
 
 ---
 
+## Database Explorer
+
+Browse what is inside a database from the Web UI: tables and views
+(PostgreSQL, MySQL/MariaDB) or collections and views (MongoDB), their columns
+and indexes, and their rows page by page. It works on every server kind
+(Docker containers and direct servers, also through SSH tunnels) with the same
+credentials the backups use.
+
+| Who | Can |
+|-----|-----|
+| every signed-in role | list objects, see their structure, page through rows (any role can already download full backups) |
+| `admin` | also run SQL in the console (PostgreSQL and MySQL/MariaDB) |
+
+Everything is read-only:
+
+- Every query runs in a read-only transaction with a 10 s statement timeout
+  (`statement_timeout` on PostgreSQL, `max_execution_time` on MySQL,
+  `max_statement_time` on MariaDB, `maxTimeMS` on MongoDB).
+- Pages hold 1 to 200 rows (default 50); the console returns at most 500.
+  Text longer than 2,000 characters is cut, binary values show their size and
+  the first 32 bytes as hex.
+- The console takes one statement. On PostgreSQL it runs as a subquery, so
+  it accepts queries (`SELECT`, `WITH`, `VALUES`, `TABLE`); on MySQL it runs
+  through `PREPARE`, so the mysql client never parses it. Client commands
+  (`\` in psql; `\`, `system`, `source`, `tee`, `pager`, `!` in mysql) are
+  refused, and so is a semicolon anywhere but at the end, also inside strings.
+- MongoDB rows can be filtered with an Extended JSON object such as
+  `{"status": "active"}`; `$where`, `$function` and `$accumulator` are refused.
+- Table and collection names are only used when they appear in the database's
+  catalog, and are then quoted.
+
+The read-only transaction is the guard against writes, so extensions that open
+their own connections (such as `dblink`) can still write; that is one reason
+the console is admin-only. MySQL console results are text (numbers included),
+and a text value `NULL` cannot be told apart from a real NULL there.
+
+---
+
 ## Remote servers & SSH tunnels
 
 Besides the Docker socket of the host it runs on (**Local Docker**, always

@@ -48,5 +48,5 @@ async function open(target, fn) {
 
 module.exports = {
   ...createMysqlDriver({ kind: 'docker', open }),
-  _internals: { MYSQL_SH, execArgs },
+  _internals: { MYSQL_SH, execArgs, open },
 }
