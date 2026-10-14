@@ -47,5 +47,6 @@
 }
 .pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
 
-/*Increase all fonts scaling*/
-* { font-size: 24px; }
+/* Larger base size: Tailwind sizes are in rem, so every text size scales by
+   1.25 and headings, body text and labels keep their relative sizes. */
+html { font-size: 125%; }

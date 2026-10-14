@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../lib/auth'
-import { Button } from '../components/UI'
+import { Button, Brand } from '../components/UI'
 import { TextField, FormMessage } from '../components/FormField'
 
 function loginErrorText(err) {
@@ -34,12 +34,8 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-100 p-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <span className="text-4xl">🐘</span>
-          <div>
-            <p className="text-lg font-semibold leading-tight">PG Backup</p>
-            <p className="text-[10px] text-zinc-500 leading-tight tracking-wider uppercase">& Restore CLI</p>
-          </div>
+        <div className="flex justify-center mb-8">
+          <Brand large />
         </div>
 
         <form
@@ -48,7 +44,7 @@ export default function Login() {
         >
           <div>
             <h1 className="text-xl font-bold">Sign in</h1>
-            <p className="text-sm text-zinc-500 mt-1">Use the account your administrator gave you.</p>
+            <p className="text-sm text-zinc-400 mt-1">Use the account your administrator gave you.</p>
           </div>
           <TextField
             id="login-username"
