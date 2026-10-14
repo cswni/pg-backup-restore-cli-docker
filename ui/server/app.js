@@ -49,6 +49,18 @@ function createApp() {
   // Unknown API routes are JSON 404s, never the SPA
   app.use('/api', (req, res) => res.status(404).json({ error: `Unknown API endpoint: ${req.method} /api${req.path}` }))
 
+  // Malformed JSON bodies and other errors thrown before a route answers:
+  // always JSON, never Express's HTML error page (or a stack trace).
+  // eslint-disable-next-line no-unused-vars
+  app.use('/api', (err, req, res, next) => {
+    const status = err.type === 'entity.parse.failed' ? 400 : (err.status || err.statusCode || 500)
+    const message = status === 400 ? 'Request body is not valid JSON'
+      : status === 413 ? 'Request body is too large'
+        : status < 500 ? err.message : 'Internal server error'
+    if (status >= 500) console.error('[pg-backup-ui] Unhandled API error:', err)
+    res.status(status).json({ error: message })
+  })
+
   // Built frontend + SPA fallback
   if (fs.existsSync(DIST_DIR)) {
     app.use(express.static(DIST_DIR))

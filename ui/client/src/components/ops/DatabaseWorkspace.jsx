@@ -42,7 +42,7 @@ function DatabaseRow({ db, operations, onSelect, target }) {
       <div className="flex flex-wrap gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
         <Link
           to={explorerHref({ ...target, database: db })}
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
+          className="inline-flex items-center gap-1.5 px-2 py-1 min-h-[44px] md:min-h-0 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
         >
           <Icon as={TableProperties} className="size-3.5" /> Explore
         </Link>
@@ -51,7 +51,7 @@ function DatabaseRow({ db, operations, onSelect, target }) {
             key={op.id}
             onClick={() => onSelect({ ...op, presetDb: db })}
             title={op.label}
-            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-2 py-1 min-h-[44px] md:min-h-0 rounded-md text-xs font-medium transition-colors ${
               op.variant === 'danger' ? 'text-red-400 hover:bg-red-500/15' : 'text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100'
             }`}
           >
