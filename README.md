@@ -149,6 +149,46 @@ use `docker ps --filter name=<stack>_postgres` on the node to find the exact nam
 Web UI backups can be compressed (`.gz`) and encrypted (`.enc`), e.g.
 `shop_<ts>.archive.gz.enc`. The CLI writes plain `.sql` files.
 
+### Container credentials
+
+By default the tools in a Docker container log in with what the container
+itself provides: PostgreSQL runs as the `postgres` OS user (`docker exec -u
+postgres`), MySQL / MariaDB uses `root` with `MARIADB_ROOT_PASSWORD` /
+`MYSQL_ROOT_PASSWORD`, MongoDB uses `MONGO_INITDB_ROOT_USERNAME` /
+`MONGO_INITDB_ROOT_PASSWORD` (or their `*_FILE` variants).
+
+When that does not work (a password changed after the container was created,
+an image without a `postgres` OS user), an admin can save credentials per
+container in **Servers → Container credentials** on the Docker server's card,
+or with the **Credentials** button on the container page:
+
+- PostgreSQL: username, password, OS user (leave it empty to use the image's
+  default user) and host (`127.0.0.1` logs in with the password over TCP
+  instead of the local socket)
+- MySQL / MariaDB: username, password
+- MongoDB: username, password, auth database (default `admin`)
+
+Saved credentials are used for backups, restores, database lists and the
+Explorer. They are stored encrypted (like server passwords), never sent back to
+the browser, and reach the container only as environment variables
+(`docker exec -e NAME`, never on a command line). For a Swarm task container
+(`<service>.<slot>.<task id>`) they are saved under the service name, so they
+still apply after a redeploy. Without saved credentials nothing changes.
+
+The PostgreSQL CLI commands honour the same settings through environment
+variables of the `pg-backup` container:
+
+| Variable | Effect |
+|---|---|
+| `PG_EXEC_USER` | OS user for `docker exec -u`. Unset: `postgres`. Set but empty: no `-u` |
+| `PGUSER`, `PGPASSWORD`, `PGHOST` | Forwarded to `psql` / `pg_dump` with `docker exec -e NAME` when not empty |
+
+```bash
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd)/backups:/backups \
+  -e PG_EXEC_USER= -e PGUSER=app -e PGPASSWORD -e PGHOST=127.0.0.1 \
+  ghcr.io/cswni/pg-backup-restore-cli export -c mcp-postgres-core -d app
+```
+
 ---
 
 ## Web UI authentication
@@ -396,14 +436,15 @@ client, or `N document(s) failed to restore` fails the job, and partial backup
 files are removed.
 
 **Credentials for containers** are read inside the container from the official
-images' environment, never passed on a command line:
+images' environment, never passed on a command line, unless an admin saved
+others (see [Container credentials](#container-credentials)):
 
 - MySQL / MariaDB / Percona: user `root`, password from `MARIADB_ROOT_PASSWORD` or
   `MYSQL_ROOT_PASSWORD` (or the `*_FILE` variants). They are written to a
   `mktemp` option file (`--defaults-extra-file`, removed afterwards). Both the
   `mariadb`/`mariadb-dump` and `mysql`/`mysqldump` tool names are supported.
   `MYSQL_RANDOM_ROOT_PASSWORD` / `MARIADB_ROOT_PASSWORD_HASH` setups cannot be
-  discovered.
+  discovered: save the credentials in the UI instead.
 - MongoDB: `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` (or
   `*_FILE`), authSource `admin`; no authentication when unset. The password
   reaches mongodump/mongorestore via a `mktemp` `--config` YAML file and mongosh
