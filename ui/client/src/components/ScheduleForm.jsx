@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { Card, DbNameInput, Toggle, ErrorAlert, Spinner, DB_NAME_PATTERN } from './UI'
 import CronPicker, { inputCls, labelCls } from './CronPicker'
 import { DEFAULT_PRESET, buildCron } from '../lib/cron'
+import DestinationPicker from './DestinationPicker'
 
 const BROWSER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 const TIMEZONES = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
@@ -21,14 +22,14 @@ function initialForm(schedule) {
     outputName: schedule?.outputName || '',
     compress: !!opts.compress,
     encrypt: !!opts.encrypt,
-    destinations: Array.isArray(opts.destinations) ? opts.destinations.join(', ') : '',
+    destinations: Array.isArray(opts.destinations) ? opts.destinations : [],
     extraOptions: Object.fromEntries(Object.entries(opts).filter(([k]) => !['compress', 'encrypt', 'destinations'].includes(k))),
   }
 }
 
 /** Request body for the API (options are passed through to the backup pipeline). */
 function toPayload(f) {
-  const destinations = f.destinations.split(',').map((d) => d.trim()).filter(Boolean)
+  const { destinations } = f
   return {
     name: f.name.trim(),
     enabled: f.enabled,
@@ -192,9 +193,7 @@ export default function ScheduleForm({ schedule, onSaved, onCancel }) {
           <h3 className="text-sm font-medium text-zinc-300">Options</h3>
           <Toggle checked={form.compress} onChange={(v) => set({ compress: v })} label="Compress" hint="gzip, adds .gz to the file name." />
           <Toggle checked={form.encrypt} onChange={(v) => set({ encrypt: v })} label="Encrypt" hint="Uses the passphrase set on the Storage page." />
-          <Field id={`${id}-dest`} label="Remote destination IDs (comma separated, optional)">
-            <input id={`${id}-dest`} type="text" value={form.destinations} placeholder="empty: the default remote destinations" onChange={(e) => set({ destinations: e.target.value })} className={inputCls} />
-          </Field>
+          <DestinationPicker value={form.destinations} onChange={(destinations) => set({ destinations })} />
         </section>
         {error && <ErrorAlert message={error} />}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
