@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useId, useState } from 'react'
 import { api } from '../lib/api'
 import { PRESETS, WEEKDAYS, buildCron, parseCron } from '../lib/cron'
 import { formatInZone } from '../lib/format'
 
-export const inputCls = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-hidden focus:border-emerald-500 transition-colors'
-export const labelCls = 'block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider'
+export const inputCls = 'w-full bg-zinc-800 border border-zinc-500 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-400 outline-hidden focus:border-emerald-500 transition-colors'
+export const labelCls = 'block text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wider'
 
 const PREVIEW_DEBOUNCE_MS = 300
 const pad = (n) => String(n).padStart(2, '0')
@@ -30,10 +30,12 @@ function useCronPreview(cron, timezone) {
 }
 
 function TimeField({ p, update }) {
+  const id = useId()
   return (
     <div>
-      <label className={labelCls}>Time</label>
+      <label htmlFor={id} className={labelCls}>Time</label>
       <input
+        id={id}
         type="time"
         value={`${pad(p.hour)}:${pad(p.minute)}`}
         onChange={(e) => {
@@ -47,11 +49,12 @@ function TimeField({ p, update }) {
 }
 
 function PresetFields({ p, update }) {
+  const id = useId()
   if (p.preset === 'hourly') {
     return (
       <div>
-        <label className={labelCls}>Minute past the hour</label>
-        <input type="number" min={0} max={59} value={p.minute}
+        <label htmlFor={id} className={labelCls}>Minute past the hour</label>
+        <input id={id} type="number" min={0} max={59} value={p.minute}
           onChange={(e) => update({ minute: Math.min(59, Math.max(0, Number(e.target.value) || 0)) })} className={inputCls} />
       </div>
     )
@@ -59,10 +62,10 @@ function PresetFields({ p, update }) {
   if (p.preset === 'custom') {
     return (
       <div className="sm:col-span-2">
-        <label className={labelCls}>Cron expression</label>
-        <input type="text" value={p.custom} placeholder="m h dom mon dow" spellCheck={false}
+        <label htmlFor={id} className={labelCls}>Cron expression</label>
+        <input id={id} type="text" value={p.custom} placeholder="m h dom mon dow" spellCheck={false}
           onChange={(e) => update({ custom: e.target.value })} className={`${inputCls} font-mono`} />
-        <p className="text-xs text-zinc-600 mt-1">5 fields: minute hour day-of-month month day-of-week (e.g. <code>30 1 * * 1-5</code>).</p>
+        <p className="text-xs text-zinc-400 mt-1">5 fields: minute hour day-of-month month day-of-week (e.g. <code>30 1 * * 1-5</code>).</p>
       </div>
     )
   }
@@ -70,16 +73,16 @@ function PresetFields({ p, update }) {
     <>
       {p.preset === 'weekly' && (
         <div>
-          <label className={labelCls}>Day of week</label>
-          <select value={p.weekday} onChange={(e) => update({ weekday: Number(e.target.value) })} className={inputCls}>
+          <label htmlFor={id} className={labelCls}>Day of week</label>
+          <select id={id} value={p.weekday} onChange={(e) => update({ weekday: Number(e.target.value) })} className={inputCls}>
             {WEEKDAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
           </select>
         </div>
       )}
       {p.preset === 'monthly' && (
         <div>
-          <label className={labelCls}>Day of month</label>
-          <input type="number" min={1} max={28} value={p.monthDay}
+          <label htmlFor={id} className={labelCls}>Day of month</label>
+          <input id={id} type="number" min={1} max={28} value={p.monthDay}
             onChange={(e) => update({ monthDay: Math.min(28, Math.max(1, Number(e.target.value) || 1)) })} className={inputCls} />
         </div>
       )}
@@ -119,8 +122,8 @@ export default function CronPicker({ cron, timezone, onChange }) {
         <PresetFields p={p} update={update} />
       </div>
       <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
-        <p className="text-xs text-zinc-500 mb-1.5">
-          Next runs <span className="font-mono text-zinc-600">({cron || '—'} · {timezone})</span>
+        <p className="text-xs text-zinc-400 mb-1.5">
+          Next runs <span className="font-mono text-zinc-400">({cron || 'no expression'} · {timezone})</span>
         </p>
         {preview.error ? (
           <p className="text-xs text-red-400">{preview.error}</p>

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { PageHeader, Spinner, ErrorAlert, Button } from '../components/UI'
+import { PageHeader, Spinner, ErrorAlert, Button, Toast } from '../components/UI'
 import ServerCard from '../components/servers/ServerCard'
 import ServerForm from '../components/servers/ServerForm'
 
@@ -46,26 +46,19 @@ export default function Servers() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <PageHeader
         title="Servers"
         subtitle="Docker hosts and database servers this UI can back up and restore"
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {isAdmin && <Button size="sm" className="whitespace-nowrap" onClick={() => setEditing('new')}>＋ Add server</Button>}
             <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={reload}>↻ Refresh</Button>
           </div>
         }
       />
 
-      {toast && (
-        <div className={`mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm border ${
-          toast.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-        }`}>
-          <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
-          {toast.msg}
-        </div>
-      )}
+      {toast && <Toast type={toast.type} message={toast.msg} />}
 
       {loading && !servers && <div className="flex justify-center py-20"><Spinner /></div>}
       {error && <ErrorAlert message={error} onRetry={reload} />}

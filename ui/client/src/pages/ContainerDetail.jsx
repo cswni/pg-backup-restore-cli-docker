@@ -30,9 +30,9 @@ export default function ContainerDetail() {
   const backHref = serverId === 'local' ? '/containers' : `/containers?server=${encodeURIComponent(serverId)}`
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-2">
-        <Link to={backHref} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">← Containers</Link>
+        <Link to={backHref} className="text-xs text-zinc-400 hover:text-zinc-100 transition-colors">← Containers</Link>
       </div>
       <PageHeader
         title={containerName}

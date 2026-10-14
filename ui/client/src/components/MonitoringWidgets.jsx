@@ -20,7 +20,7 @@ export function HealthIndicator({ health }) {
       title={`${docker} · ${db} · up ${Math.round((health.uptimeSeconds || 0) / 60)} min`}>
       <span className={`w-2 h-2 rounded-full ${s.dot} ${health.status === 'ok' ? '' : 'pulse-dot'}`} />
       <span className={`font-medium ${s.text}`}>{s.label}</span>
-      <span className="text-zinc-600 font-mono">v{health.version}</span>
+      <span className="text-zinc-400 font-mono">v{health.version}</span>
     </div>
   )
 }
@@ -30,7 +30,7 @@ function Widget({ title, to, linkLabel, children }) {
     <Card className="flex flex-col">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-3">
         <h2 className="font-semibold text-zinc-200 text-sm whitespace-nowrap">{title}</h2>
-        {to && <Link to={to} className="text-xs text-zinc-500 hover:text-zinc-300 whitespace-nowrap">{linkLabel} →</Link>}
+        {to && <Link to={to} className="text-xs text-zinc-400 hover:text-zinc-100 whitespace-nowrap">{linkLabel} →</Link>}
       </div>
       <div className="flex-1">{children}</div>
     </Card>
@@ -39,27 +39,31 @@ function Widget({ title, to, linkLabel, children }) {
 
 const STATUS_TEXT = { success: 'text-emerald-400', error: 'text-red-400', running: 'text-blue-400' }
 
-const Empty = ({ children }) => <p className="text-xs text-zinc-500 py-4 text-center">{children}</p>
+const Empty = ({ children }) => <p className="text-xs text-zinc-400 py-4 text-center">{children}</p>
 
-/** Placeholder while loading (items undefined) or when there is nothing to show; null otherwise. */
-function placeholder(items, emptyText) {
+/**
+ * Placeholder when loading failed, while loading (items undefined) or when
+ * there is nothing to show; null otherwise.
+ */
+function placeholder(items, emptyText, error) {
+  if (items === undefined && error) return <p className="text-xs text-red-400 py-4 text-center">Could not load: {error}</p>
   if (items === undefined) return <Empty>Loading…</Empty>
   return items.length ? null : <Empty>{emptyText}</Empty>
 }
 
 /** Failed jobs of the last 24 hours. */
-export function RecentFailures({ failures }) {
+export function RecentFailures({ failures, error }) {
   return (
     <Widget title="Failures (24 h)" to="/jobs?status=error" linkLabel="All failures">
-      {placeholder(failures, '✓ No failed jobs in the last 24 hours') || (
+      {placeholder(failures, '✓ No failed jobs in the last 24 hours', error) || (
         <ul className="space-y-2">
           {failures.map((j) => (
             <li key={j.id} className="text-xs">
               <Link to={`/jobs/${j.id}`} className="flex items-center justify-between gap-2 group">
-                <span className="font-mono text-red-400 group-hover:underline">{j.type} · {j.database || '—'}</span>
-                <span className="text-zinc-500 shrink-0">{timeAgo(j.startedAt)}</span>
+                <span className="font-mono text-red-400 group-hover:underline">{j.type}{j.database ? ` · ${j.database}` : ''}</span>
+                <span className="text-zinc-400 shrink-0">{timeAgo(j.startedAt)}</span>
               </Link>
-              {j.error && <p className="text-zinc-500 truncate" title={j.error}>{j.error}</p>}
+              {j.error && <p className="text-zinc-400 truncate" title={j.error}>{j.error}</p>}
             </li>
           ))}
         </ul>
@@ -69,17 +73,17 @@ export function RecentFailures({ failures }) {
 }
 
 /** Most recent successful backup per (server, database). */
-export function LastBackups({ backups }) {
+export function LastBackups({ backups, error }) {
   return (
     <Widget title="Last successful backup" to="/backups" linkLabel="Backups">
-      {placeholder(backups, 'No successful backups yet') || (
+      {placeholder(backups, 'No successful backups yet', error) || (
         <ul className="space-y-1.5">
           {backups.slice(0, 8).map((b) => (
             <li key={`${b.serverId}/${b.database}`} className="flex items-center justify-between gap-2 text-xs">
               <Link to={`/jobs/${b.jobId}`} className="font-mono text-zinc-300 hover:text-emerald-400 truncate">
-                {b.database}<span className="text-zinc-600"> @ {b.serverName || b.serverId}</span>
+                {b.database}<span className="text-zinc-400"> @ {b.serverName || b.serverId}</span>
               </Link>
-              <span className="text-zinc-500 shrink-0" title={formatDateTime(b.finishedAt)}>{timeAgo(b.finishedAt)}</span>
+              <span className="text-zinc-400 shrink-0" title={formatDateTime(b.finishedAt)}>{timeAgo(b.finishedAt)}</span>
             </li>
           ))}
         </ul>
@@ -89,10 +93,10 @@ export function LastBackups({ backups }) {
 }
 
 /** Upcoming scheduled runs, flagging overdue schedules. */
-export function NextRuns({ runs }) {
+export function NextRuns({ runs, error }) {
   return (
     <Widget title="Next scheduled runs" to="/schedules" linkLabel="Schedules">
-      {placeholder(runs, 'No enabled schedules') || (
+      {placeholder(runs, 'No enabled schedules', error) || (
         <ul className="space-y-2.5">
           {runs.slice(0, 6).map((s) => (
             <li key={s.id} className="text-xs">
@@ -100,7 +104,7 @@ export function NextRuns({ runs }) {
                 <span className="text-zinc-300 truncate">{s.name}</span>
                 <span className="text-zinc-400 shrink-0" title={formatDateTime(s.nextRunAt)}>{timeUntil(s.nextRunAt)}</span>
               </div>
-              <p className="text-zinc-600 truncate">
+              <p className="text-zinc-400 truncate">
                 <span className="font-mono">{s.database}</span>
                 {s.lastStatus && (
                   <>

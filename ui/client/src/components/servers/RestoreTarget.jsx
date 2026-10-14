@@ -5,22 +5,22 @@ import { Spinner, DbNameInput, Toggle, DB_NAME_PATTERN, dropTargetHint } from '.
 import { isCompatibleBackup } from '../../lib/engines'
 import { ServerSelect, engineLabel } from './ServerBits'
 
-// Where a backup is restored: server → container (Docker servers only) →
-// target database. Shared by the Backups page restore dialogs.
+// Where a backup is restored: server, then container (Docker servers only),
+// then target database. Shared by the Backups page restore dialogs.
 
-const SELECT_CLASS = 'w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors'
-const LABEL_CLASS = 'block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider'
+const SELECT_CLASS = 'w-full bg-zinc-800 border border-zinc-500 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm font-mono text-zinc-100 outline-hidden transition-colors'
+const LABEL_CLASS = 'block text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wider'
 
-/** Fetch a list when `fetcher` is set; [] otherwise. Ignores stale responses. */
+/** Fetch a list when `fetcher` is set; [] otherwise. Ignores stale responses; keeps the error. */
 function useList(fetcher, key) {
-  const [state, setState] = useState({ items: [], loading: false })
+  const [state, setState] = useState({ items: [], loading: false, error: null })
   useEffect(() => {
-    if (!fetcher) { setState({ items: [], loading: false }); return }
+    if (!fetcher) { setState({ items: [], loading: false, error: null }); return }
     let cancelled = false
-    setState({ items: [], loading: true })
+    setState({ items: [], loading: true, error: null })
     fetcher()
-      .then((items) => { if (!cancelled) setState({ items, loading: false }) })
-      .catch(() => { if (!cancelled) setState({ items: [], loading: false }) })
+      .then((items) => { if (!cancelled) setState({ items, loading: false, error: null }) })
+      .catch((e) => { if (!cancelled) setState({ items: [], loading: false, error: e.message }) })
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
@@ -39,7 +39,7 @@ export function useRestoreTarget(initialDb = '', backup = null) {
   const [container, setContainer] = useState('')
   const [db, setDb] = useState(initialDb)
   const [dropExisting, setDropExisting] = useState(false)
-  const { data: allServers, loading: loadingServers } = useFetch(api.servers.list)
+  const { data: allServers, loading: loadingServers, error: serversError } = useFetch(api.servers.list)
 
   const matches = (engine) => !backup?.name || isCompatibleBackup(backup.name, backup.engine, engine)
   const servers = allServers && allServers.filter((s) => s.kind === 'docker' || matches(s.engine))
@@ -63,7 +63,7 @@ export function useRestoreTarget(initialDb = '', backup = null) {
   }
 
   return {
-    servers, loadingServers, server, serverId, selectServer, isDocker,
+    servers, loadingServers, serversError, server, serverId, selectServer, isDocker,
     containers, container, setContainer, databases,
     db, setDb, dropExisting, setDropExisting,
     ready: (!isDocker || !!container) && DB_NAME_PATTERN.test(db),
@@ -71,17 +71,22 @@ export function useRestoreTarget(initialDb = '', backup = null) {
   }
 }
 
-function ContainerField({ target }) {
-  if (target.containers.loading) return <Spinner size="sm" />
+const FieldError = ({ children }) => <p role="alert" className="text-xs text-red-400 mt-1">{children}</p>
+
+function ContainerField({ id, target }) {
+  const { loading, error, items } = target.containers
+  if (loading) return <Spinner size="sm" label="Loading containers…" />
   return (
     <>
-      <select value={target.container} onChange={(e) => target.setContainer(e.target.value)} className={SELECT_CLASS}>
-        <option value="">— select container —</option>
-        {target.containers.items.map((c) => <option key={c.idFull} value={c.name}>{c.name} ({engineLabel(c.engine)})</option>)}
+      <select id={id} value={target.container} onChange={(e) => target.setContainer(e.target.value)} className={SELECT_CLASS}>
+        <option value="">Select a container</option>
+        {items.map((c) => <option key={c.idFull} value={c.name}>{c.name} ({engineLabel(c.engine)})</option>)}
       </select>
-      {target.containers.items.length === 0 && (
-        <p className="text-xs text-zinc-500 mt-1">No running container with a matching database engine on this server.</p>
-      )}
+      {error
+        ? <FieldError>Could not list containers: {error}</FieldError>
+        : items.length === 0 && (
+          <p className="text-xs text-zinc-400 mt-1">No running container with a matching database engine on this server.</p>
+        )}
     </>
   )
 }
@@ -93,22 +98,23 @@ export default function RestoreTargetFields({ id, target }) {
   const hasSource = !isDocker || !!container
   return (
     <>
+      {target.serversError && <FieldError>Could not list servers: {target.serversError}</FieldError>}
       {(target.servers || []).length > 1 && (
         <div>
-          <label className={LABEL_CLASS}>Target Server</label>
-          <ServerSelect servers={target.servers} value={target.serverId} onChange={target.selectServer} />
+          <label htmlFor={`${id}-server`} className={LABEL_CLASS}>Target Server</label>
+          <ServerSelect id={`${id}-server`} servers={target.servers} value={target.serverId} onChange={target.selectServer} />
         </div>
       )}
       {isDocker && (
         <div>
-          <label className={LABEL_CLASS}>Target Container</label>
-          <ContainerField target={target} />
+          <label htmlFor={`${id}-container`} className={LABEL_CLASS}>Target Container</label>
+          <ContainerField id={`${id}-container`} target={target} />
         </div>
       )}
       <div>
-        <label className={LABEL_CLASS}>
+        <label htmlFor={id} className={LABEL_CLASS}>
           Target Database
-          {databases.loading && <span className="ml-2 text-zinc-600 normal-case tracking-normal">loading…</span>}
+          {databases.loading && <span className="ml-2 text-zinc-400 normal-case tracking-normal">loading…</span>}
         </label>
         <DbNameInput
           id={id}
@@ -117,8 +123,9 @@ export default function RestoreTargetFields({ id, target }) {
           options={databases.items}
           placeholder={hasSource ? 'existing or new database name' : 'Select a container first'}
         />
-        {hasSource && db && !databases.loading && (
-          <p className="text-xs text-zinc-500 mt-1">
+        {databases.error && <FieldError>Could not list databases: {databases.error}</FieldError>}
+        {hasSource && db && !databases.loading && !databases.error && (
+          <p className="text-xs text-zinc-400 mt-1">
             {exists ? 'Database exists on this server.' : 'Database will be created.'}
           </p>
         )}

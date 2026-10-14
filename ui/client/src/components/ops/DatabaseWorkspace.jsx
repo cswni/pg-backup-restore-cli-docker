@@ -3,22 +3,9 @@ import { useNavigate } from 'react-router'
 import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
-import { Card, Spinner, ErrorAlert, EmptyState } from '../UI'
+import { Card, Spinner, ErrorAlert, EmptyState, Toast } from '../UI'
 import { useEngines, engineInfo, isCompatibleBackup } from '../../lib/engines'
 import OperationModal, { OPERATIONS } from './OperationModal'
-
-function Toast({ toast }) {
-  if (!toast) return null
-  const cls = toast.type === 'error'
-    ? 'bg-red-500/10 border-red-500/20 text-red-400'
-    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-  return (
-    <div className={`mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm border ${cls}`}>
-      <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
-      {toast.msg}
-    </div>
-  )
-}
 
 /** Restores and schema changes are admin-only (the API enforces it too). */
 function visibleOperations(operations, isAdmin) {
@@ -48,12 +35,12 @@ function OperationGrid({ operations, onSelect }) {
 
 function DatabaseRow({ db, operations, onSelect }) {
   return (
-    <div className="flex items-center justify-between py-3 group">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-2 py-3 group">
+      <div className="flex items-center gap-3 min-w-0">
         <div className="w-2 h-2 rounded-full bg-emerald-400/60" />
-        <span className="font-mono text-sm text-zinc-200">{db}</span>
+        <span className="font-mono text-sm text-zinc-200 break-all">{db}</span>
       </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      <div className="flex flex-wrap gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
         {operations.filter((o) => o.id !== 'create').map((op) => (
           <button
             key={op.id}
@@ -111,13 +98,13 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
 
   return (
     <>
-      <Toast toast={toast} />
+      {toast && <Toast type={toast.type} message={toast.msg} />}
       <OperationGrid operations={operations} onSelect={setActiveOp} />
 
       <Card>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-4">
           <h2 className="font-semibold text-zinc-200">Databases</h2>
-          <span className="text-xs text-zinc-600">Click an operation above to act on a database</span>
+          <span className="text-xs text-zinc-400">Click an operation above to act on a database</span>
         </div>
 
         {loading && <div className="flex justify-center py-10"><Spinner /></div>}

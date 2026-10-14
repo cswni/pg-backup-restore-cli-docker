@@ -3,14 +3,14 @@ import React from 'react'
 export const MIN_PASSWORD_LENGTH = 10
 
 const INPUT_CLASS =
-  'w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm ' +
-  'text-zinc-100 placeholder-zinc-600 outline-hidden transition-colors disabled:opacity-50'
+  'w-full bg-zinc-800 border border-zinc-500 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm ' +
+  'text-zinc-100 placeholder-zinc-400 outline-hidden transition-colors disabled:opacity-50'
 
 /** Labelled text/password/email input in the app's dark style. */
 export function TextField({ id, label, value, onChange, type = 'text', hint, error, mono = false, ...rest }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
+      <label htmlFor={id} className="block text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wider">
         {label}
       </label>
       <input
@@ -23,7 +23,7 @@ export function TextField({ id, label, value, onChange, type = 'text', hint, err
       />
       {error
         ? <p className="text-xs text-red-400 mt-1">{error}</p>
-        : hint && <p className="text-xs text-zinc-500 mt-1">{hint}</p>}
+        : hint && <p className="text-xs text-zinc-400 mt-1">{hint}</p>}
     </div>
   )
 }
@@ -32,7 +32,7 @@ export function TextField({ id, label, value, onChange, type = 'text', hint, err
 export function SelectField({ id, label, value, onChange, options, ...rest }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-xs text-zinc-500 mb-1 font-medium uppercase tracking-wider">
+      <label htmlFor={id} className="block text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wider">
         {label}
       </label>
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={INPUT_CLASS} {...rest}>

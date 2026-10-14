@@ -1,40 +1,12 @@
 import React, { useState } from 'react'
 import { Button, Toggle } from '../UI'
+import Modal, { ModalFooter, CancelButton } from '../Modal'
 import { TextField, SelectField, FormMessage, passwordError, MIN_PASSWORD_LENGTH } from '../FormField'
 
 const ROLE_OPTIONS = [
-  { value: 'user', label: 'User — view, back up, restore, upload, download' },
-  { value: 'admin', label: 'Admin — everything, incl. users and deleting backups' },
+  { value: 'user', label: 'User: view, back up, upload, download and run schedules' },
+  { value: 'admin', label: 'Admin: everything, including restores, creating and dropping databases, users and deleting backups' },
 ]
-
-/** Modal shell matching the existing Backups dialogs. */
-export function Modal({ title, subtitle, icon, onClose, children }) {
-  return (
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/70 backdrop-blur-xs p-4" role="dialog" aria-modal="true">
-      {/* m-auto centres the dialog and still lets it scroll on short screens */}
-      <div className="m-auto bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
-          <span className="text-2xl">{icon}</span>
-          <div>
-            <p className="font-semibold text-zinc-100">{title}</p>
-            {subtitle && <p className="text-xs text-zinc-500 font-mono mt-0.5">{subtitle}</p>}
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="ml-auto text-zinc-600 hover:text-zinc-300 text-xl leading-none">✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-/** Plain button that never submits the surrounding form. */
-export function CancelButton({ onClick, children = 'Cancel' }) {
-  return (
-    <button type="button" onClick={onClick} className="px-4 py-2 text-sm font-medium rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all">
-      {children}
-    </button>
-  )
-}
 
 function initialForm(user) {
   return {
@@ -81,7 +53,7 @@ export default function UserDialog({ user, isSelf, onSubmit, onClose }) {
   }
 
   return (
-    <Modal icon={isNew ? '👤' : '✏️'} title={isNew ? 'New user' : 'Edit user'} subtitle={user?.username} onClose={onClose}>
+    <Modal icon={isNew ? '👤' : '✏️'} title={isNew ? 'New user' : 'Edit user'} subtitle={user?.username} subtitleClassName="font-mono" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-5 space-y-4">
           {isNew && (
@@ -104,10 +76,10 @@ export default function UserDialog({ user, isSelf, onSubmit, onClose }) {
           )}
           <FormMessage message={error && { type: 'error', text: error }} />
         </div>
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
+        <ModalFooter>
           <CancelButton onClick={onClose} />
-          <Button disabled={!canSubmit}>{saving ? 'Saving…' : isNew ? 'Create user' : 'Save changes'}</Button>
-        </div>
+          <Button type="submit" disabled={!canSubmit}>{saving ? 'Saving…' : isNew ? 'Create user' : 'Save changes'}</Button>
+        </ModalFooter>
       </form>
     </Modal>
   )

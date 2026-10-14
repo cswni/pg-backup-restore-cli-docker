@@ -3,7 +3,8 @@ import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { useFetch } from '../hooks/useFetch'
 import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button } from '../components/UI'
-import UserDialog, { Modal, CancelButton } from '../components/users/UserDialog'
+import UserDialog from '../components/users/UserDialog'
+import Modal, { ModalFooter, CancelButton } from '../components/Modal'
 import { FormMessage } from '../components/FormField'
 
 const formatDate = (ms) => (ms ? new Date(ms).toLocaleString() : 'Never')
@@ -31,18 +32,18 @@ function DeleteDialog({ user, onConfirm, onClose }) {
   }
 
   return (
-    <Modal icon="🗑️" title="Delete user" subtitle={user.username} onClose={onClose}>
+    <Modal icon="🗑️" title="Delete user" subtitle={user.username} subtitleClassName="font-mono" onClose={onClose}>
       <div className="px-6 py-5 space-y-3 text-sm text-zinc-400">
         <p>
           Delete <span className="font-mono text-zinc-200">{user.username}</span>? Their sessions end immediately.
-          This cannot be undone — disable the account instead if you may need it again.
+          This cannot be undone. Disable the account instead if you may need it again.
         </p>
         <FormMessage message={error && { type: 'error', text: error }} />
       </div>
-      <div className="flex justify-end gap-2 px-6 py-4 border-t border-zinc-800">
+      <ModalFooter>
         <CancelButton onClick={onClose} />
         <Button variant="danger" disabled={deleting} onClick={handleConfirm}>{deleting ? 'Deleting…' : 'Delete user'}</Button>
-      </div>
+      </ModalFooter>
     </Modal>
   )
 }
@@ -56,18 +57,18 @@ function UserRow({ user, isSelf, onEdit, onDelete }) {
           {isSelf && <span className="ml-2 text-[10px] text-emerald-400 font-sans uppercase tracking-wider">you</span>}
         </p>
         {(user.displayName || user.email) && (
-          <p className="text-xs text-zinc-500 mt-0.5">{[user.displayName, user.email].filter(Boolean).join(' · ')}</p>
+          <p className="text-xs text-zinc-400 mt-0.5">{[user.displayName, user.email].filter(Boolean).join(' · ')}</p>
         )}
       </td>
       <td className="px-5 py-3.5"><RoleBadge role={user.role} /></td>
       <td className="px-5 py-3.5 text-xs">
         {user.disabled ? <span className="text-red-400">Disabled</span> : <span className="text-zinc-400">Active</span>}
       </td>
-      <td className="px-5 py-3.5 text-zinc-500 text-xs">{formatDate(user.lastLoginAt)}</td>
+      <td className="px-5 py-3.5 text-zinc-400 text-xs">{formatDate(user.lastLoginAt)}</td>
       <td className="px-5 py-3.5">
         <div className="flex justify-end gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => onEdit(user)}>✏️ Edit</Button>
-          {!isSelf && <Button size="sm" variant="danger" onClick={() => onDelete(user)}>🗑️</Button>}
+          {!isSelf && <Button size="sm" variant="danger" aria-label={`Delete user ${user.username}`} onClick={() => onDelete(user)}>🗑️</Button>}
         </div>
       </td>
     </tr>
@@ -80,7 +81,7 @@ function UsersTable({ users, selfId, onEdit, onDelete }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-zinc-500 uppercase tracking-wider border-b border-zinc-800 bg-zinc-950/50">
+            <tr className="text-left text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-800 bg-zinc-950/50">
               <th className="px-5 py-3 font-medium">User</th>
               <th className="px-5 py-3 font-medium">Role</th>
               <th className="px-5 py-3 font-medium">Status</th>
@@ -123,7 +124,7 @@ export default function Users() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <PageHeader
         title="Users"
         subtitle="Accounts that can sign in to this UI. Only admins can manage users."

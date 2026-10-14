@@ -56,16 +56,17 @@ export function serverHref(server) {
   return server.builtin ? '/containers' : `/containers?server=${encodeURIComponent(server.id)}`
 }
 
-const SELECT_CLASS = 'w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-hidden transition-colors'
+const SELECT_CLASS = 'w-full bg-zinc-800 border border-zinc-500 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-hidden transition-colors'
 
 /**
  * Server dropdown.
- * @param {{ servers: object[], value: string, onChange: (id: string) => void, kinds?: string[], className?: string }} props
+ * @param {{ id?: string, servers: object[], value: string, onChange: (id: string) => void, kinds?: string[], className?: string }} props
  */
-export function ServerSelect({ servers, value, onChange, kinds, className = SELECT_CLASS }) {
+export function ServerSelect({ id, servers, value, onChange, kinds, className = SELECT_CLASS }) {
   const options = (servers || []).filter((s) => !kinds || kinds.includes(s.kind))
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={className} aria-label="Server">
+    <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={className}
+      aria-label={id ? undefined : 'Server'}>
       {options.map((s) => (
         <option key={s.id} value={s.id}>
           {s.name}{s.kind === 'direct' ? ` (${engineLabel(s.engine)})` : s.builtin ? '' : ' (Docker · SSH)'}

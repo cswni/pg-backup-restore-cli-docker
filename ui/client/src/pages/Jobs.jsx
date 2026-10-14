@@ -8,7 +8,7 @@ const PAGE_SIZE = 25
 const REFRESH_MS = 5000
 const TYPES = ['', 'export', 'restore', 'create', 'delete', 'unblock']
 const STATUSES = ['', 'running', 'success', 'error']
-const selectCls = 'bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-200 outline-hidden focus:border-emerald-500'
+const selectCls = 'bg-zinc-800 border border-zinc-500 rounded-lg px-3 py-1.5 text-sm text-zinc-200 outline-hidden focus:border-emerald-500'
 
 /** One page of job history; fetches PAGE_SIZE + 1 rows to know whether a next page exists. */
 function useJobsPage({ type, status, page }) {
@@ -35,7 +35,7 @@ function useJobsPage({ type, status, page }) {
 
 function Filter({ label, value, options, onChange }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-zinc-500">
+    <label className="flex items-center gap-2 text-xs text-zinc-400">
       {label}
       <select value={value} onChange={(e) => onChange(e.target.value)} className={selectCls}>
         {options.map((o) => <option key={o} value={o}>{o || 'all'}</option>)}
@@ -50,18 +50,18 @@ function JobRow({ j }) {
     <tr className="hover:bg-zinc-800/30 transition-colors">
       <td className="py-2.5 pr-4">
         <Link to={`/jobs/${j.id}`} className="font-mono text-emerald-400 hover:text-emerald-300 hover:underline">{j.type}</Link>
-        {m.scheduleId && <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-500 border border-zinc-700 rounded px-1">⏰ {m.scheduleName || 'schedule'}</span>}
+        {m.scheduleId && <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-400 border border-zinc-700 rounded px-1">⏰ {m.scheduleName || 'schedule'}</span>}
       </td>
       <td className="py-2.5 pr-4 font-mono text-xs text-zinc-400">
-        {[m.serverName || m.serverId, m.container, m.database].filter(Boolean).join(' / ') || '—'}
-        {m.file && <p className="text-zinc-600 truncate max-w-xs">{m.file}</p>}
+        {[m.serverName || m.serverId, m.container, m.database].filter(Boolean).join(' / ') || 'n/a'}
+        {m.file && <p className="text-zinc-400 truncate max-w-xs">{m.file}</p>}
       </td>
-      <td className="py-2.5 pr-4 text-xs text-zinc-400">{j.username || '—'}</td>
+      <td className="py-2.5 pr-4 text-xs text-zinc-400">{j.username || 'n/a'}</td>
       <td className="py-2.5 pr-4"><StatusBadge status={j.status} /></td>
-      <td className="py-2.5 pr-4 text-xs text-zinc-500" title={formatDateTime(j.startedAt)}>{timeAgo(j.startedAt)}</td>
+      <td className="py-2.5 pr-4 text-xs text-zinc-400" title={formatDateTime(j.startedAt)}>{timeAgo(j.startedAt)}</td>
       <td className="py-2.5 pr-4 text-xs font-mono text-zinc-400">{j.status === 'running' ? '…' : formatDuration(j.startedAt, j.finishedAt)}</td>
       <td className="py-2.5 text-right">
-        <Link to={`/jobs/${j.id}`} className="text-xs text-zinc-500 hover:text-zinc-200">Log →</Link>
+        <Link to={`/jobs/${j.id}`} className="text-xs text-zinc-400 hover:text-zinc-200">Log →</Link>
       </td>
     </tr>
   )
@@ -81,7 +81,7 @@ export default function Jobs() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <PageHeader title="Jobs" subtitle="History of every backup, restore and maintenance operation"
         action={<Button variant="secondary" size="sm" onClick={reload}>Refresh</Button>} />
       <div className="flex flex-wrap items-center gap-4 mb-4">
@@ -97,7 +97,7 @@ export default function Jobs() {
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
+              <tr className="text-left text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
                 {['Operation', 'Target', 'User', 'Status', 'Started', 'Duration', ''].map((h) => <th key={h} className="pb-2 pr-4 font-medium">{h}</th>)}
               </tr>
             </thead>
@@ -107,7 +107,7 @@ export default function Jobs() {
           </table>
         </Card>
       )}
-      <div className="flex items-center justify-between mt-4 text-xs text-zinc-500">
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-xs text-zinc-400">
         <span>Page {page + 1}</span>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" disabled={page === 0} onClick={() => update({ page: page - 1 })}>← Newer</Button>
