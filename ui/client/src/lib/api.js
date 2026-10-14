@@ -34,7 +34,7 @@ export async function req(method, path, body) {
   return res.json()
 }
 
-const qs = (params) => {
+export const qs = (params) => {
   const s = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== '')).toString()
   return s ? `?${s}` : ''
 }
@@ -177,6 +177,14 @@ export const api = {
     remove: (id) => req('DELETE', `/api/schedules/${encodeURIComponent(id)}`),
     run: (id) => req('POST', `/api/schedules/${encodeURIComponent(id)}/run`),
     preview: (cron, tz) => req('GET', `/api/schedules/preview${qs({ cron, tz })}`),
+  },
+  explorer: {
+    // params: { serverId, engine, container, database, schema, name, limit, offset, sort, dir, filter }
+    objects: (params) => req('GET', `/api/explorer/objects${qs(params)}`),
+    structure: (params) => req('GET', `/api/explorer/structure${qs(params)}`),
+    rows: (params) => req('GET', `/api/explorer/rows${qs(params)}`),
+    // body: { serverId, engine, container, database, sql, limit }; admin only
+    query: (body) => req('POST', '/api/explorer/query', body),
   },
   monitoring: {
     health: () => req('GET', '/api/health'),

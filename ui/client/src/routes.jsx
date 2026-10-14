@@ -1,4 +1,4 @@
-import { Archive, Bell, CalendarClock, Container, HardDrive, LayoutDashboard, ListChecks, Server, Users as UsersIcon } from 'lucide-react'
+import { Archive, Bell, CalendarClock, Container, HardDrive, LayoutDashboard, ListChecks, Server, TableProperties, Users as UsersIcon } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import Containers from './pages/Containers'
 import ContainerDetail from './pages/ContainerDetail'
@@ -8,6 +8,7 @@ import Users from './pages/Users'
 import Profile from './pages/Profile'
 import Servers from './pages/Servers'
 import ServerDatabases from './pages/ServerDatabases'
+import Explorer from './pages/Explorer'
 import Schedules from './pages/Schedules'
 import Jobs from './pages/Jobs'
 import Notifications from './pages/Notifications'
@@ -24,6 +25,7 @@ export const routes = [
   { path: '/containers/:name', element: <ContainerDetail /> },
   { path: '/servers', element: <Servers />, nav: { label: 'Servers', icon: Server } },
   { path: '/servers/:id/databases', element: <ServerDatabases /> },
+  { path: '/explorer', element: <Explorer />, nav: { label: 'Explorer', icon: TableProperties } },
   { path: '/backups', element: <Backups />, nav: { label: 'Backups', icon: Archive } },
   { path: '/schedules', element: <Schedules />, nav: { label: 'Schedules', icon: CalendarClock } },
   { path: '/jobs', element: <Jobs />, nav: { label: 'Jobs', icon: ListChecks } },

@@ -109,13 +109,13 @@ B1, server (`ui/server/explorer/**`, one line in `modules.js`, small exports fro
 - [x] routes + validation + permissions, tests with fake tools (no real DB locally) (commit d56cc4a)
 
 B2, client (`ui/client/**`):
-- [ ] `/explorer` page (nav "Explorer"): pick server → container (Docker) → database; deep link via query string
-- [ ] object list with search (tree on desktop, select on mobile), row-count/size hints
-- [ ] Data tab: paginated table, sort by column, page size, cell detail for truncated/binary/JSON values, MongoDB filter box
-- [ ] Structure tab: columns + indexes
-- [ ] Query tab (admins, PostgreSQL/MySQL only): textarea, run, result grid, timing, truncation notice
-- [ ] "Explore" action on database rows (DatabaseWorkspace) linking to `/explorer?…`
-- [ ] accessible + responsive (antislop rules: real `<table>`, `th scope`, keyboard, 375px)
+- [x] `/explorer` page (nav "Explorer"): pick server → container (Docker) → database; deep link via query string (commit 5148f4b)
+- [x] object list with search (tree on desktop, select on mobile), row-count/size hints (commit 5148f4b)
+- [x] Data tab: paginated table, sort by column, page size, cell detail for truncated/binary/JSON values, MongoDB filter box (commits aef64f9, 5148f4b)
+- [x] Structure tab: columns + indexes (commit 5148f4b)
+- [x] Query tab (admins, PostgreSQL/MySQL only): textarea, run, result grid, timing, truncation notice (commits 5148f4b, bd4d7ec)
+- [x] "Explore" action on database rows (DatabaseWorkspace) linking to `/explorer?…` (commit fdcf243)
+- [x] accessible + responsive (antislop rules: real `<table>`, `th scope`, keyboard, 375px) (commit 5148f4b)
 
 B3-B5:
 - [ ] B3 merge B1 + B2, tests + build green
@@ -134,3 +134,4 @@ B3-B5:
 - 2026-10-14: A1 client fixes #12 to #22 done in 4b57b5c and 860c88e (lucide-react devDependency, build + 256 tests green, browser check desktop + 375px).
 - 2026-10-14: Phase A complete (A1+A2 merged in 6edd63a, picker fix aa54b50, follow-up report written). B1 and B2 running in parallel.
 - 2026-10-14: B1 done (d56cc4a): ui/server/explorer API + README "Database Explorer" section; mysql drivers export open(); tested with fake tools only, not against real databases.
+- 2026-10-14: B2 client done (aef64f9, 5148f4b, fdcf243, bd4d7ec): `/explorer` page with URL state, object list, Data/Structure/Query tabs, Explore action on database rows; checked against a throwaway mock of the contract at desktop and 375px; build + 256 tests green.

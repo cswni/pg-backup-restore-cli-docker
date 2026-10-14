@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
-import { Database } from 'lucide-react'
+import { Database, TableProperties } from 'lucide-react'
 import { Card, Spinner, ErrorAlert, EmptyState, Toast, Icon } from '../UI'
 import { useEngines, engineInfo, isCompatibleBackup } from '../../lib/engines'
 import OperationModal, { OPERATIONS } from './OperationModal'
+import { explorerHref } from '../explorer/useExplorerTarget'
 
 /** Restores and schema changes are admin-only (the API enforces it too). */
 function visibleOperations(operations, isAdmin) {
@@ -34,11 +35,17 @@ function OperationGrid({ operations, onSelect }) {
   )
 }
 
-function DatabaseRow({ db, operations, onSelect }) {
+function DatabaseRow({ db, operations, onSelect, target }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 py-3 group">
       <span className="min-w-0 font-mono text-sm text-zinc-200 break-all">{db}</span>
       <div className="flex flex-wrap gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
+        <Link
+          to={explorerHref({ ...target, database: db })}
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
+        >
+          <Icon as={TableProperties} className="size-3.5" /> Explore
+        </Link>
         {operations.filter((o) => o.id !== 'create').map((op) => (
           <button
             key={op.id}
@@ -114,7 +121,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
 
         {!loading && !error && dbs?.length > 0 && (
           <div className="divide-y divide-zinc-800/60">
-            {dbs.map((db) => <DatabaseRow key={db} db={db} operations={operations} onSelect={setActiveOp} />)}
+            {dbs.map((db) => <DatabaseRow key={db} db={db} operations={operations} onSelect={setActiveOp} target={target} />)}
           </div>
         )}
       </Card>
