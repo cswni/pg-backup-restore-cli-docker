@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# ============================================================
-# Entrypoint: web UI (default) and the PostgreSQL CLI commands
-# ============================================================
+# Entrypoint: web UI (default) and the PostgreSQL CLI commands.
 
 set -euo pipefail
 
-# ── Trap: print a clear message on any unexpected exit ───────────────────────
+# Print a clear message on any unexpected exit.
 _exit_handler() {
   local code=$?
-  # A web server should NEVER exit cleanly, so treat exit 0 as an error too
+  # The web server should never exit cleanly, so exit 0 from serve is an error too.
   if [[ $code -ne 0 ]] || [[ "${COMMAND:-}" == "serve" ]]; then
     echo ""
     echo "================================================================" >&2
@@ -30,35 +28,30 @@ _exit_handler() {
 }
 trap '_exit_handler' EXIT
 
-# ── Helper: start the web UI with pre-flight checks ──────────────────────────
 start_server() {
   echo "================================================================"
   echo "  PG Backup & Restore: Web UI"
   echo "  Starting at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "================================================================"
 
-  # Check Node.js is available
   if ! command -v node &>/dev/null; then
     echo "[ERROR] node is not installed or not in PATH" >&2
     exit 1
   fi
   echo "[boot] Node.js: $(node --version)"
 
-  # Check the server file exists
   if [[ ! -f /ui/server/index.js ]]; then
     echo "[ERROR] /ui/server/index.js not found. Was the image built correctly?" >&2
     exit 1
   fi
   echo "[boot] Server:  /ui/server/index.js ✓"
 
-  # Check node_modules exist
   if [[ ! -d /ui/node_modules ]]; then
     echo "[ERROR] /ui/node_modules not found. Dependencies were not installed in the image" >&2
     exit 1
   fi
   echo "[boot] Modules: /ui/node_modules ✓"
 
-  # Check Docker socket
   if [[ ! -S /var/run/docker.sock ]]; then
     echo "[WARN] /var/run/docker.sock not found. Container listing will not work" >&2
     echo "[WARN] Mount it with: -v /var/run/docker.sock:/var/run/docker.sock" >&2
@@ -72,7 +65,6 @@ start_server() {
   # The express check below resolves modules from the cwd, so run it from /ui
   cd /ui
 
-  # Quick sanity-check: try to require express before handing off
   if ! node -e "require('express')" 2>/dev/null; then
     echo "[ERROR] Cannot require 'express' from /ui/node_modules" >&2
     echo "[ERROR] node_modules contents:" >&2
@@ -85,7 +77,6 @@ start_server() {
   exec node /ui/server/index.js
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
 COMMAND="${1:-serve}"
 shift || true
 
@@ -98,9 +89,9 @@ case "$COMMAND" in
   serve)     start_server ;;
   --help|help)
     cat <<'EOF'
-pg-backup: a web UI for PostgreSQL, MySQL/MariaDB and MongoDB backups
-(the default "serve" command), plus a PostgreSQL-only CLI.
-======================================================================
+PG Backup & Restore (pg-backup-restore-cli image, pg-backup command):
+a web UI for PostgreSQL, MySQL/MariaDB and MongoDB backups (the default
+"serve" command), plus a PostgreSQL-only CLI.
 
 Usage:
   docker run --rm \
@@ -110,16 +101,16 @@ Usage:
     <image> <command> [options]
 
   -v $(pwd):/work             Optional. Lets restore find files in the current directory.
-  -v $(pwd)/backups:/backups  Optional. Keeps dumps in ./backups on the host.
+  -v $(pwd)/backups:/backups  Optional. Keeps backups in ./backups on the host.
   Inside a running container the same commands are available as: pg-backup <command>
 
 Commands:
-  export   -c <container> -d <database> [-n <name>]  Export database to /backups/<name>_<ts>.sql
+  export   -c <container> -d <database> [-n <name>]  Back up the database to /backups/<name>_<ts>.sql
   unblock  -c <container> -d <database>             Terminate active connections
   delete   -c <container> -d <database>             Drop database (force)
   create   -c <container> -d <database>             Create database
   restore  -c <container> -d <target_db> [-f <file>] [-x]
-                                                     Restore dump into <target_db> (created if
+                                                     Restore a backup into <target_db> (created if
                                                      missing; -x drops it first)
   serve                                              Start the Web UI (default)
   help                                               Show this help message
@@ -128,7 +119,7 @@ Restore file resolution (-f):
   1. /work/<file>     : file in current directory (mount with -v $(pwd):/work)
   2. /backups/<file>  : file in backups dir (mount with -v /path/to/backups:/backups)
   3. <file> as-is     : absolute path inside the container
-  If -f is omitted, the latest dump for the database is used.
+  If -f is omitted, the latest backup of the database is used.
 
 Web UI authentication (serve):
   Users sign in on a login page; admins manage accounts in the UI.
