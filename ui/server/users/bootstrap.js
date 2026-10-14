@@ -46,7 +46,7 @@ function bootstrapAuth(env = process.env, log = console) {
     throw new Error(`Invalid initial admin username '${user}': use letters, digits, ".", "_", "@" or "-"`)
   }
   if (passwordPolicyError(password)) {
-    log.warn(`${LOG} WARNING: the initial admin password is shorter than the policy minimum; change it in the UI`)
+    log.warn(`${LOG} WARNING: the initial admin password is shorter than the policy minimum; change it on the Profile page`)
   }
 
   store.createUser({ username: user, displayName: user, passwordHash: hashPasswordSync(password), role: 'admin' })

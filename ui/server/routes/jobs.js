@@ -49,7 +49,7 @@ router.get('/jobs/:jobId/stream', (req, res) => {
 
 router.get('/jobs/:jobId', handle(async (req, res) => {
   const job = getJob(req.params.jobId)
-  if (!job) throw httpError(404, 'Not found')
+  if (!job) throw httpError(404, 'Job not found')
   res.json(job)
 }))
 

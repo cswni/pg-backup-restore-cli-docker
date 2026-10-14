@@ -19,14 +19,14 @@ const router = express.Router()
 
 function validateName(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 100) {
-    throw httpError(400, 'name is required (max 100 characters)')
+    throw httpError(400, 'Name is required (at most 100 characters)')
   }
   return value.trim()
 }
 
 function optionalBool(value, field, fallback) {
   if (value === undefined) return fallback
-  if (typeof value !== 'boolean') throw httpError(400, `${field} must be a boolean`)
+  if (typeof value !== 'boolean') throw httpError(400, `${field} must be true or false`)
   return value
 }
 
@@ -37,10 +37,10 @@ function destinationFields(body, type, current) {
   return {
     type,
     name: validateName(body.name),
-    enabled: optionalBool(body.enabled, 'enabled', current ? current.enabled : true),
-    isDefault: optionalBool(body.isDefault, 'isDefault', current ? current.isDefault : false),
+    enabled: optionalBool(body.enabled, 'Enabled', current ? current.enabled : true),
+    isDefault: optionalBool(body.isDefault, 'Upload every backup here by default', current ? current.isDefault : false),
     config: provider.validateConfig(body.config || {}, current ? current.config : {}),
-    retention: config.validateRetentionPolicy(body.retention ?? current?.retention, 'retention'),
+    retention: config.validateRetentionPolicy(body.retention ?? current?.retention, 'Retention'),
   }
 }
 
@@ -78,7 +78,7 @@ router.put('/storage/settings', requireAdmin, handle(async (req, res) => {
 
 router.post('/storage/destinations', requireAdmin, handle(async (req, res) => {
   const type = req.body?.type
-  if (!destinations.TYPES.includes(type)) throw httpError(400, `type must be one of: ${destinations.TYPES.join(', ')}`)
+  if (!destinations.TYPES.includes(type)) throw httpError(400, `Destination type must be one of: ${destinations.TYPES.join(', ')}`)
   const dest = destinations.insertDestination(destinationFields(req.body, type, null))
   res.status(201).json(destinations.maskDestination(dest))
 }))

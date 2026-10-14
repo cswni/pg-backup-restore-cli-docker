@@ -42,15 +42,15 @@ function findWebhook(id) {
  * @returns {string}
  */
 function checkUrl(url) {
-  if (typeof url !== 'string' || !url.trim()) throw httpError(400, 'url is required')
-  if (url.length > MAX_URL_LENGTH) throw httpError(400, 'url is too long')
+  if (typeof url !== 'string' || !url.trim()) throw httpError(400, 'Webhook URL is required')
+  if (url.length > MAX_URL_LENGTH) throw httpError(400, 'Webhook URL is too long')
   let parsed
   try {
     parsed = new URL(url.trim())
   } catch {
-    throw httpError(400, 'url must be a valid URL')
+    throw httpError(400, 'Webhook URL must be a valid URL')
   }
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw httpError(400, 'url must use http or https')
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw httpError(400, 'Webhook URL must use http or https')
   return parsed.toString()
 }
 
@@ -58,13 +58,13 @@ function normalize(body, existing) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw httpError(400, 'Request body must be a JSON object')
   const merged = { ...(existing || { format: 'generic', events: ['job.failed', 'schedule.overdue'], enabled: true }), ...body }
   const name = typeof merged.name === 'string' ? merged.name.trim() : ''
-  if (!name) throw httpError(400, 'name is required')
-  if (name.length > MAX_NAME_LENGTH) throw httpError(400, `name must be at most ${MAX_NAME_LENGTH} characters`)
-  if (!FORMATS.includes(merged.format)) throw httpError(400, `format must be one of: ${FORMATS.join(', ')}`)
+  if (!name) throw httpError(400, 'Name is required')
+  if (name.length > MAX_NAME_LENGTH) throw httpError(400, `Name must be at most ${MAX_NAME_LENGTH} characters`)
+  if (!FORMATS.includes(merged.format)) throw httpError(400, `Format must be one of: ${FORMATS.join(', ')}`)
   if (!Array.isArray(merged.events) || merged.events.some((e) => !EVENTS.includes(e))) {
-    throw httpError(400, `events must be a list of: ${EVENTS.join(', ')}`)
+    throw httpError(400, `Events must be a list of: ${EVENTS.join(', ')}`)
   }
-  if (typeof merged.enabled !== 'boolean') throw httpError(400, 'enabled must be a boolean')
+  if (typeof merged.enabled !== 'boolean') throw httpError(400, 'Enabled must be true or false')
   return { name, format: merged.format, events: [...new Set(merged.events)], enabled: merged.enabled }
 }
 

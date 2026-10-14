@@ -34,17 +34,18 @@ test('settings: defaults, validation and write-only passphrase', async () => {
   assert.equal(res.json.encryption.passphraseConfigured, false)
   assert.match(res.json.gdriveRedirectUri, /^http:\/\/127\.0\.0\.1:\d+\/api\/storage\/gdrive\/oauth\/callback$/)
 
-  for (const body of [
-    { compression: { level: 12 } },
-    { compression: { enabled: 'yes' } },
-    { encryption: { enabled: true } },
-    { encryption: { passphrase: 'short' } },
-    { upload: { failurePolicy: 'maybe' } },
-    { retention: { local: { keepLast: -1 } } },
-    { retention: 'x' },
+  for (const [body, message] of [
+    [{ compression: { level: 12 } }, /^Compression level must be a whole number from 1 to 9$/],
+    [{ compression: { enabled: 'yes' } }, /^Compress new backups by default must be true or false$/],
+    [{ encryption: { enabled: true } }, /^Set an encryption passphrase/],
+    [{ encryption: { passphrase: 'short' } }, /^Passphrase must be \d+ to 1024 characters$/],
+    [{ upload: { failurePolicy: 'maybe' } }, /^Upload failure policy must be 'fail' or 'best-effort'$/],
+    [{ retention: { local: { keepLast: -1 } } }, /^Local retention: Newest N must be a whole number/],
+    [{ retention: 'x' }, /must be an object/],
   ]) {
     const bad = await srv.request('PUT', '/api/storage/settings', { body })
     assert.equal(bad.status, 400, JSON.stringify(body))
+    assert.match(bad.json.error, message)
   }
 
   const ok = await srv.request('PUT', '/api/storage/settings', {
@@ -96,17 +97,19 @@ test('destinations: create masks secrets, update keeps them when blank', async (
 
 test('destinations: validation errors', async () => {
   const cases = [
-    { type: 'ftp', name: 'x' },
-    s3Body({ name: '' }),
-    s3Body({ config: { bucket: 'bkt' } }),
-    s3Body({ config: { ...s3Body().config, endpoint: 'file:///etc/passwd' } }),
-    s3Body({ config: { ...s3Body().config, prefix: '../escape' } }),
-    s3Body({ retention: { keepLast: 1.5 } }),
-    { type: 'gdrive', name: 'd', config: { clientId: 'cid' } },
+    [{ type: 'ftp', name: 'x' }, /^Destination type must be one of/],
+    [s3Body({ name: '' }), /^Name is required/],
+    [s3Body({ config: { bucket: 'bkt' } }), /^Secret access key is required$/],
+    [s3Body({ config: { ...s3Body().config, endpoint: 'file:///etc/passwd' } }), /^Endpoint must start with http/],
+    [s3Body({ config: { ...s3Body().config, prefix: '../escape' } }), /^Prefix contains unsupported characters$/],
+    [s3Body({ retention: { keepLast: 1.5 } }), /^Retention: Newest N must be a whole number/],
+    [{ type: 'gdrive', name: 'd', config: { clientId: 'cid' } }, /^OAuth client secret is required$/],
+    [{ type: 'gdrive', name: 'd', config: {} }, /^OAuth client ID is required$/],
   ]
-  for (const body of cases) {
+  for (const [body, message] of cases) {
     const res = await srv.request('POST', '/api/storage/destinations', { body })
     assert.equal(res.status, 400, JSON.stringify(body))
+    assert.match(res.json.error, message)
   }
   assert.equal((await srv.request('PUT', '/api/storage/destinations/nope', { body: s3Body() })).status, 404)
 })

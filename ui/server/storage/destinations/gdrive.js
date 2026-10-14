@@ -34,7 +34,7 @@ function setEndpointsForTests(overrides, { retryDelay = 0 } = {}) {
 
 function str(value, field, max) {
   if (value === undefined || value === null || value === '') return ''
-  if (typeof value !== 'string' || value.length > max) throw httpError(400, `${field} must be a string (max ${max} chars)`)
+  if (typeof value !== 'string' || value.length > max) throw httpError(400, `${field} must be text of at most ${max} characters`)
   return value.trim()
 }
 
@@ -43,12 +43,13 @@ function str(value, field, max) {
  * the client id drops the refresh token (it belongs to the old client).
  */
 function validateConfig(input = {}, current = {}) {
-  const clientId = str(input.clientId, 'clientId', 256)
-  if (!clientId || !/^[A-Za-z0-9._-]+$/.test(clientId)) throw httpError(400, 'clientId is required (OAuth client ID)')
-  const clientSecret = str(input.clientSecret, 'clientSecret', 256) || current.clientSecret
-  if (!clientSecret) throw httpError(400, 'clientSecret is required')
-  const folderId = str(input.folderId, 'folderId', 200)
-  if (folderId && !ID_RE.test(folderId)) throw httpError(400, 'folderId is invalid')
+  const clientId = str(input.clientId, 'OAuth client ID', 256)
+  if (!clientId) throw httpError(400, 'OAuth client ID is required')
+  if (!/^[A-Za-z0-9._-]+$/.test(clientId)) throw httpError(400, 'OAuth client ID is invalid')
+  const clientSecret = str(input.clientSecret, 'OAuth client secret', 256) || current.clientSecret
+  if (!clientSecret) throw httpError(400, 'OAuth client secret is required')
+  const folderId = str(input.folderId, 'Folder ID', 200)
+  if (folderId && !ID_RE.test(folderId)) throw httpError(400, 'Folder ID is invalid')
   const sameClient = current.clientId === clientId
   return {
     clientId,

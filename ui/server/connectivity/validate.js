@@ -87,7 +87,7 @@ function directRecord(body, existing, engines) {
   const database = str(body.database) || DEFAULT_DATABASES[engine] || 'postgres'
   if (!isValidDbName(database)) throw httpError(400, `Invalid database name: ${database}`)
   const sslmode = str(body.sslmode) || 'prefer'
-  if (!SSL_MODES.includes(sslmode)) throw httpError(400, `Invalid sslmode: ${sslmode}`)
+  if (!SSL_MODES.includes(sslmode)) throw httpError(400, `Invalid SSL mode: ${sslmode}`)
   const password = typeof body.password === 'string' && body.password !== '' ? body.password : (existing?.password || '')
   const tunnelOn = body.tunnel && body.tunnel.enabled !== false
   return {
@@ -95,8 +95,8 @@ function directRecord(body, existing, engines) {
     kind: 'direct',
     engine,
     host: host(body.host, 'Host'),
-    port: port(body.port, DEFAULT_PORTS[engine], 'port'),
-    username: requireMatch(str(body.username), DB_USER_RE, 'username'),
+    port: port(body.port, DEFAULT_PORTS[engine], 'Port'),
+    username: requireMatch(str(body.username), DB_USER_RE, 'Username'),
     password,
     database,
     sslmode,
@@ -105,7 +105,7 @@ function directRecord(body, existing, engines) {
 }
 
 function serverName(body) {
-  return requireMatch(str(body.name), NAME_RE, 'name (1-64 characters)')
+  return requireMatch(str(body.name), NAME_RE, 'name (1 to 64 characters)')
 }
 
 /**
@@ -121,7 +121,7 @@ function validateServerInput(body, existing, engines) {
   if (existing && input.kind && input.kind !== existing.kind) throw httpError(400, 'The kind of a server cannot be changed')
   if (kind === 'docker') return dockerRecord(input, existing)
   if (kind === 'direct') return directRecord(input, existing, engines)
-  throw httpError(400, "kind must be 'docker' or 'direct'")
+  throw httpError(400, "Server type must be 'docker' or 'direct'")
 }
 
 /** Did the SSH endpoint move (so a stored host key no longer applies)? */

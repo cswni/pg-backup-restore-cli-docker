@@ -76,7 +76,7 @@ function publicSettings() {
 
 function optionalBool(value, field) {
   if (value === undefined) return undefined
-  if (typeof value !== 'boolean') throw httpError(400, `${field} must be a boolean`)
+  if (typeof value !== 'boolean') throw httpError(400, `${field} must be true or false`)
   return value
 }
 
@@ -84,7 +84,7 @@ function optionalBool(value, field) {
 function optionalCount(value, field, max = MAX_KEEP) {
   if (value === null || value === '' || value === 0 || value === undefined) return null
   if (!Number.isInteger(value) || value < 1 || value > max) {
-    throw httpError(400, `${field} must be an integer between 1 and ${max}, or null`)
+    throw httpError(400, `${field} must be a whole number from 1 to ${max}, or empty`)
   }
   return value
 }
@@ -94,16 +94,16 @@ function validateRetentionPolicy(policy, field) {
   if (policy == null) return { keepLast: null, keepDays: null }
   if (typeof policy !== 'object' || Array.isArray(policy)) throw httpError(400, `${field} must be an object`)
   return {
-    keepLast: optionalCount(policy.keepLast, `${field}.keepLast`),
-    keepDays: optionalCount(policy.keepDays, `${field}.keepDays`, 36500),
+    keepLast: optionalCount(policy.keepLast, `${field}: Newest N`),
+    keepDays: optionalCount(policy.keepDays, `${field}: Max age (days)`, 36500),
   }
 }
 
 function buildCompression(input) {
-  const enabled = optionalBool(input.enabled, 'compression.enabled')
+  const enabled = optionalBool(input.enabled, 'Compress new backups by default')
   const level = input.level
   if (level !== undefined && (!Number.isInteger(level) || level < 1 || level > 9)) {
-    throw httpError(400, 'compression.level must be an integer between 1 and 9')
+    throw httpError(400, 'Compression level must be a whole number from 1 to 9')
   }
   const current = getCompression()
   return { enabled: enabled ?? current.enabled, level: level ?? current.level }
@@ -112,13 +112,13 @@ function buildCompression(input) {
 function validatePassphrase(passphrase) {
   if (passphrase === undefined || passphrase === '') return null
   if (typeof passphrase !== 'string' || passphrase.length < MIN_PASSPHRASE || passphrase.length > 1024) {
-    throw httpError(400, `encryption.passphrase must be ${MIN_PASSPHRASE}-1024 characters`)
+    throw httpError(400, `Passphrase must be ${MIN_PASSPHRASE} to 1024 characters`)
   }
   return passphrase
 }
 
 function buildEncryption(input) {
-  const enabled = optionalBool(input.enabled, 'encryption.enabled') ?? getEncryption().enabled
+  const enabled = optionalBool(input.enabled, 'Encrypt new backups by default') ?? getEncryption().enabled
   const passphrase = validatePassphrase(input.passphrase)
   if (enabled && !passphrase && !currentPassphrase()) {
     throw httpError(400, 'Set an encryption passphrase before enabling encryption')
@@ -128,7 +128,7 @@ function buildEncryption(input) {
 
 function buildUpload(input) {
   if (!['fail', 'best-effort'].includes(input.failurePolicy)) {
-    throw httpError(400, "upload.failurePolicy must be 'fail' or 'best-effort'")
+    throw httpError(400, "Upload failure policy must be 'fail' or 'best-effort'")
   }
   return { failurePolicy: input.failurePolicy }
 }
@@ -161,7 +161,7 @@ function saveSettings(body) {
   const compression = body.compression && buildCompression(body.compression)
   const encryption = body.encryption && buildEncryption(body.encryption)
   const upload = body.upload && buildUpload(body.upload)
-  const retention = body.retention && { local: validateRetentionPolicy(body.retention.local, 'retention.local') }
+  const retention = body.retention && { local: validateRetentionPolicy(body.retention.local, 'Local retention') }
 
   if (compression) settings.setSetting(KEYS.compression, compression)
   if (upload) settings.setSetting(KEYS.upload, upload)

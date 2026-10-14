@@ -47,7 +47,7 @@ function createApp() {
   for (const m of modules) if (m.router) app.use('/api', m.router)
 
   // Unknown API routes are JSON 404s, never the SPA
-  app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }))
+  app.use('/api', (req, res) => res.status(404).json({ error: `Unknown API endpoint: ${req.method} /api${req.path}` }))
 
   // Built frontend + SPA fallback
   if (fs.existsSync(DIST_DIR)) {

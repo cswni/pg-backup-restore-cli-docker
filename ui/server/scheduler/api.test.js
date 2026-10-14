@@ -103,13 +103,13 @@ test('rejects invalid input', async () => {
     [{ timezone: 'Mars/Base' }, /Unknown timezone/],
     [{ database: 'bad;drop' }, /Invalid database name/],
     [{ outputName: '../x' }, /Invalid output name/],
-    [{ container: '' }, /container is required/],
+    [{ container: '' }, /Container is required/],
     [{ container: 'pg; rm -rf' }, /Invalid container name/],
     [{ serverId: 'nope' }, /Unknown server/],
     [{ engine: 'oracle' }, /No driver/],
-    [{ name: '' }, /name is required/],
-    [{ enabled: 'yes' }, /enabled must be a boolean/],
-    [{ options: [1] }, /options must be an object/],
+    [{ name: '' }, /Name is required/],
+    [{ enabled: 'yes' }, /Enabled must be true or false/],
+    [{ options: [1] }, /Backup options must be an object/],
     [{ options: { big: 'x'.repeat(5000) } }, /too large/],
   ]
   for (const [patch, re] of cases) {

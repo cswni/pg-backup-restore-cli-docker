@@ -16,8 +16,8 @@ function isPlainObject(v) {
 }
 
 function checkName(name) {
-  if (typeof name !== 'string' || !name.trim()) throw httpError(400, 'name is required')
-  if (name.trim().length > MAX_NAME_LENGTH) throw httpError(400, `name must be at most ${MAX_NAME_LENGTH} characters`)
+  if (typeof name !== 'string' || !name.trim()) throw httpError(400, 'Name is required')
+  if (name.trim().length > MAX_NAME_LENGTH) throw httpError(400, `Name must be at most ${MAX_NAME_LENGTH} characters`)
   return name.trim()
 }
 
@@ -25,15 +25,15 @@ function checkTarget({ serverId, engine, container, database, outputName }) {
   const server = getServer(serverId)
   if (!server) throw httpError(400, `Unknown server: ${serverId}`)
   getDriver(engine, server.kind) // throws 400 for unsupported engines
-  if (server.kind === 'docker' && !container) throw httpError(400, 'container is required for Docker servers')
+  if (server.kind === 'docker' && !container) throw httpError(400, 'Container is required for Docker servers')
   if (container && !CONTAINER_RE.test(container)) throw httpError(400, `Invalid container name: ${container}`)
   if (!isValidDbName(database)) throw httpError(400, `Invalid database name: ${database}`)
   if (outputName && !isValidDbName(outputName)) throw httpError(400, `Invalid output name: ${outputName}`)
 }
 
 function checkOptions(options) {
-  if (!isPlainObject(options)) throw httpError(400, 'options must be an object')
-  if (JSON.stringify(options).length > MAX_OPTIONS_BYTES) throw httpError(400, 'options is too large')
+  if (!isPlainObject(options)) throw httpError(400, 'Backup options must be an object')
+  if (JSON.stringify(options).length > MAX_OPTIONS_BYTES) throw httpError(400, 'Backup options are too large')
   return options
 }
 
@@ -50,7 +50,7 @@ function normalizeSchedule(body, existing) {
   const picked = Object.fromEntries(EDITABLE.filter((k) => body[k] !== undefined).map((k) => [k, body[k]]))
   const merged = { ...base, ...picked }
 
-  if (typeof merged.enabled !== 'boolean') throw httpError(400, 'enabled must be a boolean')
+  if (typeof merged.enabled !== 'boolean') throw httpError(400, 'Enabled must be true or false')
   const cron = typeof merged.cron === 'string' ? merged.cron.trim().replace(/\s+/g, ' ') : merged.cron
   const err = cronError(cron, merged.timezone)
   if (err) throw httpError(400, err)

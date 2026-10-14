@@ -58,6 +58,10 @@ test('non-admins cannot manage users or delete backups but can use the app', asy
   assert.equal((await srv.request('DELETE', '/api/users/1', auth)).status, 403)
   assert.equal((await srv.request('DELETE', '/api/backups/x.sql', auth)).status, 403)
   assert.equal((await srv.request('GET', '/api/backups', auth)).status, 200)
+  const missing = await srv.request('GET', '/api/backups/missing.sql/download', auth)
+  assert.deepEqual([missing.status, missing.json.error], [404, 'Backup file not found: missing.sql'])
+  const unknownJob = await srv.request('GET', '/api/jobs/nope', auth)
+  assert.deepEqual([unknownJob.status, unknownJob.json.error], [404, 'Job not found'])
   assert.equal((await srv.request('POST', '/api/uploads', { ...auth, body: { filename: 'v.sql', size: 1 } })).status, 200)
 })
 
@@ -69,6 +73,8 @@ test('updates profile fields, role and disabled state', async () => {
   assert.equal(res.json.role, 'admin')
 
   assert.equal((await srv.request('PUT', `/api/users/${u.id}`, { body: { disabled: 'yes' } })).status, 400)
+  const badName = await srv.request('PUT', `/api/users/${u.id}`, { body: { displayName: 42 } })
+  assert.deepEqual([badName.status, badName.json.error], [400, 'Display name must be text'])
   assert.equal((await srv.request('PUT', '/api/users/abc', { body: {} })).status, 400)
   assert.equal((await srv.request('PUT', '/api/users/99999', { body: {} })).status, 404)
 })

@@ -91,14 +91,14 @@ function encryptConfig(type, config) {
  * @returns {object} the stored destination (unmasked)
  */
 function insertDestination({ type, name, enabled = true, isDefault = false, config, retention }) {
-  if (!TYPES.includes(type)) throw httpError(400, `type must be one of: ${TYPES.join(', ')}`)
+  if (!TYPES.includes(type)) throw httpError(400, `Destination type must be one of: ${TYPES.join(', ')}`)
   const id = crypto.randomUUID()
   const now = Date.now()
   getDb().prepare(`
     INSERT INTO storage_destinations (id, type, name, enabled, is_default, config, retention, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, type, name, enabled ? 1 : 0, isDefault ? 1 : 0, encryptConfig(type, config),
-    JSON.stringify(validateRetentionPolicy(retention, 'retention')), now, now)
+    JSON.stringify(validateRetentionPolicy(retention, 'Retention')), now, now)
   return getDestination(id)
 }
 
@@ -110,7 +110,7 @@ function updateDestination(id, { name, enabled, isDefault, config, retention }) 
     SET name = ?, enabled = ?, is_default = ?, config = ?, retention = ?, updated_at = ?
     WHERE id = ?
   `).run(name, enabled ? 1 : 0, isDefault ? 1 : 0, encryptConfig(current.type, config),
-    JSON.stringify(validateRetentionPolicy(retention, 'retention')), Date.now(), id)
+    JSON.stringify(validateRetentionPolicy(retention, 'Retention')), Date.now(), id)
   return getDestination(id)
 }
 

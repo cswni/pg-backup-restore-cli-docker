@@ -15,10 +15,10 @@ const router = express.Router()
 /** Validate the common request shape and resolve server + driver. */
 function resolveSpec(body) {
   const { serverId = 'local', engine = 'postgres', container, database } = body ?? {}
-  if (!database) throw httpError(400, 'database is required')
+  if (!database) throw httpError(400, 'Database is required')
   if (!isValidDbName(database)) throw httpError(400, `Invalid database name: ${database}`)
   const server = requireServer(serverId)
-  if (server.kind === 'docker' && !container) throw httpError(400, 'container is required for Docker servers')
+  if (server.kind === 'docker' && !container) throw httpError(400, 'Container is required for Docker servers')
   if (container && !isValidContainerName(container)) throw httpError(400, `Invalid container name: ${container}`)
   const driver = getDriver(engine, server.kind)
   return { server, engine, container, database, driver }
@@ -69,7 +69,7 @@ function startBackupJob(body, user, extraMeta = {}) {
 
 function startRestoreJob(body, user) {
   const spec = resolveSpec(body)
-  if (!body.file) throw httpError(400, 'file is required')
+  if (!body.file) throw httpError(400, 'Backup file is required')
   return startJob('restore', jobMeta(spec, { file: body.file, dropExisting: !!body.dropExisting }),
     (job) => runRestore(job, { ...spec, file: body.file, dropExisting: body.dropExisting === true || body.dropExisting === 'true' }),
     { username: user?.username })

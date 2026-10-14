@@ -13,13 +13,13 @@ router.get('/backups', handle(async (req, res) => {
 
 router.get('/backups/:filename/download', handle(async (req, res) => {
   const file = backupPath(req.params.filename)
-  if (!fs.existsSync(file)) throw httpError(404, 'Not found')
+  if (!fs.existsSync(file)) throw httpError(404, `Backup file not found: ${req.params.filename}`)
   res.download(file)
 }))
 
 router.delete('/backups/:filename', requireAdmin, handle(async (req, res) => {
   const file = backupPath(req.params.filename)
-  if (!fs.existsSync(file)) throw httpError(404, 'Not found')
+  if (!fs.existsSync(file)) throw httpError(404, `Backup file not found: ${req.params.filename}`)
   fs.unlinkSync(file)
   removeCatalogEntry(req.params.filename)
   res.json({ ok: true })

@@ -178,11 +178,11 @@ test('webhook validation', async () => {
   const cases = [
     [{ name: 'x', url: 'ftp://example.com' }, /http or https/],
     [{ name: 'x', url: 'not a url' }, /valid URL/],
-    [{ name: 'x' }, /url is required/],
-    [{ name: '', url: 'https://example.com' }, /name is required/],
-    [{ name: 'x', url: 'https://example.com', format: 'pager' }, /format must be/],
-    [{ name: 'x', url: 'https://example.com', events: ['job.exploded'] }, /events must be/],
-    [{ name: 'x', url: 'https://example.com', enabled: 'yes' }, /enabled must be/],
+    [{ name: 'x' }, /Webhook URL is required/],
+    [{ name: '', url: 'https://example.com' }, /Name is required/],
+    [{ name: 'x', url: 'https://example.com', format: 'pager' }, /Format must be/],
+    [{ name: 'x', url: 'https://example.com', events: ['job.exploded'] }, /Events must be/],
+    [{ name: 'x', url: 'https://example.com', enabled: 'yes' }, /Enabled must be true or false/],
   ]
   for (const [body, re] of cases) {
     const res = await srv.request('POST', '/api/monitoring/settings/webhooks', { body })

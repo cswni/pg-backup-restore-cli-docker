@@ -18,23 +18,23 @@ function str(value, field, { required = false, max = 512 } = {}) {
     if (required) throw httpError(400, `${field} is required`)
     return ''
   }
-  if (typeof value !== 'string' || value.length > max) throw httpError(400, `${field} must be a string (max ${max} chars)`)
+  if (typeof value !== 'string' || value.length > max) throw httpError(400, `${field} must be text of at most ${max} characters`)
   return value.trim()
 }
 
 function validateEndpoint(value) {
-  const endpoint = str(value, 'endpoint')
+  const endpoint = str(value, 'Endpoint')
   if (!endpoint) return ''
   let url
-  try { url = new URL(endpoint) } catch { throw httpError(400, 'endpoint must be a valid URL') }
-  if (!['http:', 'https:'].includes(url.protocol)) throw httpError(400, 'endpoint must be http(s)')
+  try { url = new URL(endpoint) } catch { throw httpError(400, 'Endpoint must be a valid URL') }
+  if (!['http:', 'https:'].includes(url.protocol)) throw httpError(400, 'Endpoint must start with http:// or https://')
   return endpoint.replace(/\/+$/, '')
 }
 
 function validatePrefix(value) {
-  const prefix = str(value, 'prefix').replace(/^\/+/, '')
+  const prefix = str(value, 'Prefix').replace(/^\/+/, '')
   if (!PREFIX_RE.test(prefix) || prefix.split('/').some((seg) => seg === '..' || seg === '.')) {
-    throw httpError(400, 'prefix contains unsupported characters')
+    throw httpError(400, 'Prefix contains unsupported characters')
   }
   return prefix && !prefix.endsWith('/') ? `${prefix}/` : prefix
 }
@@ -45,21 +45,21 @@ function validatePrefix(value) {
  * @param {object} [current] stored config (with decrypted secrets) when updating
  */
 function validateConfig(input = {}, current = {}) {
-  const bucket = str(input.bucket, 'bucket', { required: true, max: 255 })
-  if (!BUCKET_RE.test(bucket)) throw httpError(400, 'bucket name is invalid')
-  const region = str(input.region, 'region', { max: 50 }) || 'us-east-1'
-  if (!REGION_RE.test(region)) throw httpError(400, 'region is invalid')
-  const secretAccessKey = str(input.secretAccessKey, 'secretAccessKey', { max: 1024 }) || current.secretAccessKey
-  if (!secretAccessKey) throw httpError(400, 'secretAccessKey is required')
+  const bucket = str(input.bucket, 'Bucket', { required: true, max: 255 })
+  if (!BUCKET_RE.test(bucket)) throw httpError(400, 'Bucket name is invalid')
+  const region = str(input.region, 'Region', { max: 50 }) || 'us-east-1'
+  if (!REGION_RE.test(region)) throw httpError(400, 'Region is invalid')
+  const secretAccessKey = str(input.secretAccessKey, 'Secret access key', { max: 1024 }) || current.secretAccessKey
+  if (!secretAccessKey) throw httpError(400, 'Secret access key is required')
   if (input.forcePathStyle !== undefined && typeof input.forcePathStyle !== 'boolean') {
-    throw httpError(400, 'forcePathStyle must be a boolean')
+    throw httpError(400, 'Force path-style URLs must be true or false')
   }
   return {
     endpoint: validateEndpoint(input.endpoint),
     region,
     bucket,
     prefix: validatePrefix(input.prefix),
-    accessKeyId: str(input.accessKeyId, 'accessKeyId', { required: true, max: 256 }),
+    accessKeyId: str(input.accessKeyId, 'Access key ID', { required: true, max: 256 }),
     secretAccessKey,
     forcePathStyle: !!input.forcePathStyle,
   }

@@ -22,8 +22,8 @@ const credentialString = (value, name) => {
 publicRouter.post('/auth/login', requireCsrfHeader, handle(async (req, res) => {
   if (isAuthDisabled()) throw httpError(400, 'Authentication is disabled on this server')
   const body = validate.body(req)
-  const username = credentialString(body.username, 'username')
-  const password = credentialString(body.password, 'password')
+  const username = credentialString(body.username, 'Username')
+  const password = credentialString(body.password, 'Password')
 
   const result = await checkCredentials(username, password, req.ip)
   if (!result.ok) return sendCredentialError(res, result)
@@ -68,8 +68,8 @@ router.put('/auth/me', handle(async (req, res) => {
 router.put('/auth/me/password', handle(async (req, res) => {
   const body = validate.body(req)
   const user = currentUser(req)
-  const currentPassword = credentialString(body.currentPassword, 'currentPassword')
-  const newPassword = validate.password(body.newPassword, 'newPassword')
+  const currentPassword = credentialString(body.currentPassword, 'Current password')
+  const newPassword = validate.password(body.newPassword, 'New password')
 
   const check = await checkCredentials(user.username, currentPassword, req.ip)
   if (!check.ok) {

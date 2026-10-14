@@ -39,7 +39,7 @@ function buildCron(expr, tz) {
  * @returns {string|null} error message, or null when valid
  */
 function cronError(expr, tz) {
-  if (typeof expr !== 'string' || !expr.trim()) return 'cron expression is required'
+  if (typeof expr !== 'string' || !expr.trim()) return 'Cron expression is required'
   const trimmed = expr.trim()
   if (trimmed.length > MAX_CRON_LENGTH) return 'cron expression is too long'
   const isNickname = NICKNAMES.includes(trimmed.toLowerCase())
