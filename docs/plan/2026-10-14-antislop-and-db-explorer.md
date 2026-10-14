@@ -159,7 +159,7 @@ Tasks:
 - [x] D3 drivers + Explorer use the override (postgres/mysql/mongodb Docker), tests with fakes (commit 5d591bd)
 - [x] D4 API routes + permission/validation tests (commit b41913f)
 - [x] D5 UI: "Container credentials" section per Docker server on the Servers page (list running containers + saved keys, status: saved / from container env), edit dialog per engine, test button; "Credentials" button on the container page; admin-only (commit 99c5147)
-- [ ] D6 README section (done, 3eae0cb), tests + build green (done), deploy, verify on s1 with `legacy_legacydb` and `mcp-postgres-core` (user enters the real credentials)
+- [ ] D6 README section (done, 3eae0cb), tests + build green (done), deploy, verify on s1 with `legacy_legacydb` and `mcp-postgres-core` (user enters the real credentials) (code, README, tests 331/331, CI 38568470803 and deploy done: image bc885eeb24a0; remaining: user enters credentials for legacy_legacydb and premas-arch-2025_mcp-postgres-core in Servers > Local Docker > Container credentials, then verify)
 
 ## Phase C: release
 
@@ -183,3 +183,4 @@ Tasks:
 - [ ] `legacy_legacydb` (MariaDB): root password in the container env no longer matches the server, so listing databases fails (Access denied). Option: per-container credentials override in the UI.
 - [ ] `mcp-postgres-core`: custom image without an OS user `postgres`, so `docker exec -u postgres` fails. Option: fall back to `docker exec <ctr> psql -U postgres` when the user does not exist.
 - [ ] Explorer not yet exercised against MongoDB or a direct (SSH-tunnelled) server.
+- 2026-10-14: Phase D merged (067fd77), CI green, deployed bc885eeb24a0; no regressions on s1 (mariadb 4 dbs, postgres 8 dbs). Waiting for the user to save credentials for the two failing containers.
