@@ -25,6 +25,14 @@
 
 set -euo pipefail
 
+PG_EXEC_SH="$(dirname "${BASH_SOURCE[0]}")/pg-exec.sh"
+if [[ ! -f "$PG_EXEC_SH" ]]; then
+  echo "[pg-restore] ERROR: ${PG_EXEC_SH} not found (it must sit next to this script)." >&2
+  exit 1
+fi
+# shellcheck source=pg-exec.sh
+source "$PG_EXEC_SH"
+
 usage() {
   echo "Usage: $0 -c <container> -d <target_database> [-f <dump_file>] [-x]"
   echo "  -c  Target Docker container name or ID"
@@ -82,7 +90,7 @@ resolve_file() {
 
 # admin_sql <sql> [db]: runs a statement in <db>, default the maintenance database "postgres".
 admin_sql() {
-  docker exec -u postgres "${CONTAINER}" \
+  pg_docker_exec "${CONTAINER}" \
     psql -v ON_ERROR_STOP=1 -X -q -tA -d "${2:-postgres}" -c "$1"
 }
 
@@ -150,7 +158,7 @@ trap 'rm -f "$ERR_LOG"' EXIT
 # fd swap: psql stdout -> fd 3 (our stdout), psql stderr -> tee -> our stderr
 {
   retarget_dump "$DATABASE" < "${FILE}" \
-    | docker exec -i -u postgres "${CONTAINER}" psql -X -d "${DATABASE}" 2>&1 1>&3 \
+    | pg_docker_exec -i "${CONTAINER}" psql -X -d "${DATABASE}" 2>&1 1>&3 \
     | tee "$ERR_LOG" >&2
 } 3>&1
 

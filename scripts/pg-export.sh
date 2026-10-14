@@ -13,6 +13,14 @@
 
 set -euo pipefail
 
+PG_EXEC_SH="$(dirname "${BASH_SOURCE[0]}")/pg-exec.sh"
+if [[ ! -f "$PG_EXEC_SH" ]]; then
+  echo "[pg-export] ERROR: ${PG_EXEC_SH} not found (it must sit next to this script)." >&2
+  exit 1
+fi
+# shellcheck source=pg-exec.sh
+source "$PG_EXEC_SH"
+
 usage() {
   echo "Usage: $0 -c <container> -d <database> [-n <name>] [-o <file>]"
   exit 1
@@ -50,7 +58,7 @@ echo "[pg-export] Exporting database '${DATABASE}' from container '${CONTAINER}'
 echo "[pg-export] Output file: ${OUTPUT_FILE}"
 
 # No -t: a TTY would turn every newline in the dump into \r\n
-docker exec -u postgres "${CONTAINER}" \
+pg_docker_exec "${CONTAINER}" \
   pg_dump -C "${DATABASE}" > "${OUTPUT_FILE}"
 
 echo "[pg-export] Done. Dump saved to: ${OUTPUT_FILE}"

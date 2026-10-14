@@ -4,6 +4,14 @@
 
 set -euo pipefail
 
+PG_EXEC_SH="$(dirname "${BASH_SOURCE[0]}")/pg-exec.sh"
+if [[ ! -f "$PG_EXEC_SH" ]]; then
+  echo "[pg-unblock] ERROR: ${PG_EXEC_SH} not found (it must sit next to this script)." >&2
+  exit 1
+fi
+# shellcheck source=pg-exec.sh
+source "$PG_EXEC_SH"
+
 usage() {
   echo "Usage: $0 -c <container> -d <database>"
   exit 1
@@ -24,7 +32,7 @@ done
 
 echo "[pg-unblock] Terminating all connections to '${DATABASE}' on container '${CONTAINER}'..."
 
-docker exec -u postgres "${CONTAINER}" psql -c \
+pg_docker_exec "${CONTAINER}" psql -d postgres -c \
   "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${DATABASE}' AND pid <> pg_backend_pid();"
 
 echo "[pg-unblock] Done."

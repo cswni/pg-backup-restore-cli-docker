@@ -121,6 +121,14 @@ Restore file resolution (-f):
   3. <file> as-is     : absolute path inside the container
   If -f is omitted, the latest backup of the database is used.
 
+PostgreSQL login in the target container (all optional, pass with docker run -e):
+  PG_EXEC_USER                OS user for docker exec -u. Default: postgres.
+                              Set it empty for images without a postgres OS user.
+  PGUSER, PGPASSWORD, PGHOST  Forwarded to psql / pg_dump with docker exec -e NAME
+                              when not empty. PGHOST=127.0.0.1 logs in over TCP
+                              with the password instead of the local socket.
+  Example: -e PG_EXEC_USER= -e PGUSER=app -e PGPASSWORD -e PGHOST=127.0.0.1
+
 Web UI authentication (serve):
   Users sign in on a login page; admins manage accounts in the UI.
   BASIC_AUTH_USER / BASIC_AUTH_PASSWORD   Initial admin, required while no users exist
