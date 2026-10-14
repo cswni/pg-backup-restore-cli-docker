@@ -40,13 +40,15 @@ WORKDIR /backups
 # Copy the CLI scripts
 COPY scripts/ /usr/local/bin/
 
-# Make all scripts executable
+# Make all scripts executable. The pg-backup symlink exposes the same commands
+# inside a running container (docker exec <ctr> pg-backup export ...).
 RUN chmod +x /usr/local/bin/pg-export.sh \
               /usr/local/bin/pg-unblock.sh \
               /usr/local/bin/pg-delete.sh \
               /usr/local/bin/pg-create.sh \
               /usr/local/bin/pg-restore.sh \
-              /usr/local/bin/entrypoint.sh
+              /usr/local/bin/entrypoint.sh \
+ && ln -s entrypoint.sh /usr/local/bin/pg-backup
 
 # Server, its production dependencies, and the built frontend
 WORKDIR /ui
@@ -60,8 +62,5 @@ VOLUME ["/backups"]
 ENV NODE_ENV=production
 
 EXPOSE 3000
-
-# Ensure the runtime working directory is /ui so node can resolve node_modules
-WORKDIR /ui
 
 ENTRYPOINT ["entrypoint.sh"]

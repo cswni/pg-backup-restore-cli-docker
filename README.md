@@ -1,12 +1,16 @@
-# pg-backup – PostgreSQL Backup / Restore Docker Image
+# pg-backup: database backup and restore Docker image
 
-A lightweight Docker image (Alpine-based) that wraps common PostgreSQL
-backup and restore operations using the Docker CLI.  
-Designed to be used in CI/CD pipelines.
+An Alpine-based Docker image with two parts:
+
+- A **web UI** (the default `serve` command) that backs up and restores
+  PostgreSQL, MySQL / MariaDB and MongoDB databases, in Docker containers or on
+  remote servers, with schedules, storage destinations and monitoring.
+- A **bash CLI** (`export`, `restore`, `unblock`, `delete`, `create`) for
+  PostgreSQL only, for scripts and CI/CD pipelines.
 
 ---
 
-## Prerequisites — Docker Hub Authentication
+## Prerequisites: Docker Hub Authentication
 
 All `docker pull` / `docker push` operations require a valid Docker Hub session.
 If you see:
@@ -18,14 +22,14 @@ unauthorized: personal access token is expired
 
 your token has expired. Follow these steps to re-authenticate:
 
-### 1 — Create a new Personal Access Token (PAT)
+### 1. Create a new Personal Access Token (PAT)
 
 1. Log in to [hub.docker.com](https://hub.docker.com).
 2. Go to **Account Settings → Security → Personal Access Tokens**.
 3. Click **Generate new token**, give it a description (e.g. `pg-backup-ci`), choose **Read & Write** scope, and click **Generate**.
-4. **Copy the token now** — it will not be shown again.
+4. **Copy the token now**. It will not be shown again.
 
-### 2 — Log in from the CLI
+### 2. Log in from the CLI
 
 ```bash
 docker login -u <your-dockerhub-username>
@@ -38,7 +42,7 @@ Or pass the token directly (useful for CI/CD):
 echo "<your-pat>" | docker login -u <your-dockerhub-username> --password-stdin
 ```
 
-### 3 — Verify
+### 3. Verify
 
 ```bash
 docker pull cswni/pg-backup:latest
@@ -121,7 +125,7 @@ docker run --rm \
 
 ### restore
 Restore a database from a dump file.  
-`-f` is optional — if omitted the latest dump for that database is used.
+`-f` is optional. If omitted, the latest dump for that database is used.
 
 - `-d` is the **target** database. The dump is always restored into it, whatever
   database it was exported from (e.g. a `premas` dump restored into `premas_qa`).
@@ -140,9 +144,9 @@ docker run --rm \
 ```
 
 **File resolution order for `-f <file>`:**
-1. `/work/<file>` — mount your current directory with `-v $(pwd):/work`
-2. `/backups/<file>` — mount your backups dir with `-v /path/to/backups:/backups`
-3. `<file>` as-is — absolute path already inside the container
+1. `/work/<file>`: mount your current directory with `-v $(pwd):/work`
+2. `/backups/<file>`: mount your backups dir with `-v /path/to/backups:/backups`
+3. `<file>` as-is: absolute path already inside the container
 
 ```bash
 # Restore from a file in the CURRENT directory (most common for ad-hoc restores)
@@ -187,7 +191,7 @@ refuses to start:
 
 > The variables only **seed** the first admin. Once any user exists they are
 > ignored, so changing `BASIC_AUTH_PASSWORD` later does **not** change an existing
-> password — change it on the Profile page (or have another admin reset it).
+> password. Change it on the Profile page (or have another admin reset it).
 
 **Users and roles.** Only admins create accounts (Users page, no public
 sign-up). Every user can edit their own display name, email and password on the
@@ -208,7 +212,7 @@ everywhere (the user who changes their own password stays signed in). The last
 active admin cannot be deleted, disabled or demoted. Failed logins are limited
 to 5 per username and IP every 15 minutes (HTTP 429).
 
-**Scripts and CI** can keep using HTTP Basic auth with any account — no session
+**Scripts and CI** can keep using HTTP Basic auth with any account, with no session
 or extra header needed:
 
 ```bash
@@ -239,12 +243,12 @@ There are two kinds:
 
 | Kind | How it connects | Where the tools run |
 |------|-----------------|---------------------|
-| **Docker host over SSH** | `DOCKER_HOST=ssh://…` — the same container workflow as the local socket | `docker exec` inside the remote containers (the bash scripts) |
+| **Docker host over SSH** | `DOCKER_HOST=ssh://…`, the same container workflow as the local socket | `docker exec` inside the remote containers (the bash scripts) |
 | **Direct database** | TCP to `host:port` with a username/password, optionally through an SSH tunnel | `psql` / `pg_dump` inside this image (`postgresql18-client`) |
 
 Credentials (private keys, database passwords) are stored encrypted (AES-256-GCM,
 key from `APP_SECRET` or `DATA_DIR/secret.key`) and are never sent back to the
-browser — the UI only shows "•••• configured". When editing a server, leave a
+browser: the UI only shows "•••• configured". When editing a server, leave a
 secret field empty to keep the stored value. Deleting a server keeps every
 backup that was made from it. Use **⚡ Test** on a server to check connectivity
 (latency and server version, or a readable error).
@@ -273,7 +277,7 @@ over the SSH connection.
 ### Direct database connections
 
 **Servers → Add server → Direct database**: engine (PostgreSQL, MySQL / MariaDB
-or MongoDB — see [below](#mysql--mariadb-and-mongodb)), host, port,
+or MongoDB, see [below](#mysql--mariadb-and-mongodb)), host, port,
 username, password, maintenance database (default `postgres`, used for
 `CREATE/DROP DATABASE`) and `sslmode` (`disable`, `prefer`, `require`,
 `verify-full`). The user needs `CREATEDB` (and ownership or superuser rights to
@@ -306,13 +310,13 @@ bastion user does not need Docker).
 The UI manages its own OpenSSH configuration in `DATA_DIR/ssh/` (default
 `/backups/.pgui/ssh/`) and never touches `~/.ssh`:
 
-- `config` — one `Host pgui-<id>` block per server (HostName, Port, User,
+- `config`: one `Host pgui-<id>` block per server (HostName, Port, User,
   `IdentityFile`, `IdentitiesOnly yes`, `BatchMode yes`, `ServerAliveInterval`),
   regenerated whenever servers change.
-- `<id>.key` — each server's private key (mode `0600`), written from the
+- `<id>.key`: each server's private key (mode `0600`), written from the
   encrypted database copy.
-- `known_hosts` — trusted host keys.
-- `bin/ssh` — a wrapper that runs the system `ssh` with `-F DATA_DIR/ssh/config`.
+- `known_hosts`: trusted host keys.
+- `bin/ssh`: a wrapper that runs the system `ssh` with `-F DATA_DIR/ssh/config`.
   The docker CLI has no option to pass ssh flags, so docker/script processes for
   a remote host get `DOCKER_HOST=ssh://pgui-<id>` and this directory first on
   `PATH`. Keep `DATA_DIR` on a filesystem that allows executables (not `noexec`).
@@ -320,7 +324,7 @@ The UI manages its own OpenSSH configuration in `DATA_DIR/ssh/` (default
 Host keys use **trust on first use** (`StrictHostKeyChecking accept-new`): the
 first successful connection records the host's key, and later connections fail
 if the key changes (possible man-in-the-middle). Each server's stored
-fingerprint (`SHA256:…`) is shown on the Servers page — compare it with
+fingerprint (`SHA256:…`) is shown on the Servers page. Compare it with
 `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the host. If the host was
 legitimately reinstalled, use **Forget host key** (or change the server's host,
 which forgets it automatically) and test again to trust the new key.
@@ -340,11 +344,11 @@ server (default ports 3306 / 27017); containers are detected by image:
 | MongoDB | `mongo` (any name containing it, e.g. `mongo`, `bitnami/mongodb`) | `.archive` | export, restore, delete |
 
 Operations a driver does not support are hidden (MongoDB has no `CREATE
-DATABASE` — a database exists once it holds data — and no per-database
+DATABASE` (a database exists once it holds data) and no per-database
 connection kill). Restore dialogs only offer backups / targets of a matching
 engine: the catalog engine is used when known, uploads are inferred from the
 extension (`.archive` → MongoDB; a `.sql` of unknown origin can go to PostgreSQL
-or MySQL — pick the right target).
+or MySQL, so pick the right target).
 
 **Rename semantics** (restore a dump of `shop` as `shop_qa`):
 
@@ -369,7 +373,7 @@ restore into an existing database that has tables (MySQL) / collections
 removed.
 
 **Credentials for containers** are read inside the container from the official
-images' environment — never passed on a command line:
+images' environment, never passed on a command line:
 
 - MySQL / MariaDB / Percona: user `root`, password from `MARIADB_ROOT_PASSWORD` or
   `MYSQL_ROOT_PASSWORD` (or the `*_FILE` variants). They are written to a
@@ -398,13 +402,13 @@ unverified TLS when offered (prefer), `--ssl --skip-ssl-verify-server-cert` /
 `tls=true&tlsInsecure=true` (require) and full verification (verify-full);
 MongoDB has no opportunistic TLS, so `prefer` connects without TLS.
 `verify-full` through an SSH tunnel is not supported for these engines (the
-tools cannot verify the real host name over `127.0.0.1`) — use `require`.
+tools cannot verify the real host name over `127.0.0.1`). Use `require`.
 
-**Required privileges**: MySQL export — `SELECT`, `SHOW VIEW`, `TRIGGER`,
+**Required privileges**: MySQL export: `SELECT`, `SHOW VIEW`, `TRIGGER`,
 `EVENT`, `LOCK TABLES` (and `PROCESS` is avoided via `--no-tablespaces`);
-restore/create/delete — `CREATE`, `DROP`, `ALTER`, `INSERT`, `CREATE ROUTINE`,
+restore/create/delete: `CREATE`, `DROP`, `ALTER`, `INSERT`, `CREATE ROUTINE`,
 `EVENT`, `TRIGGER` and, for routines/views with a `DEFINER` other than the
-restoring user, `SET_USER_ID`/`SUPER`; unblock — `CONNECTION_ADMIN`/`PROCESS`
+restoring user, `SET_USER_ID`/`SUPER`; unblock: `CONNECTION_ADMIN`/`PROCESS`
 (or `SUPER`). MongoDB: `backup` for exports, `restore` + `dropDatabase` on the
 target for restores/deletes, `listDatabases` for listing (e.g. the built-in
 `backup`, `restore` and `readAnyDatabase` roles, or `root`).
@@ -426,7 +430,7 @@ target (server, engine, container, database, optional output name), backup optio
 cron expression and a timezone. Admins create, edit, enable/disable and delete
 schedules; any signed-in user can see them and use **Run now**.
 
-**Cron syntax** — standard 5 fields, evaluated with [croner](https://github.com/hexagon/croner):
+**Cron syntax**: standard 5 fields, evaluated with [croner](https://github.com/hexagon/croner):
 
 ```
 ┌───────────── minute (0-59)
@@ -445,7 +449,7 @@ schedules; any signed-in user can see them and use **Run now**.
 fields are rejected. The form offers presets and shows the next 5 run times
 (`GET /api/schedules/preview?cron=…&tz=…`).
 
-**Timezone** — every schedule stores an IANA timezone (e.g. `Europe/Madrid`); runs follow
+**Timezone**: every schedule stores an IANA timezone (e.g. `Europe/Madrid`); runs follow
 local time in that zone including daylight-saving changes (times skipped by a DST jump
 do not run, repeated times run once). New schedules default to the browser's timezone in
 the UI, or the server's `TZ` (falling back to `UTC`) through the API.
@@ -490,8 +494,8 @@ after the job leaves memory and across restarts. Log files older than
   "checks": { "database": { "ok": true }, "docker": { "reachable": true, "serverVersion": "27.1.0" } } }
 ```
 
-`status` is `ok`, `degraded` (local Docker daemon unreachable — checked with a 3 s
-timeout, cached 30 s) or `error` (app database unusable; HTTP `503`). Use it for Docker
+`status` is `ok`, `degraded` (local Docker daemon unreachable, checked with a 3 s
+timeout and cached 30 s) or `error` (app database unusable; HTTP `503`). Use it for Docker
 `HEALTHCHECK`s or load-balancer probes.
 
 ### Prometheus metrics
@@ -565,8 +569,8 @@ Server logs from the scheduler and monitoring modules are structured.
 | `JOB_LOG_RETENTION_DAYS` | `30` | Days to keep persisted job logs |
 | `TZ` | `UTC` | Default timezone for new schedules created through the API |
 | `SCHEDULER_ENABLED` | `true` | `false` disables the schedule timer and overdue checks |
-| `METRICS_TOKEN` | — | Bearer token accepted by `/api/metrics` |
-| `PUBLIC_URL` | — | Base URL used for links in notifications |
+| `METRICS_TOKEN` | (none) | Bearer token accepted by `/api/metrics` |
+| `PUBLIC_URL` | (none) | Base URL used for links in notifications |
 
 ---
 
@@ -588,7 +592,7 @@ the Export dialog, which also lets you pick the destinations to upload to.
 |----------|-------------|
 | `BACKUP_ENCRYPTION_PASSPHRASE` | Encryption passphrase. When set it **overrides** the passphrase stored in the UI |
 | `PUBLIC_URL` | External URL of the UI, e.g. `https://backups.example.com`. Used to build the Google OAuth redirect URI. If unset it is derived from the request (`X-Forwarded-Proto`/`Host` behind a proxy) |
-| `APP_SECRET` | Key used to encrypt stored credentials (S3 keys, OAuth secrets/tokens, the passphrase). If unset a key is generated in `$DATA_DIR/secret.key` — back it up or set `APP_SECRET` |
+| `APP_SECRET` | Key used to encrypt stored credentials (S3 keys, OAuth secrets/tokens, the passphrase). If unset a key is generated in `$DATA_DIR/secret.key`: back it up or set `APP_SECRET` |
 
 ### Compression
 
@@ -626,11 +630,11 @@ limited to 64 GiB (AES-GCM limit).
 **Changing the passphrase** only affects new backups. Replaced passphrases are
 kept (encrypted) and tried automatically when restoring older backups. If you
 lose the app database, older backups need the passphrase that was active when
-they were created — keep a record of every passphrase you have used.
+they were created. Keep a record of every passphrase you have used.
 
 #### Offline decryption (disaster recovery)
 
-`decrypt-cli.js` needs only Node.js ≥ 18 — no web server, database or
+`decrypt-cli.js` needs only Node.js ≥ 18: no web server, database or
 `node_modules`. Inside the image:
 
 ```bash
@@ -680,7 +684,7 @@ Works with a normal Gmail account; files are uploaded with the
 1. In [Google Cloud Console](https://console.cloud.google.com/) create (or pick)
    a project and enable the **Google Drive API**.
 2. Configure the **OAuth consent screen** (External, add yourself as a test
-   user — or publish the app so the refresh token does not expire after 7 days).
+   user, or publish the app so the refresh token does not expire after 7 days).
 3. **Credentials → Create credentials → OAuth client ID → Web application.**
    Under *Authorized redirect URIs* add the URI shown in the destination form:
    `https://<your PUBLIC_URL>/api/storage/gdrive/oauth/callback`.
@@ -696,7 +700,7 @@ connecting again.
 
 ### Retention
 
-Policies: keep the **newest N** backups and/or backups **younger than D days** —
+Policies: keep the **newest N** backups and/or backups **younger than D days**,
 for local files (Storage → Retention) and separately for each destination (in
 its form). Retention runs after every backup and once a day (and on demand with
 *Run retention now*); every deletion is written to the job log.
@@ -755,6 +759,9 @@ volumes:
 ```
 
 ### Running commands via Compose
+
+The image includes a `pg-backup` command (a link to its entrypoint), so the CLI
+commands also run inside an already running container:
 
 ```bash
 # Export
