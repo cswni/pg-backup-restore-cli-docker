@@ -133,6 +133,16 @@ export const api = {
     forgetHostKey: (id) => req('DELETE', `/api/servers/${encodeURIComponent(id)}/host-key`),
     databases: (id) => req('GET', `/api/servers/${encodeURIComponent(id)}/databases`),
   },
+  // Admin only. A blank password keeps the stored one, `password: null` clears it.
+  containerCredentials: {
+    list: (serverId) => req('GET', `/api/servers/${encodeURIComponent(serverId)}/container-credentials`),
+    save: (serverId, key, body) =>
+      req('PUT', `/api/servers/${encodeURIComponent(serverId)}/container-credentials/${encodeURIComponent(key)}`, body),
+    remove: (serverId, key) =>
+      req('DELETE', `/api/servers/${encodeURIComponent(serverId)}/container-credentials/${encodeURIComponent(key)}`),
+    test: (serverId, key, container) =>
+      req('POST', `/api/servers/${encodeURIComponent(serverId)}/container-credentials/${encodeURIComponent(key)}/test`, { container }),
+  },
   engines: {
     list: () => req('GET', '/api/engines'),
   },

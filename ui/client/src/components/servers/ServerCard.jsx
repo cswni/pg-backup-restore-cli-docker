@@ -4,6 +4,7 @@ import { api } from '../../lib/api'
 import { CircleCheck, Trash2, TriangleAlert } from 'lucide-react'
 import { Card, Button, BusyIcon, Icon } from '../UI'
 import { KindBadge, endpointText, serverHref } from './ServerBits'
+import ContainerCredentials from './ContainerCredentials'
 
 function TestResult({ result }) {
   if (!result) return null
@@ -106,6 +107,7 @@ export default function ServerCard({ server, isAdmin, onEdit, onDelete, onChange
       </div>
       <HostKeys server={server} isAdmin={isAdmin} onForget={forgetHostKey} />
       <TestResult result={result} />
+      {isAdmin && server.kind === 'docker' && <ContainerCredentials server={server} />}
     </Card>
   )
 }
