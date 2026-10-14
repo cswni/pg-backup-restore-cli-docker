@@ -1,21 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { api } from '../lib/api'
-import { StatusBadge, Button, Spinner } from '../components/UI'
-import { formatDateTime } from '../lib/format'
+import { Check, CircleCheck, CircleX } from 'lucide-react'
+import { StatusBadge, Button, Spinner, Icon } from '../components/UI'
+import { formatDateTime, operationLabel } from '../lib/format'
 import { copyText } from '../lib/clipboard'
 
 const COPY_FEEDBACK_MS = 2000
 
-/** "server / container → database · by user · started …" */
+/** "server / container / database · by user · started …" */
 function describeJob(job) {
   const m = job.meta || {}
-  const target = [m.serverName, job.container].filter(Boolean).join(' / ')
-  const parts = [`${target ? `${target} → ` : ''}${job.database ?? ''}`]
+  const parts = [[m.serverName, job.container, job.database].filter(Boolean).join(' / ')]
   if (m.scheduleName) parts.push(`schedule ${m.scheduleName}`)
   if (job.username) parts.push(`by ${job.username}`)
   if (job.startedAt) parts.push(formatDateTime(job.startedAt))
-  return parts.join(' · ')
+  return parts.filter(Boolean).join(' · ')
 }
 
 export default function JobLog() {
@@ -32,14 +32,12 @@ export default function JobLog() {
   const logRef = useRef(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
-  // Load initial job meta
   useEffect(() => {
     api.jobs.get(jobId)
       .then((j) => setMeta(j))
       .catch(() => {})
   }, [jobId])
 
-  // SSE stream
   useEffect(() => {
     const es = new EventSource(api.jobs.streamUrl(jobId))
 
@@ -73,7 +71,6 @@ export default function JobLog() {
     return () => es.close()
   }, [jobId])
 
-  // Auto-scroll
   useEffect(() => {
     if (autoScroll && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -102,13 +99,12 @@ export default function JobLog() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="shrink-0 px-4 md:px-8 py-4 md:py-5 border-b border-zinc-800 flex flex-wrap items-center gap-3 md:gap-4">
         <button type="button" onClick={() => navigate(-1)} className="text-zinc-400 hover:text-zinc-100 transition-colors text-sm">← Back</button>
         <div className="h-4 w-px bg-zinc-800" />
         <div className="flex-1 min-w-48">
           <div className="flex items-center gap-3">
-            <p className="font-mono text-emerald-400 text-sm font-semibold">{meta?.operation ?? '…'}</p>
+            <p className="font-mono text-emerald-400 text-sm font-semibold">{meta ? operationLabel(meta.operation) : '…'}</p>
             <StatusBadge status={status} />
           </div>
           <p className="text-xs text-zinc-400 font-mono mt-0.5 truncate">
@@ -136,7 +132,7 @@ export default function JobLog() {
             </span>
           )}
           <Button size="sm" variant="secondary" disabled={lines.length === 0} onClick={copyLog}>
-            {copyState === 'copied' ? '✓ Copied' : 'Copy Log'}
+            {copyState === 'copied' ? <><Icon as={Check} /> Copied</> : 'Copy log'}
           </Button>
         </div>
         {copyState === 'failed' && (
@@ -146,14 +142,13 @@ export default function JobLog() {
         )}
       </div>
 
-      {/* Log output */}
       <div
         className="flex-1 overflow-y-auto bg-zinc-950 font-mono text-xs leading-relaxed p-4 md:p-6"
         style={{ minHeight: 0 }}
       >
         {lines.length === 0 && status === 'running' && connection === 'live' && (
           <div className="flex items-center gap-2 text-zinc-400">
-            <span className="pulse-dot">●</span> Waiting for output…
+            <span aria-hidden="true" className="w-2 h-2 rounded-full bg-blue-400 pulse-dot" /> Waiting for output…
           </div>
         )}
         {lines.length === 0 && status !== 'running' && (
@@ -189,9 +184,10 @@ export default function JobLog() {
             ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
             : 'border-red-500/20 bg-red-500/5 text-red-400'
         }`}>
-          <span>{exitCode === 0 ? '✅ Operation completed successfully' : '❌ Operation failed'}</span>
+          <Icon as={exitCode === 0 ? CircleCheck : CircleX} />
+          <span>{exitCode === 0 ? 'Operation completed successfully' : 'Operation failed'}</span>
           <Link to="/" className="ml-auto text-zinc-400 hover:text-zinc-100 transition-colors">
-            Dashboard →
+            Dashboard
           </Link>
         </div>
       )}

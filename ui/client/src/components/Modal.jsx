@@ -1,4 +1,5 @@
 import React, { useId, useRef } from 'react'
+import { X } from 'lucide-react'
 import { useDialogFocus } from '../hooks/useDialogFocus'
 
 const WIDTHS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' }
@@ -13,7 +14,7 @@ export function CloseButton({ onClick, label = 'Close' }) {
       data-dialog-close
       className="shrink-0 min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center rounded-lg text-xl leading-none text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
     >
-      <span aria-hidden="true">✕</span>
+      <X aria-hidden="true" className="size-5" />
     </button>
   )
 }
@@ -22,10 +23,10 @@ export function CloseButton({ onClick, label = 'Close' }) {
  * Accessible modal dialog: role="dialog" + aria-modal, labelled by its title,
  * Escape closes, focus moves in, stays in and returns to the opener on close.
  * The overlay scrolls, so tall dialogs stay usable on short screens.
- * @param {{ title: string, subtitle?: React.ReactNode, subtitleClassName?: string, icon?: React.ReactNode,
+ * @param {{ title: string, subtitle?: React.ReactNode, subtitleClassName?: string, icon?: React.ComponentType,
  *   onClose: () => void, size?: 'md'|'lg'|'xl', children: React.ReactNode }} props
  */
-export default function Modal({ title, subtitle, subtitleClassName = '', icon, onClose, size = 'md', children }) {
+export default function Modal({ title, subtitle, subtitleClassName = '', icon: Glyph, onClose, size = 'md', children }) {
   const ref = useRef(null)
   const titleId = useId()
   const subtitleId = useId()
@@ -43,7 +44,7 @@ export default function Modal({ title, subtitle, subtitleClassName = '', icon, o
         className={`m-auto bg-zinc-900 border border-zinc-700 rounded-2xl w-full ${WIDTHS[size]} shadow-2xl outline-hidden`}
       >
         <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-800">
-          {icon && <span aria-hidden="true" className="text-2xl">{icon}</span>}
+          {Glyph && <Glyph aria-hidden="true" className="size-5 shrink-0 text-zinc-400" />}
           <div className="flex-1 min-w-0">
             <h2 id={titleId} className="font-semibold text-zinc-100">{title}</h2>
             {subtitle && <p id={subtitleId} className={`text-xs text-zinc-400 mt-0.5 ${subtitleClassName}`}>{subtitle}</p>}
@@ -56,7 +57,6 @@ export default function Modal({ title, subtitle, subtitleClassName = '', icon, o
   )
 }
 
-/** Footer row of a Modal. */
 export function ModalFooter({ children }) {
   return <div className="flex flex-wrap justify-end gap-2 px-6 py-4 border-t border-zinc-800">{children}</div>
 }

@@ -190,10 +190,10 @@ export default function ScheduleForm({ schedule, onSaved, onCancel }) {
         </section>
         <section className="space-y-3">
           <h3 className="text-sm font-medium text-zinc-300">Options</h3>
-          <Toggle checked={form.compress} onChange={(v) => set({ compress: v })} label="Compress" hint="Applied when the storage module supports it." />
-          <Toggle checked={form.encrypt} onChange={(v) => set({ encrypt: v })} label="Encrypt" hint="Uses the configured encryption key." />
-          <Field id={`${id}-dest`} label="Remote destinations (comma separated, optional)">
-            <input id={`${id}-dest`} type="text" value={form.destinations} placeholder="e.g. s3-offsite" onChange={(e) => set({ destinations: e.target.value })} className={inputCls} />
+          <Toggle checked={form.compress} onChange={(v) => set({ compress: v })} label="Compress" hint="gzip, adds .gz to the file name." />
+          <Toggle checked={form.encrypt} onChange={(v) => set({ encrypt: v })} label="Encrypt" hint="Uses the passphrase set on the Storage page." />
+          <Field id={`${id}-dest`} label="Remote destination IDs (comma separated, optional)">
+            <input id={`${id}-dest`} type="text" value={form.destinations} placeholder="empty: the default remote destinations" onChange={(e) => set({ destinations: e.target.value })} className={inputCls} />
           </Field>
         </section>
         {error && <ErrorAlert message={error} />}

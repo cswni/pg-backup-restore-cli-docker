@@ -1,4 +1,5 @@
 import React, { useState, useId, useRef } from 'react'
+import { Check } from 'lucide-react'
 import { copyText } from '../../lib/clipboard'
 
 // Small form primitives shared by the storage settings components.
@@ -75,9 +76,9 @@ export function CopyField({ label, value }) {
         <button
           type="button"
           onClick={copy}
-          className="shrink-0 px-3 rounded-lg text-xs font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
         >
-          {result === 'copied' ? '✓ Copied' : 'Copy'}
+          {result === 'copied' ? <><Check aria-hidden="true" className="size-4" /> Copied</> : 'Copy'}
         </button>
       </div>
       {result === 'failed' && (
@@ -89,14 +90,11 @@ export function CopyField({ label, value }) {
   )
 }
 
-export function SectionTitle({ icon, title, subtitle }) {
+export function SectionTitle({ title, subtitle }) {
   return (
-    <div className="flex items-start gap-3 mb-4">
-      <span aria-hidden="true" className="text-xl leading-none mt-0.5">{icon}</span>
-      <div>
-        <h2 className="font-semibold text-zinc-100">{title}</h2>
-        {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
-      </div>
+    <div className="mb-4">
+      <h2 className="font-semibold text-zinc-100">{title}</h2>
+      {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
     </div>
   )
 }

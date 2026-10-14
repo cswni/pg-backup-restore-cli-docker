@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { HardDrive } from 'lucide-react'
 import { Button, Toggle, ErrorAlert } from '../UI'
 import { TextField, CopyField, Notice } from './fields'
 import { RetentionFields } from './RetentionCard'
@@ -37,7 +38,7 @@ function GDriveFields({ config, set, secretSaved, redirectUri }) {
   return (
     <>
       <Notice>
-        In Google Cloud Console → APIs &amp; Services → Credentials, create an <strong>OAuth client ID</strong> of type
+        In Google Cloud Console, under APIs &amp; Services, Credentials, create an <strong>OAuth client ID</strong> of type
         <strong> Web application</strong> (enable the Google Drive API first) and add the redirect URI below to
         “Authorized redirect URIs”. After saving, use <strong>Connect Google Drive</strong>.
       </Notice>
@@ -84,7 +85,7 @@ export default function DestinationForm({ destination, type, redirectUri, onClos
 
   const title = `${destination ? 'Edit' : 'Add'} ${type === 's3' ? 'S3-compatible storage' : 'Google Drive'}`
   return (
-    <Modal icon={type === 's3' ? '🪣' : '📁'} title={title} subtitle="Secrets are stored encrypted and never sent back to the browser."
+    <Modal icon={HardDrive} title={title} subtitle="Secrets are stored encrypted and never sent back to the browser."
       size="lg" onClose={onClose}>
       <div className="px-6 py-5 space-y-4">
         <TextField label="Name" value={name} onChange={setName} />
@@ -92,7 +93,7 @@ export default function DestinationForm({ destination, type, redirectUri, onClos
           ? <S3Fields config={config} set={set} secretSaved={secretSaved} />
           : <GDriveFields config={config} set={set} secretSaved={secretSaved} redirectUri={redirectUri} />}
         <div className="pt-1 space-y-3">
-          <Toggle checked={isDefault} onChange={setIsDefault} label="Upload every backup here by default" hint="Exports can still pick destinations individually." />
+          <Toggle checked={isDefault} onChange={setIsDefault} label="Upload every backup here by default" hint="Each backup can still choose its own destinations." />
           <Toggle checked={enabled} onChange={setEnabled} label="Enabled" />
         </div>
         <fieldset>

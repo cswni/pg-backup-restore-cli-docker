@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useId } from 'react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
-import { ErrorAlert, Button, Toggle, ProgressBar } from '../UI'
+import { ArchiveRestore, FileArchive, FolderOpen, Upload, X } from 'lucide-react'
+import { ErrorAlert, Button, Toggle, ProgressBar, BusyIcon, Icon } from '../UI'
 import Modal, { ModalFooter } from '../Modal'
 import RestoreTargetFields, { useRestoreTarget } from '../servers/RestoreTarget'
 
-// Dumps the server accepts: plain SQL or MongoDB archive, optionally gzipped and/or encrypted
+// Backups the server accepts: plain SQL or MongoDB archive, optionally gzipped and/or encrypted
 const UPLOAD_NAME = /\.(sql|archive)(\.gz)?(\.enc)?$/i
 
 export function formatBytes(b) {
@@ -21,7 +22,7 @@ function parseDbName(filename) {
   return m ? m[1] : filename.replace(/\.(sql|archive)$/, '')
 }
 
-const Running = ({ children }) => <><span aria-hidden="true" className="animate-spin inline-block">⟳</span> {children}</>
+const Running = ({ children }) => <><BusyIcon /> {children}</>
 
 export function RestoreModal({ backup, onClose, onRestore }) {
   const target = useRestoreTarget(parseDbName(backup.name), { name: backup.name, engine: backup.engine })
@@ -40,7 +41,7 @@ export function RestoreModal({ backup, onClose, onRestore }) {
   }
 
   return (
-    <Modal icon="♻️" title="Restore" subtitle={backup.name} subtitleClassName="font-mono break-all" onClose={onClose}>
+    <Modal icon={ArchiveRestore} title="Restore" subtitle={backup.name} subtitleClassName="font-mono break-all" onClose={onClose}>
       <div className="px-6 py-5 space-y-4">
         <RestoreTargetFields id="restore-db" target={target} />
       </div>
@@ -96,7 +97,7 @@ function DropZone({ file, running, onPick }) {
       />
       {file ? (
         <div className="flex flex-col items-center gap-3 py-6 px-4 text-center">
-          <span aria-hidden="true" className="text-3xl">📄</span>
+          <Icon as={FileArchive} className="size-8 text-zinc-400" />
           <div>
             <p className="text-sm font-mono text-emerald-400 break-all">{file.name}</p>
             <p className="text-xs text-zinc-400 mt-0.5">{formatBytes(file.size)}</p>
@@ -106,14 +107,14 @@ function DropZone({ file, running, onPick }) {
               Choose another file
             </label>
             <button type="button" disabled={running} onClick={() => onPick(null)}
-              className="min-h-[44px] px-3 text-xs text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40">
-              ✕ Remove
+              className="min-h-[44px] px-3 inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-40">
+              <Icon as={X} /> Remove
             </button>
           </div>
         </div>
       ) : (
         <label htmlFor={inputId} className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center cursor-pointer">
-          <span aria-hidden="true" className="text-3xl text-zinc-400">📂</span>
+          <Icon as={FolderOpen} className="size-8 text-zinc-400" />
           <span className="text-sm text-zinc-400">
             Drop a <span className="font-mono">.sql</span> or <span className="font-mono">.archive</span> file
             (optionally <span className="font-mono">.gz</span> or <span className="font-mono">.enc</span>) here
@@ -123,7 +124,7 @@ function DropZone({ file, running, onPick }) {
       )}
       {rejected && (
         <p role="alert" className="px-4 pb-3 text-xs text-red-400 text-center break-all">
-          {rejected} is not a .sql or .archive dump (optionally .gz or .enc).
+          {rejected} is not a .sql or .archive backup (optionally .gz or .enc).
         </p>
       )}
     </div>
@@ -148,7 +149,7 @@ export function UploadRestoreModal({ onClose, onDone }) {
   function pickFile(f) {
     setFile(f)
     setUploadError(null)
-    // Default the target to the dump's database name; user can rename it
+    // Default the target to the backup's database name; the user can rename it
     if (f && !target.db) target.setDb(parseDbName(f.name))
   }
 
@@ -182,11 +183,11 @@ export function UploadRestoreModal({ onClose, onDone }) {
 
   return (
     <Modal
-      icon="⬆️"
+      icon={Upload}
       title={isAdmin ? 'Upload & Restore' : 'Upload'}
       subtitle={isAdmin
-        ? 'Upload a .sql dump or MongoDB .archive and optionally restore it immediately'
-        : 'Upload a .sql dump or MongoDB .archive'}
+        ? 'Upload a backup (.sql, or .archive for MongoDB) and optionally restore it right away'
+        : 'Upload a backup (.sql, or .archive for MongoDB)'}
       size="lg"
       onClose={onClose}
     >
@@ -210,7 +211,7 @@ export function UploadRestoreModal({ onClose, onDone }) {
         <Button variant={restoreNow && target.dropExisting ? 'danger' : 'primary'} disabled={!canSubmit} onClick={submit}>
           {running
             ? <Running>Uploading… {progress}%</Running>
-            : restoreNow ? '⬆️ Upload & Restore' : '⬆️ Upload'}
+            : <><Icon as={Upload} /> {restoreNow ? 'Upload & Restore' : 'Upload'}</>}
         </Button>
       </ModalFooter>
     </Modal>

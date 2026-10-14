@@ -8,7 +8,7 @@ export function exportSuffix(options, baseExt = '.sql') {
 }
 
 /**
- * Compression / encryption / destination choices for an export, initialised
+ * Compression / encryption / destination choices for one backup, initialised
  * from the storage defaults. Calls `onChange(options)` with the `options`
  * object sent to POST /api/ops/export (or null while loading / on error,
  * which lets the server apply its defaults).
@@ -68,7 +68,7 @@ export default function ExportStorageOptions({ onChange }) {
                   checked={options.destinations.includes(d.id)}
                   onChange={() => toggleDest(d.id)}
                 />
-                <span>{d.type === 's3' ? '🪣' : '📁'} {d.name}</span>
+                <span>{d.name}</span>
                 {d.isDefault && <span className="text-[10px] text-zinc-400">default</span>}
                 {!d.ready && <span className="text-[10px] text-amber-400">not connected</span>}
               </label>

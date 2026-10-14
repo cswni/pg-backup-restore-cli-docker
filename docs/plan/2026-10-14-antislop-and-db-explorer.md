@@ -37,17 +37,17 @@ as soon as its work is committed, and add the commit hash. Any agent can resume 
 ## Phase A: antislop findings 12 to 24 (`anti-slop/audit-001-2026-10-13.md`)
 
 A1, client (`ui/client/**`):
-- [ ] #12 emoji as icons replaced by lucide-react icons (nav, buttons, badges, toasts, favicon/logo; 🐘 no longer stands for every engine)
-- [ ] #13 arrows kept only on back links
-- [ ] #14 pulse animation behind `prefers-reduced-motion: no-preference`
-- [ ] #15 `h-screen` → `h-dvh`
-- [ ] #16 client comment slop (JSX section labels, restating comments, banners, index.css notes)
-- [ ] #17 decorative status dots removed or tied to real state
-- [ ] #18 one chip radius (`rounded-md`)
-- [ ] #19 engine/kind badges neutral; color only for status
-- [ ] #20 dashboard: failures / next runs before the stat row
-- [ ] #21 terminology in UI copy (see Decisions)
-- [ ] #22 product name consistent in the UI
+- [x] #12 emoji as icons replaced by lucide-react icons (nav, buttons, badges, toasts, favicon/logo; 🐘 no longer stands for every engine) (commit 860c88e)
+- [x] #13 arrows kept only on back links (commit 860c88e)
+- [x] #14 pulse animation behind `prefers-reduced-motion: no-preference` (commit 4b57b5c)
+- [x] #15 `h-screen` → `h-dvh` (commit 4b57b5c)
+- [x] #16 client comment slop (JSX section labels, restating comments, banners, index.css notes) (commit 4b57b5c, 860c88e)
+- [x] #17 decorative status dots removed or tied to real state (commit 860c88e)
+- [x] #18 one chip radius (`rounded-md`) (commit 860c88e)
+- [x] #19 engine/kind badges neutral; color only for status (commit 860c88e)
+- [x] #20 dashboard: failures / next runs before the stat row (commit 860c88e)
+- [x] #21 terminology in UI copy (see Decisions) (commit 860c88e)
+- [x] #22 product name consistent in the UI (commit 860c88e)
 
 A2, server, scripts, docs (everything outside `ui/client`):
 - [x] #16 comment slop in `ui/server`, `scripts/`, Dockerfile, CI, compose (banners, separators, restating comments, redundant JSDoc, repeated step orders, commented-out `#image:` line) (commits d9e2dba, dd5b640)
@@ -131,3 +131,4 @@ B3-B5:
 
 - 2026-10-14: plan created (after commit 487f365, deployed image `1407cde51d83`).
 - 2026-10-14: A2 done (d9e2dba, 63abe85, dd5b640, fcb1fdd): server/scripts/CI comment cleanup, form-label validation messages, README restructure; tests 256/256, build passes. README image name now matches CI (`pg-backup-restore-cli`, was `cswni/pg-backup`).
+- 2026-10-14: A1 client fixes #12 to #22 done in 4b57b5c and 860c88e (lucide-react devDependency, build + 256 tests green, browser check desktop + 375px).

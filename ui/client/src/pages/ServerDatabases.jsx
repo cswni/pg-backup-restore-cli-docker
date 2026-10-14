@@ -2,7 +2,8 @@ import React from 'react'
 import { useParams, Link } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
-import { PageHeader, Button, Spinner, ErrorAlert } from '../components/UI'
+import { RefreshCw } from 'lucide-react'
+import { PageHeader, Button, Spinner, ErrorAlert, Icon } from '../components/UI'
 import DatabaseWorkspace from '../components/ops/DatabaseWorkspace'
 import { KindBadge, endpointText } from '../components/servers/ServerBits'
 
@@ -30,7 +31,7 @@ export default function ServerDatabases() {
           <PageHeader
             title={server.name}
             subtitle={<span className="inline-flex items-center gap-2"><KindBadge server={server} /><span className="font-mono">{endpointText(server)}</span></span>}
-            action={<Button variant="secondary" size="sm" onClick={databases.reload}>↻ Refresh</Button>}
+            action={<Button variant="secondary" size="sm" onClick={databases.reload}><Icon as={RefreshCw} /> Refresh</Button>}
           />
           <DatabaseWorkspace
             target={{ serverId: server.id, engine: server.engine }}

@@ -1,4 +1,9 @@
 import React from 'react'
+import { CircleCheck, Database, LoaderCircle, TriangleAlert } from 'lucide-react'
+
+/** Neutral label chip (engine, server kind, role, file flags). Color is reserved for status. */
+export const CHIP_CLASS = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-zinc-800 text-zinc-300 border-zinc-700'
+
 export function StatusBadge({ status }) {
   const map = {
     running:  'bg-blue-500/15 text-blue-400 border-blue-500/20',
@@ -7,11 +12,21 @@ export function StatusBadge({ status }) {
   }
   const cls = map[status] || 'bg-zinc-700/30 text-zinc-400 border-zinc-700'
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
-      {status === 'running' && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 pulse-dot" />}
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border ${cls}`}>
+      {status === 'running' && <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-blue-400 pulse-dot" />}
       {status}
     </span>
   )
+}
+
+/** Spinning loader for busy buttons. */
+export function BusyIcon() {
+  return <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+}
+
+/** Leading icon inside a button or link. */
+export function Icon({ as: Glyph, className = 'size-4' }) {
+  return <Glyph aria-hidden="true" className={`shrink-0 ${className}`} />
 }
 
 export function Spinner({ size = 'md', label = 'Loading…' }) {
@@ -30,7 +45,7 @@ export const APP_NAME = 'PG Backup & Restore'
 export function Brand({ large = false }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span aria-hidden="true" className={large ? 'text-4xl' : 'text-2xl'}>🐘</span>
+      <Database aria-hidden="true" className={`shrink-0 text-emerald-400 ${large ? 'size-8' : 'size-5'}`} />
       <p className={`font-semibold text-zinc-100 leading-tight ${large ? 'text-lg' : 'text-sm'}`}>{APP_NAME}</p>
     </div>
   )
@@ -59,7 +74,7 @@ export function Toast({ type, message, onDismiss }) {
     : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
   return (
     <div role={isError ? 'alert' : 'status'} className={`mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm border ${cls}`}>
-      <span aria-hidden="true">{isError ? '⚠️' : '✅'}</span>
+      <Icon as={isError ? TriangleAlert : CircleCheck} />
       <span className="flex-1 min-w-0 break-words">{message}</span>
       {onDismiss && (
         <button type="button" onClick={onDismiss}
@@ -139,8 +154,8 @@ export function DbNameInput({ id, value, onChange, options = [], placeholder = '
 /** Hint under the "drop target before restore" toggle. */
 export function dropTargetHint(db, exists, dropExisting) {
   if (!exists) return 'Target does not exist yet. It will be created.'
-  if (dropExisting) return `⚠️ "${db}" will be dropped (all connections terminated) and recreated empty.`
-  return `⚠️ "${db}" already exists. The restore will be refused if it has tables. Enable this to replace it.`
+  if (dropExisting) return `"${db}" will be dropped (all connections terminated) and recreated empty.`
+  return `"${db}" already exists. The restore will be refused if it has tables. Enable this to replace it.`
 }
 
 export function Toggle({ checked, onChange, label, hint, danger = false }) {
@@ -178,10 +193,11 @@ export function ProgressBar({ percent }) {
   )
 }
 
+/** `icon` is a lucide-react component. */
 export function EmptyState({ icon, title, description }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div aria-hidden="true" className="text-5xl mb-4">{icon}</div>
+      {icon && <Icon as={icon} className="size-10 mb-4 text-zinc-400" />}
       <p className="text-zinc-300 font-semibold text-lg">{title}</p>
       <p className="text-zinc-400 text-sm mt-1 max-w-xs">{description}</p>
     </div>
@@ -191,7 +207,7 @@ export function EmptyState({ icon, title, description }) {
 export function ErrorAlert({ message, onRetry }) {
   return (
     <div role="alert" className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-400">
-      <span aria-hidden="true" className="text-lg leading-none mt-0.5">⚠️</span>
+      <Icon as={TriangleAlert} className="size-5 mt-0.5" />
       <div className="flex-1 min-w-0 break-words">
         <p className="font-medium">Error</p>
         <p className="text-red-400/80 mt-0.5">{message}</p>

@@ -5,13 +5,14 @@ import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { describeCron } from '../lib/cron'
 import { formatDateTime, timeAgo, timeUntil } from '../lib/format'
-import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, StatusBadge, Toggle } from '../components/UI'
+import { CalendarClock, Play, Plus, TriangleAlert } from 'lucide-react'
+import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, StatusBadge, Toggle, Icon } from '../components/UI'
 import ScheduleForm from '../components/ScheduleForm'
 
 function Target({ s }) {
   return (
     <div className="font-mono text-xs leading-relaxed">
-      <p className="text-zinc-200">{s.database}{s.outputName && <span className="text-zinc-400"> → {s.outputName}</span>}</p>
+      <p className="text-zinc-200">{s.database}{s.outputName && <span className="text-zinc-400"> as {s.outputName}</span>}</p>
       <p className="text-zinc-400">{s.serverId}{s.container && ` / ${s.container}`} · {s.engine}</p>
     </div>
   )
@@ -42,7 +43,7 @@ function RowActions({ s, isAdmin, busy, onRun, onEdit, onDelete }) {
   }
   return (
     <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-      <Button size="sm" variant="secondary" disabled={busy || s.lastStatus === 'running'} onClick={() => onRun(s)}>▶ Run now</Button>
+      <Button size="sm" variant="secondary" disabled={busy || s.lastStatus === 'running'} onClick={() => onRun(s)}><Icon as={Play} /> Run now</Button>
       {isAdmin && <Button size="sm" variant="ghost" onClick={() => onEdit(s)}>Edit</Button>}
       {isAdmin && <Button size="sm" variant="ghost" className="hover:text-red-400!" onClick={() => setConfirming(true)}>Delete</Button>}
     </div>
@@ -54,7 +55,11 @@ function ScheduleRow({ s, isAdmin, busy, onToggle, ...actions }) {
     <tr className="align-top hover:bg-zinc-800/30 transition-colors">
       <td className="py-3 pr-4">
         <p className="text-zinc-100 font-medium">{s.name}</p>
-        {s.overdue && <p className="text-xs text-amber-400 mt-0.5">⚠ Overdue: {s.overdueReason}</p>}
+        {s.overdue && (
+          <p className="flex items-start gap-1 text-xs text-amber-400 mt-0.5">
+            <Icon as={TriangleAlert} className="size-3.5 mt-px" /> Overdue: {s.overdueReason}
+          </p>
+        )}
       </td>
       <td className="py-3 pr-4"><Target s={s} /></td>
       <td className="py-3 pr-4">
@@ -109,7 +114,7 @@ export default function Schedules() {
     onEdit: (s) => setEditing(s),
   }
 
-  const action = isAdmin && !editing && <Button onClick={() => setEditing('new')}>+ New schedule</Button>
+  const action = isAdmin && !editing && <Button onClick={() => setEditing('new')}><Icon as={Plus} /> New schedule</Button>
 
   return (
     <div className="p-4 md:p-8">
@@ -128,7 +133,7 @@ export default function Schedules() {
       ) : error ? (
         <ErrorAlert message={error} onRetry={reload} />
       ) : data.length === 0 ? (
-        <EmptyState icon="⏰" title="No schedules yet" description="Create a schedule to back up a database automatically." />
+        <EmptyState icon={CalendarClock} title="No schedules yet" description="Create a schedule to back up a database automatically." />
       ) : (
         <Card className="overflow-x-auto p-0!">
           <table className="w-full text-sm">

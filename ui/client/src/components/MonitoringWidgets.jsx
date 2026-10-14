@@ -1,7 +1,8 @@
 import React from 'react'
 import { Link } from 'react-router'
-import { Card } from './UI'
-import { formatDateTime, timeAgo, timeUntil } from '../lib/format'
+import { TriangleAlert } from 'lucide-react'
+import { Card, Icon } from './UI'
+import { formatDateTime, operationLabel, timeAgo, timeUntil } from '../lib/format'
 
 const HEALTH_STYLES = {
   ok: { dot: 'bg-emerald-400', text: 'text-emerald-400', label: 'Healthy' },
@@ -16,9 +17,9 @@ export function HealthIndicator({ health }) {
   const docker = health.checks?.docker?.reachable ? 'Docker reachable' : 'Docker unreachable'
   const db = health.checks?.database?.ok ? 'database ok' : 'database error'
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-800 bg-zinc-900 text-xs"
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-800 bg-zinc-900 text-xs"
       title={`${docker} · ${db} · up ${Math.round((health.uptimeSeconds || 0) / 60)} min`}>
-      <span className={`w-2 h-2 rounded-full ${s.dot} ${health.status === 'ok' ? '' : 'pulse-dot'}`} />
+      <span aria-hidden="true" className={`w-2 h-2 rounded-full ${s.dot} ${health.status === 'ok' ? '' : 'pulse-dot'}`} />
       <span className={`font-medium ${s.text}`}>{s.label}</span>
       <span className="text-zinc-400 font-mono">v{health.version}</span>
     </div>
@@ -30,7 +31,7 @@ function Widget({ title, to, linkLabel, children }) {
     <Card className="flex flex-col">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-3">
         <h2 className="font-semibold text-zinc-200 text-sm whitespace-nowrap">{title}</h2>
-        {to && <Link to={to} className="text-xs text-zinc-400 hover:text-zinc-100 whitespace-nowrap">{linkLabel} →</Link>}
+        {to && <Link to={to} className="text-xs text-zinc-400 hover:text-zinc-100 whitespace-nowrap">{linkLabel}</Link>}
       </div>
       <div className="flex-1">{children}</div>
     </Card>
@@ -55,12 +56,12 @@ function placeholder(items, emptyText, error) {
 export function RecentFailures({ failures, error }) {
   return (
     <Widget title="Failures (24 h)" to="/jobs?status=error" linkLabel="All failures">
-      {placeholder(failures, '✓ No failed jobs in the last 24 hours', error) || (
+      {placeholder(failures, 'No failed jobs in the last 24 hours', error) || (
         <ul className="space-y-2">
           {failures.map((j) => (
             <li key={j.id} className="text-xs">
               <Link to={`/jobs/${j.id}`} className="flex items-center justify-between gap-2 group">
-                <span className="font-mono text-red-400 group-hover:underline">{j.type}{j.database ? ` · ${j.database}` : ''}</span>
+                <span className="font-mono text-red-400 group-hover:underline">{operationLabel(j.type)}{j.database ? ` · ${j.database}` : ''}</span>
                 <span className="text-zinc-400 shrink-0">{timeAgo(j.startedAt)}</span>
               </Link>
               {j.error && <p className="text-zinc-400 truncate" title={j.error}>{j.error}</p>}
@@ -114,7 +115,11 @@ export function NextRuns({ runs, error }) {
                       : <span className={STATUS_TEXT[s.lastStatus] || ''}>{s.lastStatus}</span>}
                   </>
                 )}
-                {s.overdue && <span className="text-amber-400" title={s.overdueReason}> · ⚠ overdue</span>}
+                {s.overdue && (
+                  <span className="text-amber-400" title={s.overdueReason}>
+                    {' · '}<Icon as={TriangleAlert} className="inline size-3.5 -mt-0.5" /> overdue
+                  </span>
+                )}
               </p>
             </li>
           ))}

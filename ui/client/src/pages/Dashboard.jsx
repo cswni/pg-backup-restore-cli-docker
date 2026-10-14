@@ -3,24 +3,20 @@ import { Link } from 'react-router'
 import { api } from '../lib/api'
 import { Card, Spinner, StatusBadge, ErrorAlert } from '../components/UI'
 import { HealthIndicator, RecentFailures, LastBackups, NextRuns } from '../components/MonitoringWidgets'
+import { operationLabel } from '../lib/format'
 
 const JOBS_REFRESH_MS = 3000
 const SUMMARY_REFRESH_MS = 30000
 
-function StatCard({ icon, label, value, sub, to }) {
+function StatCard({ label, value, sub, to }) {
   const inner = (
-    <Card className="hover:border-zinc-700 transition-colors cursor-default">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-zinc-400 uppercase tracking-wider font-medium">{label}</p>
-          <div className="text-3xl font-bold text-zinc-100 mt-1">{value}</div>
-          {sub && <p className="text-xs text-zinc-400 mt-1">{sub}</p>}
-        </div>
-        <span aria-hidden="true" className="text-3xl opacity-70">{icon}</span>
-      </div>
+    <Card className={`h-full ${to ? 'hover:border-zinc-600 transition-colors' : ''}`}>
+      <p className="text-xs text-zinc-400 font-medium">{label}</p>
+      <div className="text-2xl font-bold text-zinc-100 mt-1">{value}</div>
+      {sub && <p className="text-xs text-zinc-400 mt-1 truncate">{sub}</p>}
     </Card>
   )
-  return to ? <Link to={to}>{inner}</Link> : inner
+  return to ? <Link to={to} className="block">{inner}</Link> : inner
 }
 
 function formatBytes(b) {
@@ -97,48 +93,43 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+        <RecentFailures failures={summary.data?.recentFailures} error={summaryError} />
+        <NextRuns runs={summary.data?.nextRuns} error={summaryError} />
+        <LastBackups backups={summary.data?.lastBackups} error={summaryError} />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         <StatCard
-          icon="🐘"
-          label="Database Containers"
+          label="Database containers"
           value={statValue(containers, (list) => list.length)}
           sub="running database containers"
           to="/containers"
         />
         <StatCard
-          icon="🗄️"
-          label="Backup Files"
+          label="Backups"
           value={statValue(backups, (list) => list.length)}
           sub={backups.data ? `${formatBytes(totalSize)} total` : ''}
           to="/backups"
         />
         <StatCard
-          icon="🕐"
-          label="Latest Backup"
+          label="Latest backup"
           value={statValue(backups, () => (latestBackup ? timeAgo(latestBackup.mtime) : 'None'))}
           sub={backups.data ? latestBackup?.name ?? 'no backups yet' : ''}
           to="/backups"
         />
         <StatCard
-          icon="⚙️"
-          label="Active Jobs"
+          label="Running jobs"
           value={statValue(jobs, () => runningJobs.length)}
           sub={jobs.data ? (runningJobs.length ? 'in progress' : 'all idle') : ''}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-10">
-        <RecentFailures failures={summary.data?.recentFailures} error={summaryError} />
-        <LastBackups backups={summary.data?.lastBackups} error={summaryError} />
-        <NextRuns runs={summary.data?.nextRuns} error={summaryError} />
-      </div>
-
-      {/* Recent Jobs */}
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 className="font-semibold text-zinc-200">Recent Jobs</h2>
+          <h2 className="font-semibold text-zinc-200">Recent jobs</h2>
           <Link to="/jobs" className="text-xs text-zinc-400 hover:text-zinc-100">
-            All jobs →
+            All jobs
           </Link>
         </div>
         {!jobs.data ? (
@@ -164,7 +155,7 @@ export default function Dashboard() {
                   <tr key={j.id} className="hover:bg-zinc-800/30 transition-colors">
                     <td className="py-2.5 pr-4">
                       <Link to={`/jobs/${j.id}`} className="font-mono text-emerald-400 hover:text-emerald-300 hover:underline">
-                        {j.operation}
+                        {operationLabel(j.operation)}
                       </Link>
                     </td>
                     <td className="py-2.5 pr-4 text-zinc-400 font-mono text-xs">{j.container}</td>

@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
-import { PageHeader, Spinner, ErrorAlert, Button, Toast } from '../components/UI'
+import { RefreshCw } from 'lucide-react'
+import { PageHeader, Spinner, ErrorAlert, Button, Toast, Icon } from '../components/UI'
 import { CompressionCard, EncryptionCard } from '../components/storage/CompressionEncryption'
 import { RetentionCard } from '../components/storage/RetentionCard'
 import DestinationsCard from '../components/storage/DestinationsCard'
@@ -63,8 +64,8 @@ export default function StorageSettings() {
     <div className="p-4 md:p-8 max-w-4xl">
       <PageHeader
         title="Storage"
-        subtitle="Compression, encryption, cloud copies and retention for new backups"
-        action={<Button variant="secondary" size="sm" onClick={() => { settingsQ.reload(); destinationsQ.reload() }}>↻ Refresh</Button>}
+        subtitle="Compression, encryption, remote copies and retention for new backups"
+        action={<Button variant="secondary" size="sm" onClick={() => { settingsQ.reload(); destinationsQ.reload() }}><Icon as={RefreshCw} /> Refresh</Button>}
       />
       {oauth && <Toast type={oauth.tone} message={oauth.msg} onDismiss={oauth.dismiss} />}
       {toast && <Toast type={toast.tone} message={toast.msg} />}

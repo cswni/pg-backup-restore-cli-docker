@@ -1,5 +1,6 @@
 import React, { useState, useId } from 'react'
-import { Button, Toggle, ErrorAlert } from '../UI'
+import { Server } from 'lucide-react'
+import { Button, Toggle, ErrorAlert, BusyIcon } from '../UI'
 import Modal, { ModalFooter } from '../Modal'
 
 // Add / edit dialog for a remote Docker host (over SSH) or a direct database
@@ -174,7 +175,7 @@ export default function ServerForm({ server, onClose, onSave }) {
 
   const nameId = useId()
   return (
-    <Modal icon="🖧" title={isEdit ? `Edit ${server.name}` : 'Add server'} size="xl" onClose={onClose}>
+    <Modal icon={Server} title={isEdit ? `Edit ${server.name}` : 'Add server'} size="xl" onClose={onClose}>
       <div className="px-6 py-5 space-y-5">
         {!isEdit && <KindPicker kind={form.kind} onChange={set('kind')} />}
         <Field id={nameId} label="Name"><TextInput id={nameId} mono={false} value={form.name} onChange={set('name')} placeholder="e.g. Production" /></Field>
@@ -200,7 +201,7 @@ export default function ServerForm({ server, onClose, onSave }) {
       <ModalFooter>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button variant="primary" disabled={saving || !form.name.trim()} onClick={submit}>
-          {saving ? <><span aria-hidden="true" className="animate-spin">⟳</span> Saving…</> : isEdit ? 'Save changes' : 'Add server'}
+          {saving ? <><BusyIcon /> Saving…</> : isEdit ? 'Save changes' : 'Add server'}
         </Button>
       </ModalFooter>
     </Modal>

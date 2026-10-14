@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Pencil, UserPlus } from 'lucide-react'
 import { Button, Toggle } from '../UI'
 import Modal, { ModalFooter, CancelButton } from '../Modal'
 import { TextField, SelectField, FormMessage, passwordError, MIN_PASSWORD_LENGTH } from '../FormField'
@@ -53,7 +54,7 @@ export default function UserDialog({ user, isSelf, onSubmit, onClose }) {
   }
 
   return (
-    <Modal icon={isNew ? '👤' : '✏️'} title={isNew ? 'New user' : 'Edit user'} subtitle={user?.username} subtitleClassName="font-mono" onClose={onClose}>
+    <Modal icon={isNew ? UserPlus : Pencil} title={isNew ? 'New user' : 'Edit user'} subtitle={user?.username} subtitleClassName="font-mono" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-5 space-y-4">
           {isNew && (

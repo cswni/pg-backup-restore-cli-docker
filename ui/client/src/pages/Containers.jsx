@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
-import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button } from '../components/UI'
+import { Container, RefreshCw } from 'lucide-react'
+import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Icon } from '../components/UI'
 import { ServerSelect, EngineBadge } from '../components/servers/ServerBits'
 
 /** Container detail link that carries the server and engine along. */
@@ -19,7 +20,6 @@ function ContainerCard({ c, serverId }) {
     <Link to={containerHref(c, serverId)} className="block group">
       <Card className="hover:border-emerald-500/30 hover:bg-zinc-800/50 transition-all cursor-pointer">
         <div className="flex items-center gap-4">
-          <div className="shrink-0 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-500/30" />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-zinc-100 group-hover:text-emerald-300 transition-colors truncate">{c.name}</p>
             <p className="text-xs text-zinc-400 font-mono mt-0.5 truncate">{c.image}</p>
@@ -29,7 +29,6 @@ function ContainerCard({ c, serverId }) {
             <p className="text-xs text-zinc-400 font-mono">{c.id}</p>
             <p className="text-xs text-zinc-400 mt-0.5">{c.status}</p>
           </div>
-          <span className="text-zinc-400 group-hover:text-emerald-400 transition-colors text-lg">→</span>
         </div>
       </Card>
     </Link>
@@ -60,7 +59,7 @@ export default function Containers() {
       <PageHeader
         title="Database Containers"
         subtitle={`Running database containers on ${server?.name || 'the host Docker daemon'}`}
-        action={<Button onClick={reload} variant="secondary" size="sm">↻ Refresh</Button>}
+        action={<Button onClick={reload} variant="secondary" size="sm"><Icon as={RefreshCw} /> Refresh</Button>}
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -81,7 +80,7 @@ export default function Containers() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full max-w-sm bg-zinc-900 border border-zinc-500 rounded-lg px-4 py-2 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:border-emerald-500 transition-colors"
         />
-        <Link to="/servers" className="text-xs text-zinc-400 hover:text-zinc-100 transition-colors">Manage servers →</Link>
+        <Link to="/servers" className="text-xs text-zinc-400 hover:text-zinc-100 transition-colors">Manage servers</Link>
       </div>
 
       {loading && <div className="flex justify-center py-20"><Spinner /></div>}
@@ -89,7 +88,7 @@ export default function Containers() {
 
       {!loading && !error && filtered.length === 0 && (
         <EmptyState
-          icon="🐘"
+          icon={Container}
           title="No database containers found"
           description={search ? 'Try a different search term.' : 'No running containers with a supported database image detected. Supported images: PostgreSQL (postgres, postgis, bitnami/postgresql, supabase/postgres, timescaledb), MySQL (mysql, mariadb, percona) and MongoDB (mongo).'}
         />

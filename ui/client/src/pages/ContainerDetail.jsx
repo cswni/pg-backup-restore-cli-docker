@@ -2,7 +2,8 @@ import React from 'react'
 import { useParams, useSearchParams, Link } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
-import { PageHeader, Button } from '../components/UI'
+import { RefreshCw } from 'lucide-react'
+import { PageHeader, Button, Icon } from '../components/UI'
 import DatabaseWorkspace from '../components/ops/DatabaseWorkspace'
 import { EngineBadge } from '../components/servers/ServerBits'
 
@@ -42,7 +43,7 @@ export default function ContainerDetail() {
             <span>Container on {serverName} · select a database and run an operation</span>
           </span>
         }
-        action={<Button variant="secondary" size="sm" onClick={databases.reload}>↻ Refresh</Button>}
+        action={<Button variant="secondary" size="sm" onClick={databases.reload}><Icon as={RefreshCw} /> Refresh</Button>}
       />
       <DatabaseWorkspace
         target={{ serverId, engine, container: containerName }}

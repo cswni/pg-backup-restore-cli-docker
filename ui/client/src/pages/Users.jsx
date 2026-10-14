@@ -2,19 +2,15 @@ import React, { useState } from 'react'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { useFetch } from '../hooks/useFetch'
-import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button } from '../components/UI'
+import { Trash2, UserPlus, Users as UsersIcon } from 'lucide-react'
+import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Icon, CHIP_CLASS } from '../components/UI'
 import UserDialog from '../components/users/UserDialog'
 import Modal, { ModalFooter, CancelButton } from '../components/Modal'
 import { FormMessage } from '../components/FormField'
 
 const formatDate = (ms) => (ms ? new Date(ms).toLocaleString() : 'Never')
 
-function RoleBadge({ role }) {
-  const cls = role === 'admin'
-    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
-    : 'bg-zinc-700/30 text-zinc-400 border-zinc-700'
-  return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>{role}</span>
-}
+const RoleBadge = ({ role }) => <span className={CHIP_CLASS}>{role}</span>
 
 function DeleteDialog({ user, onConfirm, onClose }) {
   const [deleting, setDeleting] = useState(false)
@@ -32,7 +28,7 @@ function DeleteDialog({ user, onConfirm, onClose }) {
   }
 
   return (
-    <Modal icon="🗑️" title="Delete user" subtitle={user.username} subtitleClassName="font-mono" onClose={onClose}>
+    <Modal icon={Trash2} title="Delete user" subtitle={user.username} subtitleClassName="font-mono" onClose={onClose}>
       <div className="px-6 py-5 space-y-3 text-sm text-zinc-400">
         <p>
           Delete <span className="font-mono text-zinc-200">{user.username}</span>? Their sessions end immediately.
@@ -67,8 +63,8 @@ function UserRow({ user, isSelf, onEdit, onDelete }) {
       <td className="px-5 py-3.5 text-zinc-400 text-xs">{formatDate(user.lastLoginAt)}</td>
       <td className="px-5 py-3.5">
         <div className="flex justify-end gap-1.5">
-          <Button size="sm" variant="secondary" onClick={() => onEdit(user)}>✏️ Edit</Button>
-          {!isSelf && <Button size="sm" variant="danger" aria-label={`Delete user ${user.username}`} onClick={() => onDelete(user)}>🗑️</Button>}
+          <Button size="sm" variant="secondary" onClick={() => onEdit(user)}>Edit</Button>
+          {!isSelf && <Button size="sm" variant="danger" aria-label={`Delete user ${user.username}`} onClick={() => onDelete(user)}><Icon as={Trash2} /></Button>}
         </div>
       </td>
     </tr>
@@ -128,13 +124,13 @@ export default function Users() {
       <PageHeader
         title="Users"
         subtitle="Accounts that can sign in to this UI. Only admins can manage users."
-        action={<Button onClick={() => setDialog({ type: 'create' })}>👤 New user</Button>}
+        action={<Button onClick={() => setDialog({ type: 'create' })}><Icon as={UserPlus} /> New user</Button>}
       />
 
       {loading && <div className="flex justify-center py-20"><Spinner /></div>}
       {error && <ErrorAlert message={error} onRetry={reload} />}
       {!loading && !error && users?.length === 0 && (
-        <EmptyState icon="👥" title="No users" description="Create the first account with “New user”." />
+        <EmptyState icon={UsersIcon} title="No users" description="Create the first account with “New user”." />
       )}
       {!loading && !error && users?.length > 0 && (
         <UsersTable

@@ -1,13 +1,11 @@
 import React from 'react'
+import { Lock } from 'lucide-react'
+import { CHIP_CLASS } from '../UI'
 
 const TYPE_LABEL = { s3: 'S3', gdrive: 'Google Drive' }
 
-function Badge({ title, className, children }) {
-  return (
-    <span title={title} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${className}`}>
-      {children}
-    </span>
-  )
+function Badge({ title, children }) {
+  return <span title={title} className={CHIP_CLASS}>{children}</span>
 }
 
 /** gz / encrypted / remote-copy / remote-only badges for a backup list row. */
@@ -18,13 +16,13 @@ export default function BackupBadges({ backup }) {
   const where = locations.map((l) => TYPE_LABEL[l.type] || l.type).join(', ')
   return (
     <span className="inline-flex flex-wrap gap-1">
-      {compressed && <Badge title="gzip compressed" className="bg-zinc-800 text-zinc-400 border-zinc-700">gz</Badge>}
-      {encrypted && <Badge title="Encrypted (AES-256-GCM)" className="bg-amber-500/10 text-amber-300 border-amber-500/25">🔒 enc</Badge>}
+      {compressed && <Badge title="gzip compressed">gz</Badge>}
+      {encrypted && <Badge title="Encrypted (AES-256-GCM)"><Lock aria-hidden="true" className="size-3" /> enc</Badge>}
       {locations.length > 0 && (
-        <Badge title={`Remote copies: ${where}`} className="bg-sky-500/10 text-sky-300 border-sky-500/20">☁ {locations.length}</Badge>
+        <Badge title={`Remote copies: ${where}`}>{locations.length} remote</Badge>
       )}
       {backup.local === false && (
-        <Badge title="The local file was removed; restore downloads it from a remote copy" className="bg-violet-500/10 text-violet-300 border-violet-500/20">
+        <Badge title="The local file was removed; restore downloads it from a remote copy">
           remote only
         </Badge>
       )}
