@@ -75,5 +75,5 @@ function open(target, fn, opts) {
 
 module.exports = {
   ...createMysqlDriver({ kind: 'direct', open }),
-  _internals: { optionValue, sslArgs, connArgs },
+  _internals: { optionValue, sslArgs, connArgs, open },
 }

@@ -103,10 +103,10 @@ Docker targets run the client inside the container like the drivers do.
 ### Tasks
 
 B1, server (`ui/server/explorer/**`, one line in `modules.js`, small exports from driver helpers if needed):
-- [ ] PostgreSQL adapter (Docker + direct): objects, structure, rows, query
-- [ ] MySQL/MariaDB adapter (Docker + direct): objects, structure, rows, query
-- [ ] MongoDB adapter (Docker via mongosh, direct via `mongodb` driver): objects, structure, rows (+ filter)
-- [ ] routes + validation + permissions, tests with fake tools (no real DB locally)
+- [x] PostgreSQL adapter (Docker + direct): objects, structure, rows, query (commit d56cc4a)
+- [x] MySQL/MariaDB adapter (Docker + direct): objects, structure, rows, query (commit d56cc4a)
+- [x] MongoDB adapter (Docker via mongosh, direct via `mongodb` driver): objects, structure, rows (+ filter) (commit d56cc4a)
+- [x] routes + validation + permissions, tests with fake tools (no real DB locally) (commit d56cc4a)
 
 B2, client (`ui/client/**`):
 - [ ] `/explorer` page (nav "Explorer"): pick server → container (Docker) → database; deep link via query string
@@ -133,3 +133,4 @@ B3-B5:
 - 2026-10-14: A2 done (d9e2dba, 63abe85, dd5b640, fcb1fdd): server/scripts/CI comment cleanup, form-label validation messages, README restructure; tests 256/256, build passes. README image name now matches CI (`pg-backup-restore-cli`, was `cswni/pg-backup`).
 - 2026-10-14: A1 client fixes #12 to #22 done in 4b57b5c and 860c88e (lucide-react devDependency, build + 256 tests green, browser check desktop + 375px).
 - 2026-10-14: Phase A complete (A1+A2 merged in 6edd63a, picker fix aa54b50, follow-up report written). B1 and B2 running in parallel.
+- 2026-10-14: B1 done (d56cc4a): ui/server/explorer API + README "Database Explorer" section; mysql drivers export open(); tested with fake tools only, not against real databases.
