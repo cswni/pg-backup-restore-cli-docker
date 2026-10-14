@@ -119,13 +119,13 @@ B2, client (`ui/client/**`):
 
 B3-B5:
 - [x] B3 merge B1 + B2, tests + build green (merges e0c349d, 18f6757; fixes 40d6885: JSON 400 for malformed bodies, 44px row actions)
-- [ ] B4 browser check against a real database if one is reachable, else with the API mocked/fake; README section "Database Explorer"
-- [ ] B5 antislop Delivery Gate for the new UI (`anti-slop/explorer-2026-10-14-delivery.md`)
+- [x] B4 check against real databases on s1 (MariaDB + PostgreSQL containers, read-only API checks) and local browser check; README section "Database Explorer" (d56cc4a)
+- [x] B5 antislop Delivery Gate for the new UI (`anti-slop/explorer-2026-10-14-delivery.md`)
 
 ## Phase C: release
 
-- [ ] push `ui` and fast-forward `main`; CI green
-- [ ] redeploy s1 (`cd /var/www/image-pg-backup-restore && set -a && . ./.env && set +a && docker stack deploy -c docker-compose.yml pgbackup --with-registry-auth --resolve-image always`), wait until the new task runs, check `/api/health`, auth, backups and containers
+- [x] push `ui` and fast-forward `main`; CI green (70a4761, run 38543533600)
+- [x] redeploy s1, image 3f5d077f32ec (`cd /var/www/image-pg-backup-restore && set -a && . ./.env && set +a && docker stack deploy -c docker-compose.yml pgbackup --with-registry-auth --resolve-image always`), wait until the new task runs, check `/api/health`, auth, backups and containers
 
 ## Log
 
@@ -136,3 +136,10 @@ B3-B5:
 - 2026-10-14: B1 done (d56cc4a): ui/server/explorer API + README "Database Explorer" section; mysql drivers export open(); tested with fake tools only, not against real databases.
 - 2026-10-14: B2 client done (aef64f9, 5148f4b, fdcf243, bd4d7ec): `/explorer` page with URL state, object list, Data/Structure/Query tabs, Explore action on database rows; checked against a throwaway mock of the contract at desktop and 375px; build + 256 tests green.
 - 2026-10-14: B3 done. Local smoke test: Explorer deep link, real errors with Retry, console guards (one statement, no meta-commands, MongoDB 400, user 403). Next: deploy and B4 check against s1 databases.
+- 2026-10-14: B4/B5 and Phase C done. Explorer verified on s1 against MariaDB and PostgreSQL containers. Deployed image 3f5d077f32ec.
+
+## Follow-ups (not started)
+
+- [ ] `legacy_legacydb` (MariaDB): root password in the container env no longer matches the server, so listing databases fails (Access denied). Option: per-container credentials override in the UI.
+- [ ] `mcp-postgres-core`: custom image without an OS user `postgres`, so `docker exec -u postgres` fails. Option: fall back to `docker exec <ctr> psql -U postgres` when the user does not exist.
+- [ ] Explorer not yet exercised against MongoDB or a direct (SSH-tunnelled) server.
