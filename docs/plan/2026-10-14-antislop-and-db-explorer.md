@@ -50,11 +50,11 @@ A1, client (`ui/client/**`):
 - [ ] #22 product name consistent in the UI
 
 A2, server, scripts, docs (everything outside `ui/client`):
-- [ ] #16 comment slop in `ui/server`, `scripts/`, Dockerfile, CI, compose (banners, separators, restating comments, redundant JSDoc, repeated step orders, commented-out `#image:` line)
-- [ ] #21 terminology in docs (README, TODO, docs/)
-- [ ] #22 product name consistent in README and `entrypoint.sh` help
-- [ ] #23 server messages: validation errors use form labels instead of API field names, specific "not found" messages, bootstrap log points to the Profile page (update tests that assert messages)
-- [ ] #24 README structure: Usage (web UI first) at the top, maintainer Docker Hub section at the end, `restore -x` instead of the old pipeline sequence, engine coverage (mariadb-dump/mongodump, `.archive`), Limitations cleanup, dangling arrow; TODO heading/casing
+- [x] #16 comment slop in `ui/server`, `scripts/`, Dockerfile, CI, compose (banners, separators, restating comments, redundant JSDoc, repeated step orders, commented-out `#image:` line) (commits d9e2dba, dd5b640)
+- [x] #21 terminology in docs (README, TODO, docs/) (commit fcb1fdd)
+- [x] #22 product name consistent in README and `entrypoint.sh` help (commits dd5b640, fcb1fdd)
+- [x] #23 server messages: validation errors use form labels instead of API field names, specific "not found" messages, bootstrap log points to the Profile page (update tests that assert messages) (commit 63abe85)
+- [x] #24 README structure: Usage (web UI first) at the top, maintainer Docker Hub section at the end, `restore -x` instead of the old pipeline sequence, engine coverage (mariadb-dump/mongodump, `.archive`), Limitations cleanup, dangling arrow; TODO heading/casing (commit fcb1fdd)
 
 A3:
 - [ ] merge A1 + A2 into `ui`, tests + build green, browser check (desktop + 375px)
@@ -130,3 +130,4 @@ B3-B5:
 ## Log
 
 - 2026-10-14: plan created (after commit 487f365, deployed image `1407cde51d83`).
+- 2026-10-14: A2 done (d9e2dba, 63abe85, dd5b640, fcb1fdd): server/scripts/CI comment cleanup, form-label validation messages, README restructure; tests 256/256, build passes. README image name now matches CI (`pg-backup-restore-cli`, was `cswni/pg-backup`).
