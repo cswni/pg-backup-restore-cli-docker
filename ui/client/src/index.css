@@ -5,14 +5,7 @@
     JetBrains Mono, Fira Code, Cascadia Code, ui-monospace, monospace;
 }
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
+/* Tailwind v4 defaults borders to currentcolor and drops cursor: pointer on buttons; keep the v3 look. */
 @layer base {
   *,
   ::after,
@@ -22,31 +15,25 @@
     border-color: var(--color-gray-200, currentcolor);
   }
 
-  /* v4 dropped cursor: pointer on buttons; keep the v3 behaviour */
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;
   }
 }
 
-/* scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 
-/* terminal log */
-.log-stdout { color: #d4d4d8; }
-.log-stderr { color: #fbbf24; }
-.log-done   { color: #34d399; }
-
-/* animate pulse dot */
+/* Marks a live state (running job, unhealthy server); still when reduced motion is requested. */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
-.pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: no-preference) {
+  .pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+}
 
-/* Larger base size: Tailwind sizes are in rem, so every text size scales by
-   1.25 and headings, body text and labels keep their relative sizes. */
+/* Tailwind sizes are in rem, so this scales every text size by 1.25 and keeps the hierarchy. */
 html { font-size: 125%; }

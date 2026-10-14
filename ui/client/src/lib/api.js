@@ -39,8 +39,7 @@ const qs = (params) => {
   return s ? `?${s}` : ''
 }
 
-// ── Chunked upload ────────────────────────────────────────────────────────────
-// Large dumps are sent in chunks so no single request exceeds proxy body
+// Large backups are uploaded in chunks so no single request exceeds proxy body
 // limits (Cloudflare rejects bodies > 100 MB) or long-request timeouts.
 
 const MAX_RETRIES = 5

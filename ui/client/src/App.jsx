@@ -7,7 +7,7 @@ import Login from './pages/Login'
 import { routes } from './routes'
 
 function FullScreen({ children }) {
-  return <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4">{children}</div>
+  return <div className="min-h-dvh flex items-center justify-center bg-zinc-950 p-4">{children}</div>
 }
 
 /** Signed out: only /login exists; everything else redirects there (remembering where to return). */
