@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router'
 import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
-import { Card, Spinner, ErrorAlert, EmptyState, Toast } from '../UI'
+import { Database } from 'lucide-react'
+import { Card, Spinner, ErrorAlert, EmptyState, Toast, Icon } from '../UI'
 import { useEngines, engineInfo, isCompatibleBackup } from '../../lib/engines'
 import OperationModal, { OPERATIONS } from './OperationModal'
 
@@ -25,7 +26,7 @@ function OperationGrid({ operations, onSelect }) {
               : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-emerald-500/30 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
         >
-          <span className="text-2xl">{op.icon}</span>
+          <Icon as={op.icon} className="size-6" />
           {op.label}
         </button>
       ))}
@@ -36,21 +37,18 @@ function OperationGrid({ operations, onSelect }) {
 function DatabaseRow({ db, operations, onSelect }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 py-3 group">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-2 h-2 rounded-full bg-emerald-400/60" />
-        <span className="font-mono text-sm text-zinc-200 break-all">{db}</span>
-      </div>
+      <span className="min-w-0 font-mono text-sm text-zinc-200 break-all">{db}</span>
       <div className="flex flex-wrap gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
         {operations.filter((o) => o.id !== 'create').map((op) => (
           <button
             key={op.id}
             onClick={() => onSelect({ ...op, presetDb: db })}
             title={op.label}
-            className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
               op.variant === 'danger' ? 'text-red-400 hover:bg-red-500/15' : 'text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100'
             }`}
           >
-            {op.icon} {op.label}
+            <Icon as={op.icon} className="size-3.5" /> {op.label}
           </button>
         ))}
       </div>
@@ -111,7 +109,7 @@ export default function DatabaseWorkspace({ target, targetLabel, databases, empt
         {error && <ErrorAlert message={error} onRetry={reload} />}
 
         {!loading && !error && (!dbs || dbs.length === 0) && (
-          <EmptyState icon="🐘" title="No databases found" description={emptyDescription} />
+          <EmptyState icon={Database} title="No databases found" description={emptyDescription} />
         )}
 
         {!loading && !error && dbs?.length > 0 && (

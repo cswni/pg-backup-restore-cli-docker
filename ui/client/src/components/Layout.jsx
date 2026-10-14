@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
+import { LogOut, Menu, X } from 'lucide-react'
 import { routes } from '../routes'
 import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
@@ -31,9 +32,9 @@ function UserFooter() {
         <button
           type="button"
           onClick={logout}
-          className="min-h-[44px] -mx-2 px-2 text-xs text-zinc-400 hover:text-zinc-100 transition-colors"
+          className="min-h-[44px] -mx-2 px-2 inline-flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-100 transition-colors"
         >
-          ⎋ Sign out
+          <LogOut aria-hidden="true" className="size-4" /> Sign out
         </button>
       )}
     </div>
@@ -71,7 +72,7 @@ function SidebarContent({ isAdmin, version, header }) {
       </div>
 
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-        {nav.map(({ to, label, icon }) => (
+        {nav.map(({ to, label, icon: Glyph }) => (
           <NavLink
             key={to}
             to={to}
@@ -84,7 +85,7 @@ function SidebarContent({ isAdmin, version, header }) {
               }`
             }
           >
-            <span aria-hidden="true" className="text-base leading-none">{icon}</span>
+            <Glyph aria-hidden="true" className="size-4 shrink-0" />
             {label}
           </NavLink>
         ))}
@@ -110,7 +111,7 @@ function MobileDrawer({ isAdmin, version, onClose }) {
       data-dialog-close
       className="ml-auto shrink-0 min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center rounded-lg text-xl leading-none text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
     >
-      <span aria-hidden="true">✕</span>
+      <X aria-hidden="true" className="size-5" />
     </button>
   )
   return (
@@ -136,11 +137,10 @@ export default function Layout({ children, isAdmin = true }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
 
-  // Navigating from the drawer closes it
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
+    <div className="flex h-dvh bg-zinc-950 text-zinc-100 overflow-hidden">
       <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900">
         <SidebarContent isAdmin={isAdmin} version={version} />
       </aside>
@@ -155,7 +155,7 @@ export default function Layout({ children, isAdmin = true }) {
             aria-controls={MOBILE_NAV_ID}
             className="min-h-[44px] -mr-2 px-3 inline-flex items-center gap-2 rounded-lg text-sm font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
           >
-            <span aria-hidden="true">☰</span> Menu
+            <Menu aria-hidden="true" className="size-5" /> Menu
           </button>
         </header>
         <main className="flex-1 min-h-0 overflow-y-auto">

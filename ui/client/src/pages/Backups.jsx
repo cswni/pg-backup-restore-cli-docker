@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toast } from '../components/UI'
+import { Archive, ArchiveRestore, Download, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toast, BusyIcon, Icon } from '../components/UI'
 import BackupBadges from '../components/storage/BackupBadges'
 import { RestoreModal, UploadRestoreModal, formatBytes } from '../components/backups/BackupDialogs'
 
@@ -71,11 +72,11 @@ export default function Backups() {
     <div className="p-4 md:p-8">
       <PageHeader
         title="Backups"
-        subtitle={backups ? `${backups.length} files · ${formatBytes(totalSize)} total` : 'Dump files in /backups'}
+        subtitle={backups ? `${backups.length} backups · ${formatBytes(totalSize)} total` : 'Backups in /backups'}
         action={
           <div className="flex flex-wrap gap-2">
-            <Button variant="primary" size="sm" onClick={() => setShowUpload(true)}>{isAdmin ? <>⬆️ Upload &amp; Restore</> : '⬆️ Upload'}</Button>
-            <Button variant="secondary" size="sm" onClick={reload}>↻ Refresh</Button>
+            <Button variant="primary" size="sm" onClick={() => setShowUpload(true)}><Icon as={Upload} /> {isAdmin ? 'Upload & Restore' : 'Upload'}</Button>
+            <Button variant="secondary" size="sm" onClick={reload}><Icon as={RefreshCw} /> Refresh</Button>
           </div>
         }
       />
@@ -87,9 +88,9 @@ export default function Backups() {
 
       {!loading && !error && (!backups || backups.length === 0) && (
         <EmptyState
-          icon="🗄️"
-          title="No backup files"
-          description="Run an Export operation on a container to create your first .sql dump."
+          icon={Archive}
+          title="No backups yet"
+          description="Back up a database from the Containers or Servers page, or upload a backup, to see it here."
         />
       )}
 
@@ -110,7 +111,6 @@ export default function Backups() {
                   <tr key={b.name} className="hover:bg-zinc-800/30 transition-colors group">
                     <td className="px-5 py-3.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span aria-hidden="true" className="text-base">{b.local === false ? '☁️' : '📄'}</span>
                         <span className="font-mono text-xs text-zinc-300">{b.name}</span>
                         <BackupBadges backup={b} />
                       </div>
@@ -123,9 +123,9 @@ export default function Backups() {
                           <a
                             href={api.backups.downloadUrl(b.name)}
                             download
-                            className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
                           >
-                            ⬇ Download
+                            <Icon as={Download} /> Download
                           </a>
                         )}
                         {isAdmin && (
@@ -134,7 +134,7 @@ export default function Backups() {
                             variant="secondary"
                             onClick={() => setRestoreTarget(b)}
                           >
-                            ♻️ Restore
+                            <Icon as={ArchiveRestore} /> Restore
                           </Button>
                         )}
                         {isAdmin && (
@@ -145,7 +145,7 @@ export default function Backups() {
                             aria-label={`Delete ${b.name}`}
                             onClick={() => handleDelete(b)}
                           >
-                            {deleting === b.name ? '…' : '🗑️'}
+                            {deleting === b.name ? <BusyIcon /> : <Icon as={Trash2} />}
                           </Button>
                         )}
                       </div>

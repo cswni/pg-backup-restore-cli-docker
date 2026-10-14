@@ -1,5 +1,6 @@
 import React, { useState, useId } from 'react'
-import { Card, Button } from '../UI'
+import { Play } from 'lucide-react'
+import { Card, Button, Icon } from '../UI'
 import { CountField, Label, SectionTitle, Notice } from './fields'
 
 /** "keep last N and/or D days" inputs, used for local files and destinations. */
@@ -41,7 +42,7 @@ export function RetentionCard({ settings, onSave, onRun }) {
 
   return (
     <Card>
-      <SectionTitle icon="🧹" title="Retention & uploads" subtitle="Applied after every backup and once a day, per database (same server, container and source database)." />
+      <SectionTitle title="Retention & uploads" subtitle="Applied after every backup and once a day, per database (same server, container and source database)." />
       <div className="space-y-4">
         <fieldset>
           <legend className="text-sm text-zinc-300 mb-2">Local files in /backups</legend>
@@ -49,7 +50,7 @@ export function RetentionCard({ settings, onSave, onRun }) {
         </fieldset>
         <Notice>
           A backup is deleted only when it is outside <em>every</em> rule. The newest copy of each database and the backup
-          just created are never deleted. Local files that still have cloud copies stay listed and restorable.
+          just created are never deleted. Backups whose local file was deleted stay listed and restorable while remote copies exist.
           Per-destination rules are set on each destination.
         </Notice>
         <div>
@@ -65,7 +66,7 @@ export function RetentionCard({ settings, onSave, onRun }) {
           </select>
         </div>
         <div className="flex justify-between gap-2">
-          <Button size="sm" variant="secondary" disabled={running} onClick={run}>{running ? 'Starting…' : '▶ Run retention now'}</Button>
+          <Button size="sm" variant="secondary" disabled={running} onClick={run}>{running ? 'Starting…' : <><Icon as={Play} /> Run retention now</>}</Button>
           <Button size="sm" disabled={!dirty || saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</Button>
         </div>
       </div>

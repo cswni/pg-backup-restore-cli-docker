@@ -1,21 +1,30 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router'
 import { api } from '../../lib/api'
-import { Card, Button } from '../UI'
+import { CircleCheck, Trash2, TriangleAlert } from 'lucide-react'
+import { Card, Button, BusyIcon, Icon } from '../UI'
 import { KindBadge, endpointText, serverHref } from './ServerBits'
 
 function TestResult({ result }) {
   if (!result) return null
   if (result.ok) {
     return (
-      <p className="text-xs text-emerald-400 mt-3 break-words">
-        ✅ Connected in {result.latencyMs} ms
-        {result.version && <span className="text-emerald-400/70"> · {result.version}</span>}
-        {result.details && <span className="text-emerald-400/70"> · {result.details}</span>}
+      <p className="flex items-start gap-1.5 text-xs text-emerald-400 mt-3 break-words">
+        <Icon as={CircleCheck} className="size-4 mt-px" />
+        <span>
+          Connected in {result.latencyMs} ms
+          {result.version && <span className="text-emerald-400/70"> · {result.version}</span>}
+          {result.details && <span className="text-emerald-400/70"> · {result.details}</span>}
+        </span>
       </p>
     )
   }
-  return <p className="text-xs text-red-400 mt-3 break-words">⚠️ {result.error} <span className="text-red-400/60">({result.latencyMs} ms)</span></p>
+  return (
+    <p className="flex items-start gap-1.5 text-xs text-red-400 mt-3 break-words">
+      <Icon as={TriangleAlert} className="size-4 mt-px" />
+      <span>{result.error} <span className="text-red-400/60">({result.latencyMs} ms)</span></span>
+    </p>
+  )
 }
 
 function HostKeys({ server, isAdmin, onForget }) {
@@ -84,15 +93,15 @@ export default function ServerCard({ server, isAdmin, onEdit, onDelete, onChange
         <div className="flex flex-wrap gap-1.5">
           <Link to={serverHref(server)}
             className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-zinc-100 transition-colors">
-            {server.kind === 'direct' ? 'Databases →' : 'Containers →'}
+            {server.kind === 'direct' ? 'Databases' : 'Containers'}
           </Link>
           {isAdmin && (
             <Button size="sm" variant="secondary" disabled={testing} onClick={runTest}>
-              {testing ? <><span className="animate-spin">⟳</span> Testing…</> : '⚡ Test'}
+              {testing ? <><BusyIcon /> Testing…</> : 'Test'}
             </Button>
           )}
-          {isAdmin && !server.builtin && <Button size="sm" variant="secondary" onClick={() => onEdit(server)}>✎ Edit</Button>}
-          {isAdmin && !server.builtin && <Button size="sm" variant="danger" aria-label={`Delete server ${server.name}`} onClick={() => onDelete(server)}>🗑️</Button>}
+          {isAdmin && !server.builtin && <Button size="sm" variant="secondary" onClick={() => onEdit(server)}>Edit</Button>}
+          {isAdmin && !server.builtin && <Button size="sm" variant="danger" aria-label={`Delete server ${server.name}`} onClick={() => onDelete(server)}><Icon as={Trash2} /></Button>}
         </div>
       </div>
       <HostKeys server={server} isAdmin={isAdmin} onForget={forgetHostKey} />

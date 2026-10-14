@@ -18,7 +18,7 @@ export function CompressionCard({ settings, onSave }) {
 
   return (
     <Card>
-      <SectionTitle icon="🗜️" title="Compression" subtitle="Streaming gzip of new backups (.sql → .sql.gz). Can be overridden per export." />
+      <SectionTitle title="Compression" subtitle="Streaming gzip of new backups (adds .gz). Can be changed for each backup." />
       <div className="space-y-4">
         <Toggle checked={enabled} onChange={setEnabled} label="Compress new backups by default" />
         <div className={enabled ? '' : 'opacity-40 pointer-events-none'}>
@@ -40,12 +40,12 @@ export function CompressionCard({ settings, onSave }) {
 
 function PassphraseStatus({ encryption }) {
   if (encryption.passphraseSource === 'env') {
-    return <Notice tone="success">🔑 Passphrase provided by the <span className="font-mono">BACKUP_ENCRYPTION_PASSPHRASE</span> environment variable (it overrides the stored one).</Notice>
+    return <Notice tone="success">Passphrase provided by the <span className="font-mono">BACKUP_ENCRYPTION_PASSPHRASE</span> environment variable (it overrides the stored one).</Notice>
   }
   if (encryption.passphraseConfigured) {
     return (
       <Notice tone="success">
-        🔑 A passphrase is configured.
+        A passphrase is configured.
         {encryption.previousPassphrases > 0 && ` ${encryption.previousPassphrases} previous passphrase(s) are kept so older backups can still be restored.`}
       </Notice>
     )
@@ -80,15 +80,15 @@ export function EncryptionCard({ settings, onSave }) {
 
   return (
     <Card>
-      <SectionTitle icon="🔒" title="Encryption" subtitle="AES-256-GCM with a key derived from your passphrase (scrypt, random salt per file). Adds .enc." />
+      <SectionTitle title="Encryption" subtitle="AES-256-GCM with a key derived from your passphrase (scrypt, random salt per file). Adds .enc." />
       <div className="space-y-4">
         <Notice tone="warn">
-          <strong className="font-semibold">⚠️ Keep the passphrase somewhere safe, outside this server.</strong> Encrypted
+          <strong className="font-semibold">Keep the passphrase somewhere safe, outside this server.</strong> Encrypted
           backups can't be restored without it, by this app or any other tool. If this server is lost, you will need
           the passphrase and the offline decryption tool (<span className="font-mono">node /ui/server/storage/decrypt-cli.js</span>, see README).
         </Notice>
         <PassphraseStatus encryption={encryption} />
-        <Toggle checked={enabled} onChange={setEnabled} label="Encrypt new backups by default" hint="Can be overridden per export." />
+        <Toggle checked={enabled} onChange={setEnabled} label="Encrypt new backups by default" hint="Can be changed for each backup." />
 
         <div className="grid sm:grid-cols-2 gap-3">
           <TextField

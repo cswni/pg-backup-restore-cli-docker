@@ -1,7 +1,8 @@
 import React, { useId, useState } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
-import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toggle } from '../components/UI'
+import { Bell, CircleCheck, CircleX, Plus } from 'lucide-react'
+import { PageHeader, Card, Spinner, ErrorAlert, EmptyState, Button, Toggle, Icon } from '../components/UI'
 import { inputCls, labelCls } from '../components/CronPicker'
 
 const FORMAT_LABELS = { generic: 'Generic JSON', slack: 'Slack', discord: 'Discord', teams: 'Microsoft Teams' }
@@ -60,7 +61,7 @@ function WebhookForm({ webhook, formats, events, onSaved, onCancel }) {
           <div className="sm:col-span-2">
             <label htmlFor={`${id}-url`} className={labelCls}>Webhook URL</label>
             <input id={`${id}-url`} aria-describedby={`${id}-url-hint`} type="password" autoComplete="off" value={form.url} onChange={(e) => set({ url: e.target.value })}
-              placeholder={webhook ? 'Stored securely. Leave blank to keep the current URL' : 'https://hooks.slack.com/services/…'}
+              placeholder={webhook ? 'Saved. Leave blank to keep the current URL' : 'https://hooks.slack.com/services/…'}
               className={`${inputCls} font-mono`} />
             <p id={`${id}-url-hint`} className="text-xs text-zinc-400 mt-1">The URL is stored encrypted and never shown again.</p>
           </div>
@@ -93,8 +94,8 @@ function TestResult({ result }) {
   if (!result) return null
   if (result.pending) return <span className="text-xs text-zinc-400">Sending…</span>
   return result.ok
-    ? <span className="text-xs text-emerald-400">✓ Delivered</span>
-    : <span className="text-xs text-red-400" title={result.error}>✗ {result.error || 'Failed'}</span>
+    ? <span className="inline-flex items-center gap-1 text-xs text-emerald-400"><Icon as={CircleCheck} /> Delivered</span>
+    : <span className="inline-flex items-center gap-1 text-xs text-red-400" title={result.error}><Icon as={CircleX} /> {result.error || 'Failed'}</span>
 }
 
 function WebhookRow({ w, onEdit, onDelete, onTest, testResult }) {
@@ -160,7 +161,7 @@ export default function Notifications() {
   return (
     <div className="p-4 md:p-8 max-w-4xl">
       <PageHeader title="Notifications" subtitle="Webhooks for failed backups, successes and overdue schedules"
-        action={!editing && data && <Button onClick={() => setEditing('new')}>+ Add webhook</Button>} />
+        action={!editing && data && <Button onClick={() => setEditing('new')}><Icon as={Plus} /> Add webhook</Button>} />
       {editing && (
         <WebhookForm key={editing === 'new' ? 'new' : editing.id} webhook={editing === 'new' ? null : editing}
           formats={data.formats} events={data.events}
@@ -172,7 +173,7 @@ export default function Notifications() {
       ) : error ? (
         <ErrorAlert message={error} onRetry={reload} />
       ) : webhooks.length === 0 ? (
-        <EmptyState icon="🔔" title="No webhooks" description="Add a Slack, Discord, Teams or generic webhook to get alerted about failed backups." />
+        <EmptyState icon={Bell} title="No webhooks" description="Add a Slack, Discord, Teams or generic webhook to get alerted about failed backups." />
       ) : (
         <Card className="py-0">
           <ul className="divide-y divide-zinc-800/60">

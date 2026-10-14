@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { PageHeader, Spinner, ErrorAlert, Button, Toast } from '../components/UI'
+import { Plus, RefreshCw } from 'lucide-react'
+import { PageHeader, Spinner, ErrorAlert, Button, Toast, Icon } from '../components/UI'
 import ServerCard from '../components/servers/ServerCard'
 import ServerForm from '../components/servers/ServerForm'
 
@@ -52,8 +53,8 @@ export default function Servers() {
         subtitle="Docker hosts and database servers this UI can back up and restore"
         action={
           <div className="flex flex-wrap gap-2">
-            {isAdmin && <Button size="sm" className="whitespace-nowrap" onClick={() => setEditing('new')}>＋ Add server</Button>}
-            <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={reload}>↻ Refresh</Button>
+            {isAdmin && <Button size="sm" className="whitespace-nowrap" onClick={() => setEditing('new')}><Icon as={Plus} /> Add server</Button>}
+            <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={reload}><Icon as={RefreshCw} /> Refresh</Button>
           </div>
         }
       />

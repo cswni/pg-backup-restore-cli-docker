@@ -1,4 +1,11 @@
-// Small display formatters shared by the monitoring and schedule pages.
+// Small display formatters shared by the monitoring, job and schedule pages.
+
+const OPERATION_LABELS = { export: 'backup' }
+
+/** Display name of a job type; the API calls a backup 'export'. */
+export function operationLabel(type) {
+  return OPERATION_LABELS[type] || type
+}
 
 /** "5m ago" style relative time for a past timestamp (ms). */
 export function timeAgo(ms) {
