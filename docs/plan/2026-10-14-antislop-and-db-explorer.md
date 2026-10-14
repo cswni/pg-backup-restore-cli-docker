@@ -118,7 +118,7 @@ B2, client (`ui/client/**`):
 - [x] accessible + responsive (antislop rules: real `<table>`, `th scope`, keyboard, 375px) (commit 5148f4b)
 
 B3-B5:
-- [ ] B3 merge B1 + B2, tests + build green
+- [x] B3 merge B1 + B2, tests + build green (merges e0c349d, 18f6757; fixes 40d6885: JSON 400 for malformed bodies, 44px row actions)
 - [ ] B4 browser check against a real database if one is reachable, else with the API mocked/fake; README section "Database Explorer"
 - [ ] B5 antislop Delivery Gate for the new UI (`anti-slop/explorer-2026-10-14-delivery.md`)
 
@@ -135,3 +135,4 @@ B3-B5:
 - 2026-10-14: Phase A complete (A1+A2 merged in 6edd63a, picker fix aa54b50, follow-up report written). B1 and B2 running in parallel.
 - 2026-10-14: B1 done (d56cc4a): ui/server/explorer API + README "Database Explorer" section; mysql drivers export open(); tested with fake tools only, not against real databases.
 - 2026-10-14: B2 client done (aef64f9, 5148f4b, fdcf243, bd4d7ec): `/explorer` page with URL state, object list, Data/Structure/Query tabs, Explore action on database rows; checked against a throwaway mock of the contract at desktop and 375px; build + 256 tests green.
+- 2026-10-14: B3 done. Local smoke test: Explorer deep link, real errors with Retry, console guards (one statement, no meta-commands, MongoDB 400, user 403). Next: deploy and B4 check against s1 databases.
