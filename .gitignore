@@ -14,7 +14,10 @@ specs/
 # them with `blueprint skills sync`. The .blueprint/skills.manifest.json IS committed.
 .agents/skills/
 .cursor/skills/
-.claude/skills/
+.claude/skills/*
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# antislop agent skills are part of the project (installed copies, not per-user links)
+!.claude/skills/antislop*/
