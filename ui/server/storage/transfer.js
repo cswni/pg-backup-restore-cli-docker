@@ -6,8 +6,8 @@ const config = require('./config')
 const destinations = require('./destinations')
 const { tempPath, storageSuffix, errorMessage } = require('./util')
 
-// Copies to remote destinations: post-backup upload (order 300) and the
-// pre-restore download of remote-only backups (order 100).
+// Remote copies: the post-backup upload and the pre-restore download of
+// remote-only backups.
 
 /**
  * Destinations for a backup: `options.destinations` (array of ids) when

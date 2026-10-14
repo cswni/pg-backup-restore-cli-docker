@@ -58,7 +58,6 @@ function jobEvent(job, now = Date.now()) {
   }
 }
 
-/** Notification event for an overdue schedule. */
 function overdueEvent(s, reason) {
   const since = s.lastSuccessAt ? new Date(s.lastSuccessAt).toISOString() : 'never'
   return {
@@ -74,7 +73,6 @@ function overdueEvent(s, reason) {
   }
 }
 
-/** Test notification event. */
 function testEvent() {
   return {
     type: 'test',

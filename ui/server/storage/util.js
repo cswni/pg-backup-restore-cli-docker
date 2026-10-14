@@ -36,7 +36,6 @@ function storageSuffix(name) {
   return String(name).match(/(\.[A-Za-z0-9]+)+$/)?.[0] || ''
 }
 
-/** Read the first `n` bytes of a file. */
 function readHead(file, n) {
   const fd = fs.openSync(file, 'r')
   try {

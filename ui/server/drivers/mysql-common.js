@@ -21,12 +21,10 @@ const DUMP_ARGS = [
 ]
 const SQL_ERROR_RE = /^ERROR(\s+\d+|\s+at line|:)/
 
-/** Quote a MySQL identifier. */
 function quoteIdent(name) {
   return `\`${String(name).replace(/`/g, '``')}\``
 }
 
-/** Quote a MySQL string literal. */
 function quoteLiteral(value) {
   return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "''")}'`
 }

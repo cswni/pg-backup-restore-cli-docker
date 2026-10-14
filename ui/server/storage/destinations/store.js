@@ -128,7 +128,7 @@ function deleteDestination(id) {
   getDb().prepare('DELETE FROM storage_oauth_states WHERE destination_id = ?').run(id)
 }
 
-// ── OAuth state (Google Drive connect flow) ──────────────────────────────────
+// OAuth state for the Google Drive connect flow.
 
 const STATE_TTL_MS = 10 * 60 * 1000
 

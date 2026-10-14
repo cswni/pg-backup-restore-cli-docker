@@ -74,8 +74,6 @@ function publicSettings() {
   }
 }
 
-// ── Validation ───────────────────────────────────────────────────────────────
-
 function optionalBool(value, field) {
   if (value === undefined) return undefined
   if (typeof value !== 'boolean') throw httpError(400, `${field} must be a boolean`)

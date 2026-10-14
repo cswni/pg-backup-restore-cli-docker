@@ -163,7 +163,7 @@ function runRetention(job, { current } = {}) {
   return result
 }
 
-/** Post-backup step (order 900): apply retention, protecting the new backup. */
+/** Post-backup step: apply retention, protecting the new backup. */
 async function retentionStep(ctx, job) {
   if (!hasAnyPolicy()) return ctx
   const current = {

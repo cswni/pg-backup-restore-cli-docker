@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# ============================================================
 # pg-create.sh: Create a PostgreSQL database
-# ============================================================
 # Usage: pg-create.sh -c <container> -d <database>
-# ============================================================
 
 set -euo pipefail
 

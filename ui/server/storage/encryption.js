@@ -3,9 +3,8 @@ const config = require('./config')
 const { encryptFile, decryptFile, isEncryptedFile } = require('./crypto-format')
 const { ENC, tempPath, storageSuffix } = require('./util')
 
-// AES-256-GCM encryption of finished backups (post-backup, order 200) and
-// decryption before restore (pre-restore, order 200). File format:
-// crypto-format.js. Offline decryption: decrypt-cli.js.
+// AES-256-GCM encryption of finished backups and decryption before restore.
+// File format: crypto-format.js. Offline decryption: decrypt-cli.js.
 
 /** options.encrypt (boolean) overrides the default from settings. */
 function shouldEncrypt(options = {}) {

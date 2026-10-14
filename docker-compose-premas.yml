@@ -7,10 +7,10 @@ services:
     environment:
       PORT: "3000"
       # Seeds the first admin account on first start only. Afterwards users are
-      # managed in the UI and changing these does NOT change existing passwords.
+      # managed in the UI and changing these does not change existing passwords.
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:-admin}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:?BASIC_AUTH_PASSWORD must be set}
-      # Encrypts stored credentials (SSH keys, DB passwords, cloud tokens).
+      # Encrypts stored credentials (SSH keys, database passwords, remote destination tokens).
       # Keep it safe and never change it, or stored credentials become unreadable.
       APP_SECRET: ${APP_SECRET:?APP_SECRET must be set}
       # Public https URL of this UI (Google Drive OAuth redirect, links in notifications)

@@ -1,6 +1,4 @@
-# ============================================================
 # pg-retarget.awk: Make a plain SQL dump restore into another database
-# ============================================================
 # Usage: awk -v qtarget='"<target>"' -f pg-retarget.awk < dump.sql
 #
 #   qtarget  Target database name, already quoted as an SQL identifier.
@@ -13,7 +11,6 @@
 #
 # Shared by pg-restore.sh (Docker containers) and the Web UI's direct
 # PostgreSQL driver so both retarget dumps identically.
-# ============================================================
 BEGIN { header = 1; src = "" }
 header && NR <= 200 && /^CREATE DATABASE / { src = $3; next }
 header && NR <= 200 && /^\\connect / { header = 0; next }

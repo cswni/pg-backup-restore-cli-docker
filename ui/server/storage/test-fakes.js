@@ -1,6 +1,6 @@
 const http = require('http')
 
-// In-process fakes of the cloud APIs used by the storage tests. Nothing in
+// In-process fakes of the S3 and Google APIs used by the storage tests. Nothing in
 // the test suite talks to real AWS or Google endpoints.
 
 function listen(server) {

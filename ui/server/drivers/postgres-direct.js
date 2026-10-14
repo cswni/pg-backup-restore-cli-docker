@@ -13,12 +13,10 @@ const { capture, lineReader, exitCode, toolEnv } = require('../connectivity/proc
 const CONNECT_TIMEOUT_S = '10'
 const SQL_ERROR_RE = /^(psql:[^:]*:\d+: )?ERROR:/
 
-/** Quote an SQL identifier. */
 function quoteIdent(name) {
   return `"${String(name).replace(/"/g, '""')}"`
 }
 
-/** Quote an SQL string literal. */
 function quoteLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`
 }

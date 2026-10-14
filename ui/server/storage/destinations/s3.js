@@ -65,7 +65,6 @@ function validateConfig(input = {}, current = {}) {
   }
 }
 
-/** S3 client for a destination's config. */
 function createClient(config) {
   return new S3Client({
     region: config.region || 'us-east-1',
@@ -101,7 +100,6 @@ async function upload(dest, file, name) {
   }
 }
 
-/** Download a stored object into `outFile`. */
 async function download(dest, location, outFile) {
   const client = createClient(dest.config)
   try {

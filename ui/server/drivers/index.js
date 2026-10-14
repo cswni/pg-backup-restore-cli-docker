@@ -63,7 +63,6 @@ function listEngines() {
   return [...seen.values()]
 }
 
-// Built-in drivers
 registerDriver(require('./postgres-docker'))
 registerDriver(require('./postgres-direct'))
 registerDriver(require('./mysql-docker'))

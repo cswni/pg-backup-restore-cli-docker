@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# ============================================================
 # pg-export.sh: Dump a PostgreSQL database
-# ============================================================
 # Usage: pg-export.sh -c <container> -d <database> [-n <name>] [-o <file>]
 #
 #   -o  Exact output path (overrides -n and the default location).
@@ -12,7 +10,6 @@
 #       ready to be restored as "premas_qa".
 #
 # Output file: /backups/<name>_<DD-MM-YYYY_HH_MM_SS>.sql
-# ============================================================
 
 set -euo pipefail
 

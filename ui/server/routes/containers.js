@@ -5,8 +5,6 @@ const { getDriver, listEngines } = require('../drivers')
 const { httpError, isValidContainerName } = require('../validation')
 const { handle } = require('./util')
 
-// GET /api/servers lives in connectivity/routes.js (server registry API).
-
 const router = express.Router()
 
 /** Strip secrets before sending servers to the browser. */

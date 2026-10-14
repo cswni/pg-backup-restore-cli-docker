@@ -12,7 +12,7 @@ const oauth = require('./oauth')
 const { errorMessage } = require('./util')
 
 // /api/storage/*: storage settings, remote destinations, retention.
-// Reads needed by the export modal are open to every signed-in user;
+// Reads needed by the backup dialog are open to every signed-in user;
 // everything else is admin-only.
 
 const router = express.Router()
@@ -44,7 +44,7 @@ function destinationFields(body, type, current) {
   }
 }
 
-// ── Read endpoints (any signed-in user) ─────────────────────────────────────
+// Read endpoints, open to any signed-in user.
 
 router.get('/storage/defaults', handle(async (req, res) => {
   const enc = config.publicSettings().encryption
@@ -66,7 +66,7 @@ router.get('/storage/destinations', handle(async (req, res) => {
   res.json(list.map(({ id, name, type, enabled, isDefault }) => ({ id, name, type, enabled, isDefault })))
 }))
 
-// ── Admin endpoints ──────────────────────────────────────────────────────────
+// Admin-only endpoints.
 
 router.get('/storage/settings', requireAdmin, handle(async (req, res) => {
   res.json({ ...config.publicSettings(), gdriveRedirectUri: oauth.redirectUri(req) })

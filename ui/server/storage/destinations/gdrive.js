@@ -32,8 +32,6 @@ function setEndpointsForTests(overrides, { retryDelay = 0 } = {}) {
   tokenCache.clear()
 }
 
-// ── Config ───────────────────────────────────────────────────────────────────
-
 function str(value, field, max) {
   if (value === undefined || value === null || value === '') return ''
   if (typeof value !== 'string' || value.length > max) throw httpError(400, `${field} must be a string (max ${max} chars)`)
@@ -60,8 +58,6 @@ function validateConfig(input = {}, current = {}) {
     accountEmail: sameClient ? current.accountEmail || '' : '',
   }
 }
-
-// ── OAuth ────────────────────────────────────────────────────────────────────
 
 /** Google consent URL for the connect flow. */
 function authUrl({ clientId, redirectUri, state }) {
@@ -147,8 +143,6 @@ async function accountEmail(dest) {
   if (!res.ok) return ''
   return (await res.json()).user?.emailAddress || ''
 }
-
-// ── Files ────────────────────────────────────────────────────────────────────
 
 async function startSession(dest, name, size) {
   const meta = { name, ...(dest.config.folderId ? { parents: [dest.config.folderId] } : {}) }
@@ -246,7 +240,6 @@ function fileUrl(location, query = '') {
   return `${endpoints.api}/files/${encodeURIComponent(location.fileId)}?supportsAllDrives=true${query}`
 }
 
-/** Download a Drive file into `outFile`. */
 async function download(dest, location, outFile) {
   const res = await assertOk(await driveFetch(dest, fileUrl(location, '&alt=media')), 'download')
   try {

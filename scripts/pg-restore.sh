@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# ============================================================
 # pg-restore.sh: Restore a PostgreSQL database from a dump
-# ============================================================
 # Usage: pg-restore.sh -c <container> -d <target_database> [-f <file>] [-x]
 #
 #   -d  Target database name. The dump is always restored into THIS
@@ -15,16 +13,15 @@
 #   2. /backups/<file>  (mount your backups dir with -v /path/to/backups:/backups)
 #   3. <file> as-is     (absolute path inside the container)
 #
-# If -f is omitted the script picks the latest dump for the given
-# database name, searching /work first, then /backups.
+# If -f is omitted the script picks the newest <database>_*.sql dump
+# found in /work or /backups.
 #
 # Examples:
 #   # Restore a "premas" dump into "premas_qa", replacing it:
 #   docker run --rm \
 #     -v /var/run/docker.sock:/var/run/docker.sock \
 #     -v $(pwd)/backups:/backups \
-#     cswni/pg-backup restore -c my_postgres -d premas_qa -x -f premas_01-01-2025_12_00_00.sql
-# ============================================================
+#     cswni/pg-backup-restore-cli restore -c my_postgres -d premas_qa -x -f premas_01-01-2025_12_00_00.sql
 
 set -euo pipefail
 
@@ -60,27 +57,20 @@ if [[ ! "$DATABASE" =~ ^[A-Za-z0-9_][A-Za-z0-9_$-]{0,62}$ ]]; then
   exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# resolve_file <name>
-#   Tries /work/<name>, /backups/<name>, then <name> as-is (absolute).
-#   Prints the resolved path if found, exits 1 otherwise.
-# ---------------------------------------------------------------------------
+# Prints the first existing path of /work/<name>, /backups/<name>, <name>; exits 1 if none.
 resolve_file() {
   local name="$1"
 
-  # 1. Current-directory mount
   if [[ -f "/work/${name}" ]]; then
     echo "/work/${name}"
     return 0
   fi
 
-  # 2. Backups directory mount
   if [[ -f "/backups/${name}" ]]; then
     echo "/backups/${name}"
     return 0
   fi
 
-  # 3. Treat as absolute / already-resolved path
   if [[ -f "${name}" ]]; then
     echo "${name}"
     return 0
@@ -90,11 +80,7 @@ resolve_file() {
   exit 1
 }
 
-# ---------------------------------------------------------------------------
-# admin_sql <sql>
-#   Runs a statement against the maintenance database "postgres".
-#   Optional second argument: database to run it in (default "postgres").
-# ---------------------------------------------------------------------------
+# admin_sql <sql> [db]: runs a statement in <db>, default the maintenance database "postgres".
 admin_sql() {
   docker exec -u postgres "${CONTAINER}" \
     psql -v ON_ERROR_STOP=1 -X -q -tA -d "${2:-postgres}" -c "$1"
@@ -109,13 +95,8 @@ count_user_tables() {
                AND n.nspname NOT LIKE 'pg_toast%';" "$1"
 }
 
-# ---------------------------------------------------------------------------
-# retarget_dump <target>
-#   Reads a plain SQL dump on stdin and makes it restore into <target>:
-#   drops the `pg_dump -C` CREATE DATABASE / \connect header and rewrites
-#   ALTER / COMMENT ON DATABASE <src>. The logic lives in pg-retarget.awk
-#   (next to this script) and is shared with the Web UI's direct driver.
-# ---------------------------------------------------------------------------
+# retarget_dump <target>: rewrites a plain SQL dump on stdin to restore into <target>.
+# pg-retarget.awk is shared with the web UI's direct PostgreSQL driver.
 RETARGET_AWK="$(dirname "${BASH_SOURCE[0]}")/pg-retarget.awk"
 if [[ ! -f "$RETARGET_AWK" ]]; then
   echo "[pg-restore] ERROR: ${RETARGET_AWK} not found (it must sit next to this script)." >&2
@@ -126,9 +107,7 @@ retarget_dump() {
   awk -v qtarget="\"$1\"" -f "$RETARGET_AWK"
 }
 
-# ---------------------------------------------------------------------------
-# If no file given, auto-detect the latest dump in /work then /backups
-# ---------------------------------------------------------------------------
+# Without -f, use the newest <database>_*.sql found in /work or /backups.
 if [[ -z "$FILE" ]]; then
   LATEST=$(ls -t /work/"${DATABASE}"_*.sql /backups/"${DATABASE}"_*.sql 2>/dev/null | head -n 1 || true)
   if [[ -z "$LATEST" ]]; then

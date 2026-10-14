@@ -11,9 +11,7 @@ env:
   TEST_DB: testdb
 
 jobs:
-  # ──────────────────────────────────────────────────────────────
-  # JOB 0: Web UI unit tests + frontend build
-  # ──────────────────────────────────────────────────────────────
+  # Web UI unit tests and frontend build.
   unit:
     runs-on: ubuntu-latest
     defaults:
@@ -41,9 +39,7 @@ jobs:
       - name: Build frontend
         run: pnpm run build
 
-  # ──────────────────────────────────────────────────────────────
-  # JOB 1: Integration tests
-  # ──────────────────────────────────────────────────────────────
+  # CLI and web UI integration tests against a real PostgreSQL container.
   test:
     runs-on: ubuntu-latest
     needs: unit
@@ -52,11 +48,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      # Build the CLI image locally (not pushed yet)
       - name: Build CLI image
         run: docker build -t ${{ env.IMAGE_NAME }}:test .
 
-      # Start a postgres container that the CLI will talk to via docker exec
       - name: Start PostgreSQL container
         run: |
           docker run -d \
@@ -230,9 +224,7 @@ jobs:
         if: always()
         run: docker rm -f ${{ env.PG_CONTAINER }} || true
 
-  # ──────────────────────────────────────────────────────────────
-  # JOB 2: Build & publish (only if tests pass)
-  # ──────────────────────────────────────────────────────────────
+  # Runs only when the tests pass.
   publish:
     runs-on: ubuntu-latest
     needs: test

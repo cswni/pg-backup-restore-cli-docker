@@ -13,9 +13,7 @@ const catalog = require('./catalog')
 //          → driver.restore → cleanup of temporary files.
 //
 // Steps are async functions `(ctx, job) => ctx` registered with an `order`
-// (lower runs first). Suggested orders: compress 100, encrypt 200,
-// upload 300, retention 900 for backup; download 100, decrypt 200,
-// decompress 300 for restore.
+// (lower runs first). The storage steps and their orders: storage/index.js.
 
 const postBackupSteps = []
 const preRestoreSteps = []

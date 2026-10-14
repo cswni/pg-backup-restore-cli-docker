@@ -3,8 +3,8 @@ const fs = require('fs')
 const path = require('path')
 const { DATA_DIR } = require('./config')
 
-// Encrypts credentials stored in the database (DB passwords, SSH keys,
-// cloud tokens) with AES-256-GCM. The key comes from APP_SECRET, or from a
+// Encrypts credentials stored in the database (database passwords, SSH keys,
+// remote destination tokens) with AES-256-GCM. The key comes from APP_SECRET, or from a
 // generated key file in DATA_DIR when APP_SECRET is not set.
 const PREFIX = 'enc:v1:'
 
@@ -44,7 +44,6 @@ function decrypt(value) {
   return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8')
 }
 
-/** Test helper. */
 function setKeyForTests(secret) {
   key = crypto.createHash('sha256').update(secret).digest()
 }

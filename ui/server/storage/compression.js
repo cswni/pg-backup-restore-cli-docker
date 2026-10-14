@@ -4,8 +4,7 @@ const { pipeline } = require('stream/promises')
 const config = require('./config')
 const { GZ, tempPath, isGzipFile, stripStorageSuffixes, storageSuffix } = require('./util')
 
-// Streaming gzip compression (post-backup, order 100) and decompression
-// (pre-restore, order 300).
+// Streaming gzip compression after a backup and decompression before a restore.
 
 /** Gzip `inFile` into `outFile`; removes the partial output on failure. */
 async function gzipFile(inFile, outFile, level = 6) {

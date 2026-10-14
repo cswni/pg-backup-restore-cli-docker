@@ -1,4 +1,4 @@
-# ─── Stage 1: Build the React frontend + production node_modules ─────────────
+# Build stage: the React frontend and the production node_modules.
 FROM node:24-alpine AS ui-builder
 
 # Keep in sync with "packageManager" in ui/package.json
@@ -10,20 +10,18 @@ WORKDIR /build
 COPY ui/package.json ui/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# Copy source and build
 COPY ui/ .
 RUN pnpm run build
 
 # Server-only dependencies for the runtime image (no package manager needed there)
 RUN rm -rf node_modules && pnpm install --frozen-lockfile --prod
 
-# ─── Stage 2: Runtime image ───────────────────────────────────────────────────
+# Runtime image.
 FROM alpine:3.24
 
-# Install bash, curl, docker CLI, OpenSSH client (remote Docker hosts and
-# SSH tunnels), the PostgreSQL / MariaDB clients and MongoDB database tools
-# (direct database servers), and Node.js. mongodb-tools comes from the
-# community repository, which the alpine image enables by default.
+# OpenSSH serves remote Docker hosts and SSH tunnels; the PostgreSQL and MariaDB
+# clients and MongoDB tools serve direct database servers. mongodb-tools comes from
+# the community repository, which the alpine image enables by default.
 RUN apk add --no-cache \
     bash \
     curl \
@@ -34,14 +32,12 @@ RUN apk add --no-cache \
     openssh-client-default \
     postgresql18-client
 
-# Create working directory for SQL dump files
 WORKDIR /backups
 
-# Copy the CLI scripts
 COPY scripts/ /usr/local/bin/
 
-# Make all scripts executable. The pg-backup symlink exposes the same commands
-# inside a running container (docker exec <ctr> pg-backup export ...).
+# The pg-backup symlink exposes the same commands inside a running container
+# (docker exec <ctr> pg-backup export ...).
 RUN chmod +x /usr/local/bin/pg-export.sh \
               /usr/local/bin/pg-unblock.sh \
               /usr/local/bin/pg-delete.sh \
