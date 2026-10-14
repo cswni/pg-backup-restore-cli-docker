@@ -161,6 +161,46 @@ Tasks:
 - [x] D5 UI: "Container credentials" section per Docker server on the Servers page (list running containers + saved keys, status: saved / from container env), edit dialog per engine, test button; "Credentials" button on the container page; admin-only (commit 99c5147)
 - [ ] D6 README section (done, 3eae0cb), tests + build green (done), deploy, verify on s1 with `legacy_legacydb` and `mcp-postgres-core` (user enters the real credentials) (code, README, tests 331/331, CI 38568470803 and deploy done: image bc885eeb24a0; remaining: user enters credentials for legacy_legacydb and premas-arch-2025_mcp-postgres-core in Servers > Local Docker > Container credentials, then verify)
 
+## Phase E: edit and delete rows in the Explorer (requested 2026-10-14)
+
+Clicking a row in the Data tab opens the row. Admins can edit (update) or delete it.
+
+Decisions (defaults chosen by the lead; the user may change them):
+- Admin only. Everyone else gets the read-only row view.
+- Only tables with a primary key (PostgreSQL, MySQL) or collections (MongoDB, `_id`).
+  Views, tables without a primary key, and partitioned parents if unsupported: read-only
+  with a short explanation.
+- One row per request, addressed by its full primary key (`_id` for MongoDB). Primary key
+  columns themselves are not editable.
+- Optimistic concurrency: the request carries the original values of the edited fields;
+  the UPDATE/DELETE matches them too (`IS NOT DISTINCT FROM` in PostgreSQL, `<=>` in MySQL,
+  equality filter in MongoDB). 0 affected rows → 409 "This row changed or no longer exists.
+  Reload and try again." Delete matches the key plus the row's other loaded non-truncated
+  values the same way.
+- Not editable here: truncated cells (`{ truncated }`), binary cells, generated/identity
+  "always" columns where detectable; shown read-only with a reason.
+- Values: the client sends JSON values (string, number, boolean, null, or object/array for
+  JSON/document fields). PostgreSQL: literals quoted safely and cast to the column type
+  (`'…'::<type>`); MySQL: hex string literals (`CONVERT(X'…' USING utf8mb4)`), as the
+  console does; MongoDB: Extended JSON parsed with the driver's EJSON, `$`-prefixed keys
+  and operators refused in values.
+- Identifiers only from the catalog (as for reads); columns must exist in the structure.
+- Statement timeout 10 s; no read-only transaction for these two endpoints only.
+- Audit: each change runs as a job (type `explorer-update` / `explorer-delete`) with
+  server, database, object, key and changed column names (no values) and the username, so
+  it appears in Jobs history and notifications.
+
+API (admin only):
+- `PATCH /api/explorer/row` body `{ serverId, engine, container?, database, schema?, name, key: { col: value }, original: { col: value }, changes: { col: value } }` → `{ ok: true, jobId }`
+- `DELETE /api/explorer/row` body `{ serverId, engine, container?, database, schema?, name, key, original }` → `{ ok: true, jobId }`
+- `GET /api/explorer/structure` additionally returns `editable: bool`, `editableReason: string|null`, `primaryKey: [col]`, and per column `editable: bool`.
+- Errors: 400 validation, 403 non-admin, 404 unknown object, 409 concurrency conflict / no matching row, 502 database error (message verbatim).
+
+Tasks:
+- [ ] E1 server: structure `editable`/`primaryKey`, PATCH/DELETE routes, SQL builders per engine (PostgreSQL, MySQL, MongoDB; Docker + direct), audit jobs, tests (injection attempts, conflicts, permissions)
+- [ ] E2 client: row click opens a row dialog (all roles, read-only fields); admins: Edit (per-field inputs: text, NULL toggle, JSON textarea for json/jsonb/document), Save with conflict handling, Delete with confirmation showing the key; refresh the page after success; Data tab copy no longer says read-only
+- [ ] E3 README + Explorer copy ("Nothing here changes data" → accurate), tests + build, deploy, verify on s1 on a scratch table (create a throwaway table only with the user's consent)
+
 ## Phase C: release
 
 - [x] push `ui` and fast-forward `main`; CI green (70a4761, run 38543533600)
