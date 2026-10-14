@@ -44,7 +44,7 @@ function checkLine(line, seen) {
   const m = line.match(DB_LINE_RE)
   if (!m) return false
   seen.add((m[1] || m[2]).replace(/``/g, '`'))
-  if (seen.size > 1) throw new Error(`The dump contains several databases (${[...seen].join(', ')}) – restore them one at a time.`)
+  if (seen.size > 1) throw new Error(`The dump contains several databases (${[...seen].join(', ')}). Restore them one at a time.`)
   return true
 }
 
@@ -144,7 +144,7 @@ async function prepareTarget(job, runner, database, dropExisting) {
     job.log(`[mysql-restore] ERROR: Database '${database}' already exists and contains ${tables} table(s).`, 'stderr')
     throw new Error("Enable 'Drop target database before restore' or choose another target name.")
   }
-  job.log(`[mysql-restore] Database '${database}' exists and is empty – restoring into it.`)
+  job.log(`[mysql-restore] Database '${database}' exists and is empty, restoring into it.`)
 }
 
 /** KILL every other connection using `database`. */

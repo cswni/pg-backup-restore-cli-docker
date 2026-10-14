@@ -12,7 +12,7 @@ const { createMongoDriver } = require('./mongodb-common')
 // MONGO_INITDB_ROOT_USERNAME / MONGO_INITDB_ROOT_PASSWORD or their *_FILE
 // variants, authSource admin; no authentication when unset. The password
 // reaches the tools through a mktemp YAML file (--config, mode 0600, removed
-// on exit) and mongosh through its environment – never on a command line.
+// on exit) and mongosh through its environment, never on a command line.
 
 registerEngineImages('mongodb', ['mongo'])
 

@@ -41,7 +41,7 @@ function sslArgs(conn) {
     case 'disable': return ['--skip-ssl']
     case 'require': return ['--ssl', '--skip-ssl-verify-server-cert']
     case 'verify-full':
-      if (conn.tlsServerName) throw new Error("sslmode 'verify-full' is not supported through an SSH tunnel for MySQL – use 'require'.")
+      if (conn.tlsServerName) throw new Error("sslmode 'verify-full' is not supported through an SSH tunnel for MySQL. Use 'require'.")
       return ['--ssl', '--ssl-verify-server-cert']
     default: return ['--skip-ssl-verify-server-cert'] // prefer: TLS when offered, unverified
   }

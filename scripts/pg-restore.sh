@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# pg-restore.sh  –  Restore a PostgreSQL database from a dump
+# pg-restore.sh: Restore a PostgreSQL database from a dump
 # ============================================================
 # Usage: pg-restore.sh -c <container> -d <target_database> [-f <file>] [-x]
 #
@@ -136,7 +136,7 @@ if [[ -z "$FILE" ]]; then
     exit 1
   fi
   FILE="$LATEST"
-  echo "[pg-restore] No file specified – using latest dump: ${FILE}"
+  echo "[pg-restore] No file specified, using latest dump: ${FILE}"
 else
   FILE=$(resolve_file "$FILE")
 fi
@@ -158,7 +158,7 @@ else
     echo "[pg-restore] ERROR: Enable 'Drop target database before restore' (-x) or choose another target name." >&2
     exit 1
   fi
-  echo "[pg-restore] Database '${DATABASE}' exists and is empty – restoring into it."
+  echo "[pg-restore] Database '${DATABASE}' exists and is empty, restoring into it."
 fi
 
 echo "[pg-restore] Restoring into '${DATABASE}' on container '${CONTAINER}' from: ${FILE}"
@@ -177,7 +177,7 @@ trap 'rm -f "$ERR_LOG"' EXIT
 
 ERRORS=$(grep -c '^ERROR:' "$ERR_LOG" || true)
 if [[ "$ERRORS" -gt 0 ]]; then
-  echo "[pg-restore] FAILED: restore finished with ${ERRORS} SQL error(s) – see the log above." >&2
+  echo "[pg-restore] FAILED: restore finished with ${ERRORS} SQL error(s). See the log above." >&2
   exit 1
 fi
 

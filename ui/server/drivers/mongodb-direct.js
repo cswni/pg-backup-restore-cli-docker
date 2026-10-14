@@ -26,7 +26,7 @@ function tlsParams(conn) {
   switch (conn.sslmode) {
     case 'require': return { tls: 'true', tlsInsecure: 'true' }
     case 'verify-full':
-      if (conn.tlsServerName) throw new Error("sslmode 'verify-full' is not supported through an SSH tunnel for MongoDB – use 'require'.")
+      if (conn.tlsServerName) throw new Error("sslmode 'verify-full' is not supported through an SSH tunnel for MongoDB. Use 'require'.")
       return { tls: 'true' }
     default: return {} // disable / prefer: MongoDB has no opportunistic TLS
   }

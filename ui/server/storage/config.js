@@ -59,7 +59,7 @@ function passphraseSource() {
   return settings.hasSecret(KEYS.passphrase) ? 'settings' : null
 }
 
-/** Settings as returned to the (admin) UI — never includes passphrases. */
+/** Settings as returned to the (admin) UI. Never includes passphrases. */
 function publicSettings() {
   return {
     compression: getCompression(),
@@ -114,7 +114,7 @@ function buildCompression(input) {
 function validatePassphrase(passphrase) {
   if (passphrase === undefined || passphrase === '') return null
   if (typeof passphrase !== 'string' || passphrase.length < MIN_PASSPHRASE || passphrase.length > 1024) {
-    throw httpError(400, `encryption.passphrase must be ${MIN_PASSPHRASE}–1024 characters`)
+    throw httpError(400, `encryption.passphrase must be ${MIN_PASSPHRASE}-1024 characters`)
   }
   return passphrase
 }

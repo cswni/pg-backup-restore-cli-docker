@@ -72,7 +72,7 @@ function renderHost(id, endpoint) {
 
 /** Full managed config for a list of servers. */
 function renderConfig(servers) {
-  const header = '# Managed by pg-backup-ui — regenerated automatically, do not edit.\n\n'
+  const header = '# Managed by pg-backup-ui: regenerated automatically, do not edit.\n\n'
   return header + servers
     .map((s) => ({ id: s.id, endpoint: sshEndpoint(s) }))
     .filter((e) => e.endpoint)

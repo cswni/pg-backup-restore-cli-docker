@@ -22,7 +22,7 @@ function loadKey() {
   if (!fs.existsSync(file)) {
     fs.mkdirSync(DATA_DIR, { recursive: true })
     fs.writeFileSync(file, crypto.randomBytes(32).toString('base64'), { mode: 0o600 })
-    console.warn(`[pg-backup-ui] APP_SECRET not set — generated encryption key at ${file}. Set APP_SECRET to keep secrets portable.`)
+    console.warn(`[pg-backup-ui] APP_SECRET not set: generated encryption key at ${file}. Set APP_SECRET to keep secrets portable.`)
   }
   key = Buffer.from(fs.readFileSync(file, 'utf8').trim(), 'base64')
   return key

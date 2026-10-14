@@ -11,7 +11,7 @@ const { nextRunAt, intervalMs } = require('./cron')
 // - Before starting a run, next_run_at is advanced to the first cron match
 //   strictly after *now* (not after the missed slot). After downtime, a
 //   schedule whose run(s) were missed therefore runs exactly ONCE (one
-//   catch-up) and then continues on its normal cadence — missed runs are
+//   catch-up) and then continues on its normal cadence: missed runs are
 //   never replayed one by one.
 // - Overlap: if the schedule's previous job is still running, the due run is
 //   skipped (logged as a warning) and next_run_at advances as usual.

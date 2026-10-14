@@ -47,7 +47,7 @@ router.get('/servers/:id', handle(async (req, res) => {
 
 router.get('/servers/:id/databases', handle(async (req, res) => {
   const server = servers.requireServer(req.params.id)
-  if (server.kind !== 'direct') throw httpError(400, `${server.name} is a Docker server — list databases per container`)
+  if (server.kind !== 'direct') throw httpError(400, `${server.name} is a Docker server: list databases per container`)
   res.json(await getDriver(server.engine, server.kind).listDatabases({ server }))
 }))
 

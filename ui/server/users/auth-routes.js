@@ -8,7 +8,7 @@ const validate = require('./validate')
 const { hashPassword } = require('./passwords')
 const { checkCredentials, sendCredentialError } = require('./credentials')
 
-// /api/auth/* — login/logout are public (mounted before auth); the "me"
+// /api/auth/*: login/logout are public (mounted before auth); the "me"
 // endpoints need an authenticated user.
 
 const publicRouter = express.Router()

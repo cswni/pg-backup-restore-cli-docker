@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# pg-delete.sh  –  Drop a PostgreSQL database (with FORCE)
+# pg-delete.sh: Drop a PostgreSQL database (with FORCE)
 # ============================================================
 # Usage: pg-delete.sh -c <container> -d <database>
 # ============================================================

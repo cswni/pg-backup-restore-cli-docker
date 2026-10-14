@@ -1,5 +1,5 @@
 # ============================================================
-# pg-retarget.awk  –  Make a plain SQL dump restore into another database
+# pg-retarget.awk: Make a plain SQL dump restore into another database
 # ============================================================
 # Usage: awk -v qtarget='"<target>"' -f pg-retarget.awk < dump.sql
 #

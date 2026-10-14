@@ -60,7 +60,7 @@ function privateKey(value) {
   }
   let encrypted = /ENCRYPTED/.test(key)
   try { encrypted = encrypted || isEncryptedOpenSshKey(key) } catch { /* not OpenSSH format */ }
-  if (encrypted) throw httpError(400, 'Passphrase-protected keys are not supported — use an unencrypted deploy key')
+  if (encrypted) throw httpError(400, 'Passphrase-protected keys are not supported. Use an unencrypted deploy key')
   return `${key}\n`
 }
 
@@ -105,7 +105,7 @@ function directRecord(body, existing, engines) {
 }
 
 function serverName(body) {
-  return requireMatch(str(body.name), NAME_RE, 'name (1–64 characters)')
+  return requireMatch(str(body.name), NAME_RE, 'name (1-64 characters)')
 }
 
 /**

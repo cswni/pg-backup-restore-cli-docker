@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# pg-export.sh  –  Dump a PostgreSQL database
+# pg-export.sh: Dump a PostgreSQL database
 # ============================================================
 # Usage: pg-export.sh -c <container> -d <database> [-n <name>] [-o <file>]
 #

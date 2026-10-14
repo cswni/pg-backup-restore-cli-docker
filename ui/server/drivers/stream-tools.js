@@ -80,7 +80,7 @@ async function restoreFromFile(job, proc, inFile, { tool, transform, countErrors
   err.flush()
   if (streamError) throw new Error(`Restore aborted: ${streamError.message}`)
   if (code !== 0) throw new Error(`${tool} exited with code ${code}`)
-  if (errors > 0) throw new Error(`Restore finished with ${errors} error(s) – see the log above.`)
+  if (errors > 0) throw new Error(`Restore finished with ${errors} error(s). See the log above.`)
 }
 
 module.exports = { dumpToFile, restoreFromFile }

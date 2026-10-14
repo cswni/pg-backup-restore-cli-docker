@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# pg-unblock.sh  –  Terminate all active connections to a DB
+# pg-unblock.sh: Terminate all active connections to a DB
 # ============================================================
 # Usage: pg-unblock.sh -c <container> -d <database>
 # ============================================================

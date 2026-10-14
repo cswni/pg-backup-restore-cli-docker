@@ -6,9 +6,9 @@ const { createLimiter, limiterKey } = require('./rate-limit')
 // Username/password verification shared by the login endpoint and HTTP
 // Basic auth, so both are covered by the same brute-force limiters:
 //   - username+IP: 5 failures / 15 min (normal typo tolerance)
-//   - username alone: 20 failures / 15 min — holds even when the client IP
+//   - username alone: 20 failures / 15 min, holds even when the client IP
 //     can be spoofed through a trusted proxy hop
-//   - IP alone: 50 failures / 15 min — stops spraying many usernames
+//   - IP alone: 50 failures / 15 min, stops spraying many usernames
 // Every attempt costs a 32 MB scrypt, so concurrent verifications are capped
 // to keep the libuv thread pool available for the rest of the app.
 

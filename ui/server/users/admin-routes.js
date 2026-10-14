@@ -7,7 +7,7 @@ const sessions = require('./sessions')
 const validate = require('./validate')
 const { hashPassword } = require('./passwords')
 
-// /api/users — admin-managed accounts. requireAdmin is applied per route:
+// /api/users: admin-managed accounts. requireAdmin is applied per route:
 // this router is mounted on /api, so router.use() would affect every route.
 
 const router = express.Router()

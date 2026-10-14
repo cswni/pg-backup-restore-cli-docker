@@ -84,7 +84,7 @@ const SIMPLE_OPS = {
 /**
  * Only backups are open to every role. Restores run psql/mysql on a dump,
  * and those clients execute meta-commands such as `\!` (shell) embedded in
- * the file — for direct servers inside this container, which has the Docker
+ * the file. For direct servers they run inside this container, which has the Docker
  * socket mounted. Restores and schema changes are therefore admin-only.
  */
 function assertCanRun(op, user) {

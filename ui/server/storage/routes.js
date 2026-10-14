@@ -11,7 +11,7 @@ const { deleteLocation } = require('./transfer')
 const oauth = require('./oauth')
 const { errorMessage } = require('./util')
 
-// /api/storage/* — storage settings, remote destinations, retention.
+// /api/storage/*: storage settings, remote destinations, retention.
 // Reads needed by the export modal are open to every signed-in user;
 // everything else is admin-only.
 

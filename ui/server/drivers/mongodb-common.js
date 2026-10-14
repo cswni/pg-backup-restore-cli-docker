@@ -55,11 +55,11 @@ async function prepareTarget(job, runner, database, dropExisting) {
 async function archiveSource(job, inFile) {
   const info = await inspectArchive(inFile)
   if (info.databases.length > 1) {
-    throw new Error(`The archive contains several databases (${info.databases.join(', ')}) – only single-database archives can be restored.`)
+    throw new Error(`The archive contains several databases (${info.databases.join(', ')}). Only single-database archives can be restored.`)
   }
   const source = info.databases[0] || null
   if (source) assertMongoName(source)
-  job.log(`[mongo-restore] Archive source database: ${source || '(none – archive has no collections)'}${info.gzip ? ' (gzip)' : ''}`)
+  job.log(`[mongo-restore] Archive source database: ${source || '(none: archive has no collections)'}${info.gzip ? ' (gzip)' : ''}`)
   return { source, gzip: info.gzip }
 }
 
@@ -99,7 +99,7 @@ function createMongoDriver({ kind, open }) {
         const { databases } = await inspectArchive(outFile)
         if (!databases.length) {
           fs.rmSync(outFile, { force: true })
-          throw new Error(`Database '${database}' is empty or does not exist — nothing was exported`)
+          throw new Error(`Database '${database}' is empty or does not exist, so nothing was exported`)
         }
         job.log(`[mongo-export] Done. Archive saved to: ${outFile}`)
       })

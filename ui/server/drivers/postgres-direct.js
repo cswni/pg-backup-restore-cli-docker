@@ -134,7 +134,7 @@ async function pipeRestore(job, conn, database, inFile) {
   // psql first: when it dies early (bad password…) awk only gets SIGPIPE
   if (psqlCode !== 0) throw new Error(`psql exited with code ${psqlCode}`)
   if (awkCode !== 0) throw new Error(`Retargeting the dump failed (awk exited with code ${awkCode})`)
-  if (errors > 0) throw new Error(`[pg-restore] FAILED: restore finished with ${errors} SQL error(s) – see the log above.`)
+  if (errors > 0) throw new Error(`[pg-restore] FAILED: restore finished with ${errors} SQL error(s). See the log above.`)
 }
 
 /** Drop/create the target like pg-restore.sh and refuse to merge into existing tables. */
@@ -153,7 +153,7 @@ async function prepareTarget(job, conn, database, dropExisting) {
     job.log(`[pg-restore] ERROR: Database '${database}' already exists and contains ${tables} table(s).`, 'stderr')
     throw new Error("Enable 'Drop target database before restore' (-x) or choose another target name.")
   }
-  job.log(`[pg-restore] Database '${database}' exists and is empty – restoring into it.`)
+  job.log(`[pg-restore] Database '${database}' exists and is empty, restoring into it.`)
 }
 
 /** withConnection that logs tunnel activity into the job. */

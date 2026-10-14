@@ -1,6 +1,6 @@
-# Incremental backups — design note (deferred)
+# Incremental backups: design note (deferred)
 
-Status: **not implemented** — deferred on purpose (decision of 2026-10-12).
+Status: **not implemented**, deferred on purpose (decision of 2026-10-12).
 This note records why, and how it could be built later.
 
 ## Why the current tool can't do incrementals
@@ -25,7 +25,7 @@ Real incrementals work at the **physical** level (data files + WAL):
 
 - Physical backups cover the **whole cluster** (all databases, roles,
   config), not one database. They can't be restored into a different
-  database name — the main workflow here (e.g. `premas` → `premas_qa`).
+  database name, which is the main workflow here (e.g. `premas` → `premas_qa`).
 - Restoring means **replacing a server's data directory** (stop the
   container, swap the volume, start it). That's far more invasive than
   today's restore and easy to get catastrophically wrong from a web UI.

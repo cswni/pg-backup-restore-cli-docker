@@ -107,7 +107,7 @@ const tokenCache = new Map()
 
 async function accessToken(dest) {
   const { refreshToken, clientId, clientSecret } = dest.config
-  if (!refreshToken) throw new Error(`Google Drive destination '${dest.name}' is not connected — use "Connect Google Drive"`)
+  if (!refreshToken) throw new Error(`Google Drive destination '${dest.name}' is not connected. Use "Connect Google Drive"`)
   const cached = tokenCache.get(dest.id)
   if (cached && cached.refreshToken === refreshToken && cached.expiresAt > Date.now() + 60_000) return cached.token
   try {
@@ -117,7 +117,7 @@ async function accessToken(dest) {
     tokenCache.set(dest.id, { token: body.access_token, expiresAt: Date.now() + (body.expires_in || 3600) * 1000, refreshToken })
     return body.access_token
   } catch (err) {
-    if (err.code === 'invalid_grant') throw new Error(`Google Drive access for '${dest.name}' was revoked or expired — connect it again`)
+    if (err.code === 'invalid_grant') throw new Error(`Google Drive access for '${dest.name}' was revoked or expired. Connect it again`)
     throw err
   }
 }

@@ -100,7 +100,7 @@ function setupAuth(app) {
   const { disabled } = bootstrapAuth()
   if (disabled) {
     app.use('/api', anonymousAdmin)
-    console.warn(`${LOG} WARNING: BASIC_AUTH_DISABLED=true — the UI and API are UNAUTHENTICATED; every request is an admin`)
+    console.warn(`${LOG} WARNING: BASIC_AUTH_DISABLED=true: the UI and API are UNAUTHENTICATED; every request is an admin`)
     return
   }
   app.use('/api', authenticate)
