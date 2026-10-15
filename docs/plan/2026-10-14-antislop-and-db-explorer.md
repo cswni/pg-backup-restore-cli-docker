@@ -198,8 +198,6 @@ API (admin only):
 
 Tasks:
 - [x] E1 server: structure `editable`/`primaryKey`, PATCH/DELETE routes, SQL builders per engine (PostgreSQL, MySQL, MongoDB; Docker + direct), audit jobs, tests (injection attempts, conflicts, permissions) (commits 9e18034, 3884205, 037e5e6, b79a6fa, 74b72e0, fc39cd5, README fa74b96)
-- [ ] E2 client: row click opens a row dialog (all roles, read-only fields); admins: Edit (per-field inputs: text, NULL toggle, JSON textarea for json/jsonb/document), Save with conflict handling, Delete with confirmation showing the key; refresh the page after success; Data tab copy no longer says read-only
-- [ ] E1 server: structure `editable`/`primaryKey`, PATCH/DELETE routes, SQL builders per engine (PostgreSQL, MySQL, MongoDB; Docker + direct), audit jobs, tests (injection attempts, conflicts, permissions)
 - [x] E2 client: row click opens a row dialog (all roles, read-only fields); admins: Edit (per-field inputs: text, NULL toggle, JSON textarea for json/jsonb/document), Save with conflict handling, Delete with confirmation showing the key; refresh the page after success; Data tab copy no longer says read-only (commits 60d0765, b98d7f7)
 - [ ] E3 README + Explorer copy ("Nothing here changes data" → accurate), tests + build, deploy, verify on s1 on a scratch table (create a throwaway table only with the user's consent)
 
