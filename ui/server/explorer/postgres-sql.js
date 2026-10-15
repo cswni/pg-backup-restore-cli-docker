@@ -77,7 +77,7 @@ function structureSql(object) {
 
 /**
  * Internal structure: public column fields plus `editable` (false for key,
- * bytea and generated/identity ALWAYS columns) and `castType` for row edits.
+ * bytea, array and generated/identity ALWAYS columns) and `castType` for row edits.
  */
 function parseStructure(out) {
   const [doc] = jsonLines(out)
@@ -85,7 +85,7 @@ function parseStructure(out) {
   return {
     columns: doc.columns.map(([name, type, nullable, def, primaryKey, castType, generated]) => ({
       name, type, nullable, default: def ?? null, primaryKey,
-      editable: !primaryKey && !generated && type !== 'bytea',
+      editable: !primaryKey && !generated && type !== 'bytea' && !type.endsWith('[]'),
       castType: castType || type,
     })),
     indexes: doc.indexes.map(([name, unique, columns]) => ({ name, columns: columns || [], unique })),
@@ -97,6 +97,8 @@ function columnKind(column) {
   return column.type === 'bytea' ? 'binary' : 'text'
 }
 
+const EXACT_NUMBER_RE = /^(bigint|numeric)(\(|$)/
+
 /**
  * Two slots per column, [length, value], shaped into cells by slotCell.
  * Values longer than MAX_TEXT as text are cut on the server, so a page never
@@ -107,9 +109,11 @@ function columnSlots(column) {
   if (columnKind(column) === 'binary') {
     return [`octet_length(${c})`, `encode(substring(${c} FROM 1 FOR ${BINARY_PREVIEW_BYTES}), 'hex')`]
   }
+  // bigint and numeric as text: JSON numbers lose precision above 2^53 in the browser
+  const value = EXACT_NUMBER_RE.test(column.type) ? `${c}::text` : c
   return [
     `length(${c}::text)`,
-    `CASE WHEN length(${c}::text) <= ${MAX_TEXT} THEN to_jsonb(${c}) ELSE to_jsonb(left(${c}::text, ${MAX_TEXT})) END`,
+    `CASE WHEN length(${c}::text) <= ${MAX_TEXT} THEN to_jsonb(${value}) ELSE to_jsonb(left(${c}::text, ${MAX_TEXT})) END`,
   ]
 }
 

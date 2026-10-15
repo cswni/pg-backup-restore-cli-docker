@@ -91,9 +91,16 @@ const PLAIN_TYPES = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer
   'decimal', 'numeric', 'year', 'time', 'bit'])
 const DATETIME_TYPES = new Set(['date', 'datetime', 'timestamp'])
 
-/** 'binary' | 'datetime' | 'plain' | 'text' from a COLUMN_TYPE such as `varchar(20)`. */
+const EXACT_NUMBER_TYPES = new Set(['bigint', 'decimal', 'numeric'])
+
+/** Base type of a COLUMN_TYPE such as `varchar(20)` or `int unsigned`. */
+function baseType(column) {
+  return String(column.type).toLowerCase().split(/[\s(]/)[0]
+}
+
+/** 'binary' | 'datetime' | 'plain' | 'text' from a COLUMN_TYPE. */
 function columnKind(column) {
-  const base = String(column.type).toLowerCase().split(/[\s(]/)[0]
+  const base = baseType(column)
   if (BINARY_TYPES.has(base)) return 'binary'
   if (DATETIME_TYPES.has(base)) return 'datetime'
   if (PLAIN_TYPES.has(base)) return 'plain'
@@ -107,6 +114,8 @@ function columnSlots(column) {
   if (kind === 'binary') return [`LENGTH(${c})`, `HEX(LEFT(${c}, ${BINARY_PREVIEW_BYTES}))`]
   if (kind === 'text') return [`CHAR_LENGTH(${c})`, `LEFT(${c}, ${MAX_TEXT})`]
   if (String(column.type).toLowerCase().startsWith('bit')) return ['NULL', `${c} + 0`]
+  // bigint and decimal as text: JSON numbers lose precision above 2^53 in the browser
+  if (EXACT_NUMBER_TYPES.has(baseType(column))) return ['NULL', `CAST(${c} AS CHAR)`]
   return ['NULL', c]
 }
 
@@ -166,6 +175,6 @@ function parseBatch(out) {
 }
 
 module.exports = {
-  STATEMENT_TIMEOUT_S, readOnly, writable, jsonLines, objectsSql, parseObjects, structureSql, parseStructure, columnKind,
+  STATEMENT_TIMEOUT_S, readOnly, writable, jsonLines, objectsSql, parseObjects, structureSql, parseStructure, columnKind, baseType,
   rowsSql, parseRows, consoleSql, batchField, parseBatch,
 }

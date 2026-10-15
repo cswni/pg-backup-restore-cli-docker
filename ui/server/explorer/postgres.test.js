@@ -57,6 +57,8 @@ test('structure query quotes catalog names as a regclass literal', () => {
     indexes: [{ name: 'orders_pkey', columns: ['id'], unique: true }, { name: 'orders_lower', columns: ['lower(note)'], unique: false }],
     readOnlyReason: null,
   })
+  const arrays = sql.parseStructure(JSON.stringify({ relkind: 'r', columns: [['tags', 'text[]', true, null, false, 'text[]', false]], indexes: [] }))
+  assert.equal(arrays.columns[0].editable, false)
   const foreign = sql.parseStructure(JSON.stringify({ relkind: 'f', columns: [], indexes: [] }))
   assert.equal(foreign.readOnlyReason, 'Foreign tables are read-only here.')
 })

@@ -30,6 +30,7 @@ const pgColumns = [
   { name: 'raw', castType: 'json' },
   { name: 'tags', castType: 'text[]' },
   { name: 'day', castType: 'date' },
+  { name: 'big', castType: 'bigint' },
 ]
 
 test('PostgreSQL literals are E strings with quotes and backslashes escaped; NUL is refused', () => {
@@ -41,14 +42,15 @@ test('PostgreSQL UPDATE casts to catalog types and matches key and original valu
   const text = pgWrite.updateSql(pgTable, pgColumns, {
     key: { id: 7 },
     original: { note: "old'); DROP TABLE x; --", doc: { a: [1, 2] }, tags: ['a', null] },
-    changes: { note: null, doc: { b: 'x\\y' }, tags: ['q"t', 'b\\c', null] },
+    changes: { note: null, doc: { b: 'x\\y' }, big: '9007199254740993' },
   })
   assert.ok(text.startsWith("SET statement_timeout = '10s';\n"))
   assert.ok(!text.includes('READ ONLY'))
   assert.ok(text.includes('WITH changed AS (UPDATE "sh""op"."Order Lines" SET '))
   assert.ok(text.includes('"note" = NULL'))
   assert.ok(text.includes(`"doc" = E'{"b":"x\\\\\\\\y"}'::jsonb`))
-  assert.ok(text.includes(`"tags" = E'{"q\\\\"t","b\\\\\\\\c",NULL}'::text[]`))
+  assert.ok(text.includes(`"big" = E'9007199254740993'::bigint`))
+  assert.throws(() => pgWrite.valueSql(pgColumns[4], ['a']), /not a JSON array/)
   assert.ok(text.includes(`WHERE "id" IS NOT DISTINCT FROM E'7'::integer`))
   assert.ok(text.includes(`"note" IS NOT DISTINCT FROM E'old''); DROP TABLE x; --'::text`))
   assert.ok(text.includes(`"doc"::jsonb IS NOT DISTINCT FROM E'{"a":[1,2]}'::jsonb`))
@@ -97,6 +99,24 @@ test('MySQL literals: hex text, validated numbers, booleans, NULL and JSON text'
   assert.equal(myWrite.literal(true), 'TRUE')
   assert.equal(myWrite.literal(-1.5), '-1.5')
   assert.equal(myWrite.literal({ a: 1 }), hex('{"a":1}'))
+})
+
+test('MySQL: bigint and decimal text is written as an exact number, other text stays hex', () => {
+  const big = { name: 'n', type: 'bigint(20) unsigned' }
+  assert.equal(myWrite.matchSql(big, '18446744073709551615'), '`n` <=> 18446744073709551615')
+  assert.equal(myWrite.matchSql({ name: 'd', type: 'decimal(10,2)' }, '-12.50'), '`d` <=> -12.50')
+  assert.equal(myWrite.matchSql(big, '1; DROP TABLE t'), `\`n\` <=> ${hex('1; DROP TABLE t')}`)
+  assert.equal(myWrite.matchSql({ name: 's', type: 'varchar(20)' }, '42'), `\`s\` <=> ${hex('42')}`)
+  assert.equal(myWrite.matchSql(big, null), '`n` <=> NULL')
+})
+
+test('rows return bigint and decimal as text in both SQL engines', () => {
+  const pgRows = require('./postgres-sql').rowsSql({ schema: 's', name: 't' }, [{ name: 'n', type: 'bigint' }, { name: 'm', type: 'numeric(10,2)' }, { name: 'i', type: 'integer' }], { limit: 1, offset: 0 })
+  assert.ok(pgRows.includes('to_jsonb("n"::text)'))
+  assert.ok(pgRows.includes('to_jsonb("m"::text)'))
+  assert.ok(pgRows.includes('THEN to_jsonb("i") ELSE'))
+  const myRows = require('./mysql-sql').rowsSql('shop', { name: 't' }, [{ name: 'n', type: 'bigint(20)' }, { name: 'd', type: 'decimal(10,2)' }], { limit: 1, offset: 0 })
+  assert.ok(myRows.includes('NULL, CAST(`n` AS CHAR), NULL, CAST(`d` AS CHAR)'))
 })
 
 test('MySQL UPDATE locks and counts the matched row, then updates with LIMIT 1', () => {
@@ -168,6 +188,26 @@ test('MongoDB update resolves the displayed _id and filters on the raw values ju
   assert.deepEqual(update.filter.gone, { $eq: null })
   assert.equal(update.update.$set.qty.value, 3)
   assert.equal(update.update.$set.note, 'x')
+})
+
+test('MongoDB _id: 24 hex characters match an ObjectId or the same string, other values as they are', async () => {
+  const hexId = '0123456789abcdef01234567'
+  assert.deepEqual(mongoEdit.idCandidates('plain-key'), ['plain-key'])
+  assert.deepEqual(mongoEdit.idCandidates('9007199254740993').map(String), ['9007199254740993', '9007199254740993'])
+  assert.equal(mongoEdit.idCandidates(7).length, 1)
+
+  const asObjectId = memoryStore([{ _id: new ObjectId(hexId), n: new Int32(1) }])
+  assert.equal(await mongoEdit.deleteRow(asObjectId, { name: 'c' }, { key: { _id: hexId }, original: { _id: hexId, n: 1 } }), 1)
+  assert.ok(asObjectId.calls[1].filter._id instanceof ObjectId)
+
+  const asString = memoryStore([{ _id: hexId, n: new Int32(1) }])
+  assert.equal(await mongoEdit.deleteRow(asString, { name: 'c' }, { key: { _id: hexId }, original: { n: 1 } }), 1)
+  assert.equal(asString.calls[1].filter._id, hexId)
+
+  const both = memoryStore([{ _id: new ObjectId(hexId) }, { _id: hexId }])
+  await assert.rejects(mongoEdit.deleteRow(both, { name: 'c' }, { key: { _id: hexId }, original: {} }), (err) => err.status === 400)
+  const typed = memoryStore([{ _id: new ObjectId(hexId) }, { _id: hexId }])
+  assert.equal(await mongoEdit.deleteRow(typed, { name: 'c' }, { key: { _id: { $oid: hexId } }, original: {} }), 1)
 })
 
 test('MongoDB: a changed original or a missing document matches nothing', async () => {

@@ -79,7 +79,7 @@ async function targetFilter(store, object, { key, original }) {
   if (matches.length > 1) throw httpError(400, 'Several documents match this _id; send it as Extended JSON, for example {"$oid": "…"}')
   const [doc] = matches
   if (!doc) return null
-  const fields = Object.keys(original)
+  const fields = Object.keys(original).filter((field) => field !== '_id')
   if (!fields.every((field) => sameValue(doc[field], original[field]))) return null
   return { _id: doc._id, ...Object.fromEntries(fields.map((field) => [field, { $eq: doc[field] === undefined ? null : doc[field] }])) }
 }

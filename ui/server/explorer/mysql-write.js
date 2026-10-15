@@ -1,6 +1,6 @@
 const { quoteIdent } = require('../drivers/mysql-common')
 const { httpError } = require('../validation')
-const { writable } = require('./mysql-sql')
+const { writable, baseType } = require('./mysql-sql')
 
 // UPDATE / DELETE of one row for the MySQL / MariaDB explorer. Names come
 // from the catalog; text travels as `_utf8mb4 X'<hex>'`, so no value can end
@@ -12,18 +12,22 @@ const { writable } = require('./mysql-sql')
 //   - MySQL JSON columns compare with CAST(... AS JSON), the browser got their text
 //   - FLOAT / DOUBLE / REAL columns are not compared: the page shows a rounded
 //     decimal that never equals the stored binary value
+// Numeric text for integer and decimal columns (bigint and decimal arrive as
+// strings) is written as a bare number: compared as a string, MySQL would
+// convert both sides to double and lose precision above 2^53.
 
 const APPROXIMATE_TYPES = new Set(['float', 'double', 'real'])
-
-const baseType = (column) => String(column.type).toLowerCase().split(/[\s(]/)[0]
+const EXACT_NUMERIC_TYPES = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint', 'decimal', 'numeric'])
+const NUMERIC_TEXT_RE = /^-?\d{1,65}(\.\d{1,30})?$/
 
 function hexText(text) {
   return `_utf8mb4 X'${Buffer.from(text, 'utf8').toString('hex')}'`
 }
 
 /** SQL literal for a JSON value; objects and arrays become their JSON text. */
-function literal(value) {
+function literal(value, column) {
   if (value === null) return 'NULL'
+  if (typeof value === 'string' && column && EXACT_NUMERIC_TYPES.has(baseType(column)) && NUMERIC_TEXT_RE.test(value)) return value
   if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE'
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) throw httpError(400, 'Numbers must be finite')
@@ -35,8 +39,8 @@ function literal(value) {
 
 function matchSql(column, value) {
   const c = quoteIdent(column.name)
-  if (value !== null && baseType(column) === 'json') return `${c} <=> CAST(${literal(value)} AS JSON)`
-  return `${c} <=> ${literal(value)}`
+  if (value !== null && baseType(column) === 'json') return `${c} <=> CAST(${literal(value, column)} AS JSON)`
+  return `${c} <=> ${literal(value, column)}`
 }
 
 function columnOf(columns, name) {
@@ -62,7 +66,7 @@ const tableSql = (database, object) => `${quoteIdent(database)}.${quoteIdent(obj
 function updateSql(database, object, columns, request) {
   const table = tableSql(database, object)
   const where = whereSql(columns, request)
-  const sets = Object.entries(request.changes).map(([name, value]) => `${quoteIdent(columnOf(columns, name).name)} = ${literal(value)}`)
+  const sets = Object.entries(request.changes).map(([name, value]) => `${quoteIdent(name)} = ${literal(value, columnOf(columns, name))}`)
   return writable([
     'START TRANSACTION;',
     `SELECT 1 FROM ${table} WHERE ${where} FOR UPDATE;`,

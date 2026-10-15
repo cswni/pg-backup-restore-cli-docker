@@ -27,25 +27,12 @@ function literal(text) {
 }
 
 const isJsonColumn = (column) => JSON_TYPES.has(column.castType)
-const isArrayColumn = (column) => column.castType.endsWith('[]')
 const isStructured = (value) => value !== null && typeof value === 'object'
 
-/** Array input syntax (`{"a","b",NULL}`) for a JSON array, nested arrays as sub-arrays. */
-function arrayLiteral(items) {
-  const element = (item) => {
-    if (item === null) return 'NULL'
-    if (Array.isArray(item)) return arrayLiteral(item)
-    const text = typeof item === 'object' ? JSON.stringify(item) : String(item)
-    return `"${text.replace(/[\\"]/g, '\\$&')}"`
-  }
-  return `{${items.map(element).join(',')}}`
-}
-
-/** SQL expression for a new value of `column`. */
+/** SQL expression for a value of `column`; bigint and numeric arrive as strings and cast exactly. */
 function valueSql(column, value) {
   if (value === null) return 'NULL'
   if (isJsonColumn(column)) return `${literal(JSON.stringify(value))}::${column.castType}`
-  if (Array.isArray(value) && isArrayColumn(column)) return `${literal(arrayLiteral(value))}::${column.castType}`
   if (isStructured(value)) throw httpError(400, `${column.name} takes text, a number or a boolean, not a JSON ${Array.isArray(value) ? 'array' : 'object'}`)
   return `${literal(String(value))}::${column.castType}`
 }
@@ -93,4 +80,4 @@ function parseCount(out) {
   return count
 }
 
-module.exports = { literal, arrayLiteral, valueSql, matchSql, updateSql, deleteSql, parseCount }
+module.exports = { literal, valueSql, matchSql, updateSql, deleteSql, parseCount }

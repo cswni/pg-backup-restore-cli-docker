@@ -91,9 +91,9 @@ test('an update runs as an audit job without the new values', async () => {
 })
 
 test('a delete matches the key plus the original values; key columns in original must agree', async () => {
-  const res = await del({ key: { id: 4 }, original: { id: 4, note: 'old', total: '9.50' } })
+  const res = await del({ key: { id: '9007199254740993' }, original: { id: '9007199254740993', note: null, total: '9.50' } })
   assert.equal(res.status, 200, res.text)
-  assert.deepEqual(calls[0].request, { key: { id: 4 }, original: { note: 'old', total: '9.50' }, changes: {} })
+  assert.deepEqual(calls[0].request, { key: { id: '9007199254740993' }, original: { note: null, total: '9.50' }, changes: {} })
   const job = await srv.request('GET', `/api/jobs/${res.json.jobId}`)
   assert.equal(job.json.type, 'explorer-delete')
   assert.equal((await del({ key: { id: 4 }, original: { id: 5 } })).status, 400)
