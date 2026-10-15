@@ -197,7 +197,7 @@ API (admin only):
 - Errors: 400 validation, 403 non-admin, 404 unknown object, 409 concurrency conflict / no matching row, 502 database error (message verbatim).
 
 Tasks:
-- [ ] E1 server: structure `editable`/`primaryKey`, PATCH/DELETE routes, SQL builders per engine (PostgreSQL, MySQL, MongoDB; Docker + direct), audit jobs, tests (injection attempts, conflicts, permissions)
+- [x] E1 server: structure `editable`/`primaryKey`, PATCH/DELETE routes, SQL builders per engine (PostgreSQL, MySQL, MongoDB; Docker + direct), audit jobs, tests (injection attempts, conflicts, permissions) (commits 9e18034, 3884205, 037e5e6, b79a6fa, 74b72e0, fc39cd5, README fa74b96)
 - [ ] E2 client: row click opens a row dialog (all roles, read-only fields); admins: Edit (per-field inputs: text, NULL toggle, JSON textarea for json/jsonb/document), Save with conflict handling, Delete with confirmation showing the key; refresh the page after success; Data tab copy no longer says read-only
 - [ ] E3 README + Explorer copy ("Nothing here changes data" → accurate), tests + build, deploy, verify on s1 on a scratch table (create a throwaway table only with the user's consent)
 
@@ -217,6 +217,7 @@ Tasks:
 - 2026-10-14: B3 done. Local smoke test: Explorer deep link, real errors with Retry, console guards (one statement, no meta-commands, MongoDB 400, user 403). Next: deploy and B4 check against s1 databases.
 - 2026-10-14: B4/B5 and Phase C done. Explorer verified on s1 against MariaDB and PostgreSQL containers. Deployed image 3f5d077f32ec.
 - 2026-10-14: D1 to D5 + README done (8310067, 5d591bd, b41913f, 99c5147, 3eae0cb); tests 331/331, build passes. Checked locally with a faked docker CLI (desktop + 375px): save, wrong/right password test, clear password, delete, not-running key, container page button. Not yet run against real containers; next: deploy and D6 check on s1. Note: pg-create/delete/unblock now pass `-d postgres` explicitly (same database psql picked before for the postgres user).
+- 2026-10-14: E1 done (9e18034..fa74b96): PATCH/DELETE /api/explorer/row as explorer-update/explorer-delete jobs, structure editability, rows now return bigint/decimal as text; tests 354/354, build passes. Fakes only, not run against real databases. Choices: PostgreSQL casts to format_type without typmod, json/jsonb compared as ::jsonb, arrays/composites via to_jsonb, arrays read-only; MySQL `_utf8mb4 X'..'` literals, bare numbers for exact numeric text, UPDATE counts matched rows with SELECT ... FOR UPDATE (ROW_COUNT() counts changed rows), FLOAT/DOUBLE not compared; MongoDB reads the document, compares display values, then writes with `$eq` on the raw values.
 
 ## Follow-ups (not started)
 
