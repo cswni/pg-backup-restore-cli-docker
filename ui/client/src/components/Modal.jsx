@@ -2,7 +2,7 @@ import React, { useId, useRef } from 'react'
 import { X } from 'lucide-react'
 import { useDialogFocus } from '../hooks/useDialogFocus'
 
-const WIDTHS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' }
+const WIDTHS = { md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl', '2xl': 'max-w-2xl' }
 
 /** Header close button, at least 44px square for touch. */
 export function CloseButton({ onClick, label = 'Close' }) {
@@ -24,7 +24,7 @@ export function CloseButton({ onClick, label = 'Close' }) {
  * Escape closes, focus moves in, stays in and returns to the opener on close.
  * The overlay scrolls, so tall dialogs stay usable on short screens.
  * @param {{ title: string, subtitle?: React.ReactNode, subtitleClassName?: string, icon?: React.ComponentType,
- *   onClose: () => void, size?: 'md'|'lg'|'xl', children: React.ReactNode }} props
+ *   onClose: () => void, size?: 'md'|'lg'|'xl'|'2xl', children: React.ReactNode }} props
  */
 export default function Modal({ title, subtitle, subtitleClassName = '', icon: Glyph, onClose, size = 'md', children }) {
   const ref = useRef(null)

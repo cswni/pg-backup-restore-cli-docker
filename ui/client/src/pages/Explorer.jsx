@@ -59,7 +59,7 @@ export default function Explorer() {
     <div className="p-4 md:p-8">
       <PageHeader
         title="Explorer"
-        subtitle="Browse the tables, views and collections of a database. Nothing here changes data."
+        subtitle="Browse the tables, views and collections of a database. Admins can edit or delete rows of tables with a primary key, and documents of collections."
         action={<Button variant="secondary" size="sm" onClick={refresh} className="min-h-[44px]"><Icon as={RefreshCw} /> Refresh</Button>}
       />
 

@@ -95,7 +95,7 @@ export default function Workspace({ base, engine, object, tab, onTab, isAdmin, m
   const idFor = (t, part) => `${prefix}-${t}-${part}`
   const key = object ? objectKey(object) : 'none'
   const panels = {
-    data: object ? <DataTab key={key} base={base} object={object} engine={engine} /> : <PickHint engine={engine} missingObject={missingObject} listState={listState} />,
+    data: object ? <DataTab key={key} base={base} object={object} engine={engine} isAdmin={isAdmin} /> : <PickHint engine={engine} missingObject={missingObject} listState={listState} />,
     structure: object ? <StructureTab key={key} base={base} object={object} engine={engine} /> : <PickHint engine={engine} missingObject={missingObject} listState={listState} />,
     query: <QueryTab base={base} sql={sql} onSqlChange={setSql} />,
   }

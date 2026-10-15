@@ -15,7 +15,7 @@ const KIND_CLASS = {
 }
 
 /** NULL as a small outlined token, so it never looks like the string "NULL". */
-function NullToken() {
+export function NullToken() {
   return <span className="rounded-md border border-zinc-600 px-1 py-px text-[11px] italic">NULL</span>
 }
 
@@ -92,22 +92,51 @@ function SortHeader({ column, sort, onSort }) {
   )
 }
 
+const STICKY_CELL = 'sticky left-0 bg-zinc-900 p-0 border-r border-zinc-800'
+
+function OpenRowCell({ label, onOpen }) {
+  return (
+    <td className={STICKY_CELL}>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={label}
+        className={`min-w-[44px] min-h-[44px] px-3 inline-flex items-center justify-center text-xs font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 ${FOCUS_RING}`}
+      >
+        Open
+      </button>
+    </td>
+  )
+}
+
+/** A click anywhere on a row opens it, except on its buttons or while text is being selected. */
+function rowClickHandler(onOpen) {
+  return (e) => {
+    if (e.target.closest('button, a, input, textarea, select')) return
+    if (window.getSelection()?.toString()) return
+    onOpen()
+  }
+}
+
 /**
  * Result grid shared by the Data and Query tabs: a real table with a caption,
  * sticky column headers, horizontal scroll inside its own box and a detail
- * dialog for long, binary and JSON values.
+ * dialog for long, binary and JSON values. With `onOpenRow`, each row gets an
+ * "Open" button and a click on the row opens it too.
  * @param {{ caption: string, columns: string[], rows: unknown[][], rowOffset?: number,
- *   sort?: { column: string, dir: 'asc'|'desc' } | null, onSort?: (sort: object) => void }} props
+ *   sort?: { column: string, dir: 'asc'|'desc' } | null, onSort?: (sort: object) => void,
+ *   onOpenRow?: (index: number) => void, rowNoun?: string }} props
  */
-export default function DataGrid({ caption, columns, rows, rowOffset = 0, sort = null, onSort }) {
+export default function DataGrid({ caption, columns, rows, rowOffset = 0, sort = null, onSort, onOpenRow, rowNoun = 'row' }) {
   const [detail, setDetail] = useState(null)
   return (
     <>
-      <div className="max-h-[65dvh] overflow-auto rounded-lg border border-zinc-800" tabIndex={0} aria-label={caption} role="region">
+      <div className="relative max-h-[65dvh] overflow-auto rounded-lg border border-zinc-800" tabIndex={0} aria-label={caption} role="region">
         <table className="min-w-full text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead className="sticky top-0 z-10 bg-zinc-950 text-left text-xs text-zinc-400">
             <tr className="border-b border-zinc-800">
+              {onOpenRow && <th scope="col" className="sticky left-0 z-20 bg-zinc-950 px-3 py-3 font-medium border-r border-zinc-800"><span className="sr-only">Open</span></th>}
               {columns.map((column) => (onSort
                 ? <SortHeader key={column} column={column} sort={sort} onSort={onSort} />
                 : <th key={column} scope="col" className="px-3 py-3 font-medium whitespace-nowrap">{column}</th>
@@ -116,7 +145,9 @@ export default function DataGrid({ caption, columns, rows, rowOffset = 0, sort =
           </thead>
           <tbody className="divide-y divide-zinc-800/60">
             {rows.map((row, i) => (
-              <tr key={rowOffset + i} className="hover:bg-zinc-800/30">
+              <tr key={rowOffset + i} className={`hover:bg-zinc-800/30 ${onOpenRow ? 'cursor-pointer' : ''}`}
+                onClick={onOpenRow ? rowClickHandler(() => onOpenRow(i)) : undefined}>
+                {onOpenRow && <OpenRowCell label={`Open ${rowNoun} ${rowOffset + i + 1}`} onOpen={() => onOpenRow(i)} />}
                 {columns.map((column, c) => (
                   <Cell key={column} column={column} cell={row[c]} onOpen={setDetail} />
                 ))}
