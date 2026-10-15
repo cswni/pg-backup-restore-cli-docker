@@ -2,6 +2,7 @@ const { BSON } = require('mongodb')
 const { capture } = require('../connectivity/process')
 const { _internals: { execArgs, dockerEnv } } = require('../drivers/mongodb-docker')
 const bson = require('./mongodb-bson')
+const edit = require('./mongodb-edit')
 
 // MongoDB explorer for Docker servers: the container's mongosh runs a fixed
 // program through the backup driver's shell wrapper (saved credentials or
@@ -42,6 +43,11 @@ if (req.op === 'objects') {
   const filter = EJSON.parse(req.filter, { relaxed: false })
   result = target.getCollection(req.collection).find(filter).sort(req.sort).skip(req.skip).limit(req.limit)
     .maxTimeMS(maxTimeMS).toArray()
+} else if (req.op === 'update') {
+  const r = target.getCollection(req.collection).updateOne(EJSON.parse(req.filter, { relaxed: false }), EJSON.parse(req.update, { relaxed: false }))
+  result = { matchedCount: r.matchedCount }
+} else if (req.op === 'delete') {
+  result = { deletedCount: target.getCollection(req.collection).deleteOne(EJSON.parse(req.filter, { relaxed: false })).deletedCount }
 } else {
   throw new Error('unknown explorer request ' + req.op)
 }
@@ -62,7 +68,21 @@ const toNumber = (v) => (v === null || v === undefined ? null : Number(bson.toJs
  * @param {(request: object) => Promise<any>} shell
  */
 function createSession(shell) {
+  const ejson = (value) => BSON.EJSON.stringify(value, { relaxed: false })
+  const store = {
+    find: (object, filter, limit) => shell({ op: 'rows', collection: object.name, filter: ejson(filter), sort: { _id: 1 }, skip: 0, limit }),
+    updateOne: async (object, filter, update) => {
+      const r = await shell({ op: 'update', collection: object.name, filter: ejson(filter), update: ejson(update) })
+      return { matchedCount: toNumber(r.matchedCount) }
+    },
+    deleteOne: async (object, filter) => {
+      const r = await shell({ op: 'delete', collection: object.name, filter: ejson(filter) })
+      return { deletedCount: toNumber(r.deletedCount) }
+    },
+  }
   return {
+    updateRow: (object, structure, request) => edit.updateRow(store, object, request),
+    deleteRow: (object, structure, request) => edit.deleteRow(store, object, request),
     async objects() {
       const list = await shell({ op: 'objects' })
       return list

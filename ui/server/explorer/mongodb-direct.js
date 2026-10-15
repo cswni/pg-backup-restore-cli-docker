@@ -1,6 +1,7 @@
 const { withConnection } = require('../connectivity/tunnel')
 const { _internals: { buildUri } } = require('../drivers/mongodb-direct')
 const bson = require('./mongodb-bson')
+const edit = require('./mongodb-edit')
 
 // MongoDB explorer for direct servers, through the Node.js driver. Same
 // connection settings as drivers/mongodb-direct.js: credentials are client
@@ -31,7 +32,14 @@ async function listObjects(db) {
 }
 
 function createSession(db) {
+  const store = {
+    find: (object, filter, limit) => db.collection(object.name).find(filter, { limit, maxTimeMS: bson.MAX_TIME_MS, ...RAW_VALUES }).toArray(),
+    updateOne: (object, filter, update) => db.collection(object.name).updateOne(filter, update),
+    deleteOne: (object, filter) => db.collection(object.name).deleteOne(filter),
+  }
   return {
+    updateRow: (object, structure, request) => edit.updateRow(store, object, request),
+    deleteRow: (object, structure, request) => edit.deleteRow(store, object, request),
     objects: () => listObjects(db),
     async structure(object) {
       const coll = db.collection(object.name)

@@ -59,13 +59,14 @@ test('docsToRows unions fields with _id first', () => {
 })
 
 test('toStructure reports observed types, missing fields as nullable and indexes', () => {
-  const sample = [{ _id: new ObjectId(), qty: new Int32(1) }, { _id: new ObjectId(), qty: new Double(1.5), tag: 'x' }]
+  const sample = [{ _id: new ObjectId(), qty: new Int32(1) }, { _id: new ObjectId(), qty: new Double(1.5), tag: 'x', raw: new Binary(Buffer.from([1])) }]
   const indexes = [{ name: '_id_', key: { _id: 1 } }, { name: 'tag_qty', key: { tag: 1, qty: -1 }, unique: true }]
   assert.deepEqual(bson.toStructure(sample, indexes), {
     columns: [
-      { name: '_id', type: 'objectId', nullable: false, default: null, primaryKey: true },
-      { name: 'qty', type: 'int|double', nullable: false, default: null, primaryKey: false },
-      { name: 'tag', type: 'string', nullable: true, default: null, primaryKey: false },
+      { name: '_id', type: 'objectId', nullable: false, default: null, primaryKey: true, editable: false },
+      { name: 'qty', type: 'int|double', nullable: false, default: null, primaryKey: false, editable: true },
+      { name: 'tag', type: 'string', nullable: true, default: null, primaryKey: false, editable: true },
+      { name: 'raw', type: 'binData', nullable: true, default: null, primaryKey: false, editable: false },
     ],
     indexes: [{ name: '_id_', columns: ['_id'], unique: true }, { name: 'tag_qty', columns: ['tag', 'qty'], unique: true }],
   })

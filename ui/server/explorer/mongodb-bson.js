@@ -129,7 +129,10 @@ function toStructure(sample, indexes) {
       if (!(name in doc) || doc[name] === null) nullable = true
       if (name in doc) types.add(bsonType(doc[name]))
     }
-    return { name, type: [...types].join('|'), nullable, default: null, primaryKey: name === '_id' }
+    return {
+      name, type: [...types].join('|'), nullable, default: null, primaryKey: name === '_id',
+      editable: name !== '_id' && !types.has('binData'),
+    }
   })
   return {
     columns,
