@@ -266,9 +266,9 @@ credentials the backups use.
 | Who | Can |
 |-----|-----|
 | every signed-in role | list objects, see their structure, page through rows (any role can already download full backups) |
-| `admin` | also run SQL in the console (PostgreSQL and MySQL/MariaDB) |
+| `admin` | also run SQL in the console (PostgreSQL and MySQL/MariaDB), and edit or delete single rows |
 
-Everything is read-only:
+Browsing and the console are read-only:
 
 - Every query runs in a read-only transaction with a 10 s statement timeout
   (`statement_timeout` on PostgreSQL, `max_execution_time` on MySQL,
@@ -290,6 +290,31 @@ The read-only transaction is the guard against writes, so extensions that open
 their own connections (such as `dblink`) can still write; that is one reason
 the console is admin-only. MySQL console results are text (numbers included),
 and a text value `NULL` cannot be told apart from a real NULL there.
+
+### Editing and deleting rows (admins)
+
+Admins can change or delete one row at a time from the Data tab:
+
+- Only tables with a primary key (PostgreSQL, MySQL/MariaDB) and collections
+  (MongoDB, by `_id`) can be edited. Views, foreign tables and tables without
+  a primary key stay read-only, and the Structure tab says why.
+- Primary key columns, generated and identity `ALWAYS` columns, binary
+  columns, PostgreSQL arrays and values cut at 2,000 characters cannot be
+  edited.
+- Conflict check: the change only applies when the row still holds the values
+  the page showed (`IS NOT DISTINCT FROM` on PostgreSQL, `<=>` on MySQL, an
+  equality filter on MongoDB). If someone changed or deleted it in between,
+  nothing is written and the UI asks you to reload. A delete compares every
+  loaded value of the row. MySQL `FLOAT`/`DOUBLE` columns are not compared
+  (the page shows a rounded value).
+- `bigint` and `decimal` values are shown as text so they keep every digit.
+- MongoDB values are read as Extended JSON (`{"$oid": "…"}`,
+  `{"$date": "…"}`); field names starting with `$` or containing dots are
+  refused, and `_id` cannot be changed.
+- Each change has a 10 s statement timeout and runs as a job
+  (`explorer-update` or `explorer-delete`) that records the server, database,
+  table, the row's key and the changed column names (never the new values) and
+  who made it, so it shows up in Jobs history and in notifications.
 
 ---
 
