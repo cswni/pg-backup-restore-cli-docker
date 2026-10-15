@@ -198,7 +198,7 @@ API (admin only):
 
 Tasks:
 - [ ] E1 server: structure `editable`/`primaryKey`, PATCH/DELETE routes, SQL builders per engine (PostgreSQL, MySQL, MongoDB; Docker + direct), audit jobs, tests (injection attempts, conflicts, permissions)
-- [ ] E2 client: row click opens a row dialog (all roles, read-only fields); admins: Edit (per-field inputs: text, NULL toggle, JSON textarea for json/jsonb/document), Save with conflict handling, Delete with confirmation showing the key; refresh the page after success; Data tab copy no longer says read-only
+- [x] E2 client: row click opens a row dialog (all roles, read-only fields); admins: Edit (per-field inputs: text, NULL toggle, JSON textarea for json/jsonb/document), Save with conflict handling, Delete with confirmation showing the key; refresh the page after success; Data tab copy no longer says read-only (commits 60d0765, b98d7f7)
 - [ ] E3 README + Explorer copy ("Nothing here changes data" → accurate), tests + build, deploy, verify on s1 on a scratch table (create a throwaway table only with the user's consent)
 
 ## Phase C: release
@@ -224,3 +224,4 @@ Tasks:
 - [ ] `mcp-postgres-core`: custom image without an OS user `postgres`, so `docker exec -u postgres` fails. Option: fall back to `docker exec <ctr> psql -U postgres` when the user does not exist.
 - [ ] Explorer not yet exercised against MongoDB or a direct (SSH-tunnelled) server.
 - 2026-10-14: Phase D merged (067fd77), CI green, deployed bc885eeb24a0; no regressions on s1 (mariadb 4 dbs, postgres 8 dbs). Waiting for the user to save credentials for the two failing containers.
+- 2026-10-14: E2 done (60d0765, b98d7f7): RowDialog/RowField/rowValues in `components/explorer`, `api.explorer.updateRow/deleteRow`; checked against a throwaway mock of the Phase E contract (desktop + 375px, PATCH payloads, 409 + Reload, 502 verbatim, delete confirmation, view not editable, non-admin read-only); build + 331 tests green. Client keeps PostgreSQL arrays and MongoDB date/ObjectId/long/decimal fields read-only. Also fixed a 375px page overflow from the grid's sr-only labels.
