@@ -6,14 +6,20 @@ const { assertMongoName } = require('../drivers/mongodb-common')
 const { resolveTarget, findObject, rowOptions, queryLimit } = require('./params')
 const { checkConsoleSql } = require('./sql-guard')
 const { parseFilter } = require('./mongodb-bson')
+const { checkValues: checkMongoValues } = require('./mongodb-edit')
+const { parseRowRequest, editableStructure, checkRowRequest, runRowJob, rowJobMeta } = require('./editing')
 
-// Database Explorer API: browse tables, views and collections, read-only.
-//   GET  /api/explorer/objects    every signed-in role
-//   GET  /api/explorer/structure  every signed-in role
-//   GET  /api/explorer/rows       every signed-in role
-//   POST /api/explorer/query      admins; PostgreSQL and MySQL only
-// Errors: 400 validation, 403 console for non-admins, 404 unknown object,
-// 502 when the database or its client tool fails (with the tool's message).
+// Database Explorer API: browse tables, views and collections; admins can
+// also change single rows.
+//   GET    /api/explorer/objects    every signed-in role
+//   GET    /api/explorer/structure  every signed-in role
+//   GET    /api/explorer/rows       every signed-in role
+//   POST   /api/explorer/query      admins; PostgreSQL and MySQL only, read-only
+//   PATCH  /api/explorer/row        admins; one row by primary key (MongoDB: _id)
+//   DELETE /api/explorer/row        admins; same
+// Errors: 400 validation, 403 admin-only endpoints, 404 unknown object,
+// 409 row changed or gone, 502 when the database or its client tool fails
+// (with the tool's message).
 
 const MAX_ERROR_LENGTH = 2000
 
@@ -47,9 +53,10 @@ router.get('/explorer/objects', handle(async (req, res) => {
 }))
 
 router.get('/explorer/structure', handle(async (req, res) => {
-  const structure = await withSession(resolve(req.query), async (session) => {
+  const ctx = resolve(req.query)
+  const structure = await withSession(ctx, async (session) => {
     const object = findObject(await session.objects(), req.query)
-    return session.structure(object)
+    return editableStructure(ctx.engine, object, await session.structure(object))
   })
   res.json(structure)
 }))
@@ -88,5 +95,40 @@ router.post('/explorer/query', requireAdmin, handle(async (req, res) => {
     durationMs: Date.now() - started,
   })
 }))
+
+function describeChange(op, object, request) {
+  const where = object.schema ? `${object.schema}.${object.name}` : object.name
+  const key = Object.entries(request.key).map(([column, value]) => `${column} = ${JSON.stringify(value)}`).join(', ')
+  return op === 'update'
+    ? `Updated 1 row in ${where} (${key}): ${Object.keys(request.changes).join(', ')}`
+    : `Deleted 1 row from ${where} (${key})`
+}
+
+/**
+ * PATCH / DELETE /explorer/row: checks against the catalog, then the change
+ * runs as an audit job and the response waits for it.
+ * @param {'update'|'delete'} op
+ */
+function rowChangeRoute(op) {
+  return handle(async (req, res) => {
+    const body = req.body ?? {}
+    const ctx = resolve(body)
+    const parsed = parseRowRequest(body, op)
+    const jobId = await withSession(ctx, async (session) => {
+      const object = findObject(await session.objects(), body)
+      const structure = await session.structure(object)
+      const request = checkRowRequest(parsed, editableStructure(ctx.engine, object, structure), ctx.engine)
+      if (ctx.engine === 'mongodb') checkMongoValues(request)
+      const job = { type: `explorer-${op}`, meta: rowJobMeta(ctx, object, request), username: req.user?.username, describe: describeChange(op, object, request) }
+      return runRowJob(job, () => (op === 'update'
+        ? session.updateRow(object, structure, request)
+        : session.deleteRow(object, structure, request)))
+    })
+    res.json({ ok: true, jobId })
+  })
+}
+
+router.patch('/explorer/row', requireAdmin, rowChangeRoute('update'))
+router.delete('/explorer/row', requireAdmin, rowChangeRoute('delete'))
 
 module.exports = { router }

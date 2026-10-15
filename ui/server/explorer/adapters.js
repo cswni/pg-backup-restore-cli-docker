@@ -12,7 +12,11 @@ const { httpError } = require('../validation')
 //   rows(object, { limit, offset, sort, dir, filter, structure })
 //                                -> { columns, rows }   at most limit + 1 rows
 //   query(sql, limit)            -> { columns, rows }   at most limit + 1 rows
+//   updateRow(object, structure, { key, original, changes }) -> rows matched (0 or 1)
+//   deleteRow(object, structure, { key, original })          -> rows deleted (0 or 1)
 // }
+// structure() may add internal fields (column.editable, castType,
+// readOnlyReason); editing.editableStructure() shapes what the API returns.
 // `object` always comes from objects(), so names used in SQL exist in the
 // catalog. Rows are returned already shaped as cells (see cells.js).
 

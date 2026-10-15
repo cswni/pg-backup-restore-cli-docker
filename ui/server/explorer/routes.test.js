@@ -80,7 +80,13 @@ test('target validation answers 400', async () => {
 test('structure needs an object from the catalog; 404 otherwise', async () => {
   const ok = await get(`/api/explorer/structure?${base}&schema=public&name=orders`, asUser)
   assert.equal(ok.status, 200, ok.text)
-  assert.deepEqual(ok.json, state.structure)
+  assert.deepEqual(ok.json, {
+    columns: [{ ...state.structure.columns[0], editable: false }],
+    indexes: [],
+    editable: true,
+    editableReason: null,
+    primaryKey: ['id'],
+  })
   assert.deepEqual(calls.find((c) => c.op === 'structure').object, state.objects[2])
 
   const missing = await get(`/api/explorer/structure?${base}&schema=public&name=${encodeURIComponent('orders"; DROP TABLE x')}`)
