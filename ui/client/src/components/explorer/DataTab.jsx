@@ -1,15 +1,17 @@
-import React, { useId, useState } from 'react'
+import React, { useEffect, useId, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useRequest } from '../../hooks/useRequest'
-import { Button, ErrorAlert, Icon } from '../UI'
+import { Button, ErrorAlert, Icon, Toast } from '../UI'
 import { formatCount } from '../../lib/format'
 import DataGrid, { FOCUS_RING } from './DataGrid'
 import Loading from './Loading'
+import RowDialog from './RowDialog'
 import { SELECT_CLASS } from './TargetPicker'
 
 const PAGE_SIZES = [25, 50, 100, 200]
 const DEFAULT_PAGE_SIZE = 50
+const NOTICE_MS = 5000
 const FILTER_EXAMPLE = '{ "status": "active" }'
 
 /** Parse a MongoDB filter; returns { error } when it is not a JSON object. */
@@ -104,21 +106,37 @@ function Pager({ data, pageSize, busy, onPageSize, onOffset }) {
   )
 }
 
+/** Success message that clears itself after a few seconds. */
+function useNotice() {
+  const [notice, setNotice] = useState(null)
+  const timer = useRef(null)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  function show(message) {
+    clearTimeout(timer.current)
+    setNotice(message)
+    timer.current = setTimeout(() => setNotice(null), NOTICE_MS)
+  }
+  return { notice, show, dismiss: () => setNotice(null) }
+}
+
 /**
- * Rows of one table, view or collection, a page at a time.
- * @param {{ base: object, object: { schema: string|null, name: string, type: string }, engine: string }} props
+ * Rows of one table, view or collection, a page at a time. A row opens in a
+ * dialog; admins can edit or delete it there when the object allows it.
+ * @param {{ base: object, object: { schema: string|null, name: string, type: string }, engine: string, isAdmin: boolean }} props
  */
-export default function DataTab({ base, object, engine }) {
+export default function DataTab({ base, object, engine, isAdmin }) {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [offset, setOffset] = useState(0)
   const [sort, setSort] = useState(null)
   const [filter, setFilter] = useState('')
+  const [openIndex, setOpenIndex] = useState(null)
+  const { notice, show, dismiss } = useNotice()
   const isMongo = engine === 'mongodb'
 
+  const target = { ...base, schema: object.schema ?? undefined, name: object.name }
+  const structure = useRequest(() => api.explorer.structure(target), [JSON.stringify(target)])
   const params = {
-    ...base,
-    schema: object.schema ?? undefined,
-    name: object.name,
+    ...target,
     limit: pageSize,
     offset,
     sort: sort?.column,
@@ -132,8 +150,17 @@ export default function DataTab({ base, object, engine }) {
   const label = `${object.schema ? `${object.schema}.` : ''}${object.name}`
   const caption = `Rows of ${label}${sort ? `, sorted by ${sort.column} ${sort.dir === 'asc' ? 'ascending' : 'descending'}` : ''}`
 
+  const openRow = openIndex !== null && data ? data.rows[openIndex] : null
+
+  function closeAndReload(message) {
+    setOpenIndex(null)
+    if (message) show(message)
+    rows.reload()
+  }
+
   return (
     <div>
+      {notice && <Toast type="success" message={notice} onDismiss={dismiss} />}
       {isMongo && <MongoFilter applied={filter} onApply={restart(setFilter)} />}
       {rows.error && <ErrorAlert message={rows.error} onRetry={rows.reload} />}
       {!rows.error && !data && <Loading>Loading rows…</Loading>}
@@ -147,10 +174,15 @@ export default function DataTab({ base, object, engine }) {
           {rows.loading && <Loading className="pb-2">Loading the page…</Loading>}
           <div className={rows.loading ? 'opacity-60' : undefined}>
             <DataGrid caption={caption} columns={data.columns} rows={data.rows} rowOffset={data.offset}
-              sort={sort} onSort={restart(setSort)} />
+              sort={sort} onSort={restart(setSort)} onOpenRow={setOpenIndex} rowNoun={isMongo ? 'document' : 'row'} />
           </div>
           <Pager data={data} pageSize={pageSize} busy={rows.loading} onPageSize={restart(setPageSize)} onOffset={setOffset} />
         </>
+      )}
+      {openRow && (
+        <RowDialog target={target} object={object} engine={engine} columns={data.columns} row={openRow}
+          rowNumber={data.offset + openIndex + 1} structure={structure} isAdmin={isAdmin}
+          onClose={() => setOpenIndex(null)} onDone={closeAndReload} onReloadRows={() => closeAndReload(null)} />
       )}
     </div>
   )

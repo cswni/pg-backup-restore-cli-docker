@@ -195,6 +195,10 @@ export const api = {
     rows: (params) => req('GET', `/api/explorer/rows${qs(params)}`),
     // body: { serverId, engine, container, database, sql, limit }; admin only
     query: (body) => req('POST', '/api/explorer/query', body),
+    // body: { serverId, engine, container, database, schema, name, key, original, changes }; admin only, 409 on conflict
+    updateRow: (body) => req('PATCH', '/api/explorer/row', body),
+    // body: { serverId, engine, container, database, schema, name, key, original }; admin only, 409 on conflict
+    deleteRow: (body) => req('DELETE', '/api/explorer/row', body),
   },
   monitoring: {
     health: () => req('GET', '/api/health'),
