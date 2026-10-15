@@ -15,6 +15,11 @@ function readOnly(sql) {
   return `BEGIN READ ONLY;\nSET LOCAL statement_timeout = '${STATEMENT_TIMEOUT}';\n${sql}`
 }
 
+/** Row edits: no read-only transaction; psql -c runs both statements in one implicit transaction. */
+function writable(sql) {
+  return `SET statement_timeout = '${STATEMENT_TIMEOUT}';\n${sql}`
+}
+
 const OBJECTS_SQL = `SELECT jsonb_build_array(n.nspname, c.relname, c.relkind,
     CASE WHEN c.relkind IN ('r', 'p', 'm') AND c.reltuples >= 0 THEN c.reltuples::bigint END,
     CASE WHEN c.relkind IN ('r', 'p', 'm') THEN pg_total_relation_size(c.oid) END)
@@ -44,14 +49,23 @@ function regclass(object) {
   return `${quoteLiteral(`${quoteIdent(object.schema)}.${quoteIdent(object.name)}`)}::regclass`
 }
 
+/**
+ * Columns (with the cast type, format_type without typmod, and whether the
+ * column is generated or identity ALWAYS), indexes and the relkind.
+ * information_schema keeps this working on servers older than PostgreSQL 12.
+ */
 function structureSql(object) {
   const rel = regclass(object)
   return `SELECT jsonb_build_object(
+  'relkind', (SELECT relkind FROM pg_class WHERE oid = ${rel}),
   'columns', (SELECT coalesce(jsonb_agg(jsonb_build_array(a.attname, format_type(a.atttypid, a.atttypmod),
-        NOT a.attnotnull, pg_get_expr(d.adbin, d.adrelid), coalesce(a.attnum = ANY (pk.indkey), false)) ORDER BY a.attnum), '[]'::jsonb)
+        NOT a.attnotnull, pg_get_expr(d.adbin, d.adrelid), coalesce(a.attnum = ANY (pk.indkey), false),
+        format_type(a.atttypid, NULL), coalesce(isc.is_generated = 'ALWAYS' OR isc.identity_generation = 'ALWAYS', false)) ORDER BY a.attnum), '[]'::jsonb)
     FROM pg_attribute a
     LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
     LEFT JOIN pg_index pk ON pk.indrelid = a.attrelid AND pk.indisprimary
+    LEFT JOIN information_schema.columns isc ON isc.table_schema = ${quoteLiteral(object.schema)}
+      AND isc.table_name = ${quoteLiteral(object.name)} AND isc.column_name = a.attname
     WHERE a.attrelid = ${rel} AND a.attnum > 0 AND NOT a.attisdropped),
   'indexes', (SELECT coalesce(jsonb_agg(jsonb_build_array(ic.relname, i.indisunique,
         (SELECT jsonb_agg(coalesce(ia.attname, pg_get_indexdef(i.indexrelid, k.n::int, true)) ORDER BY k.n)
@@ -61,12 +75,21 @@ function structureSql(object) {
     WHERE i.indrelid = ${rel}))`
 }
 
+/**
+ * Internal structure: public column fields plus `editable` (false for key,
+ * bytea and generated/identity ALWAYS columns) and `castType` for row edits.
+ */
 function parseStructure(out) {
   const [doc] = jsonLines(out)
   if (!doc) throw new Error('psql returned no structure')
   return {
-    columns: doc.columns.map(([name, type, nullable, def, primaryKey]) => ({ name, type, nullable, default: def ?? null, primaryKey })),
+    columns: doc.columns.map(([name, type, nullable, def, primaryKey, castType, generated]) => ({
+      name, type, nullable, default: def ?? null, primaryKey,
+      editable: !primaryKey && !generated && type !== 'bytea',
+      castType: castType || type,
+    })),
     indexes: doc.indexes.map(([name, unique, columns]) => ({ name, columns: columns || [], unique })),
+    readOnlyReason: doc.relkind === 'f' ? 'Foreign tables are read-only here.' : null,
   }
 }
 
@@ -150,6 +173,6 @@ function parseHeader(out) {
 }
 
 module.exports = {
-  STATEMENT_TIMEOUT, OBJECTS_SQL, readOnly, parseObjects, structureSql, parseStructure,
+  STATEMENT_TIMEOUT, OBJECTS_SQL, readOnly, writable, jsonLines, parseObjects, structureSql, parseStructure,
   rowsSql, parseRows, consoleSql, consoleHeaderSql, parseConsole, parseHeader, columnKind,
 }

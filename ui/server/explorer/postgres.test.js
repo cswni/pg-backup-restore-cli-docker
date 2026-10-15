@@ -35,17 +35,30 @@ test('objects query skips system schemas and maps relkinds', () => {
 test('structure query quotes catalog names as a regclass literal', () => {
   const text = sql.structureSql({ schema: "it's", name: 'Order "Lines"' })
   assert.ok(text.includes(`'"it''s"."Order ""Lines"""'::regclass`))
+  assert.ok(text.includes(`isc.table_schema = 'it''s'`))
+  assert.ok(text.includes("isc.is_generated = 'ALWAYS' OR isc.identity_generation = 'ALWAYS'"))
   const out = JSON.stringify({
-    columns: [['id', 'integer', false, "nextval('s'::regclass)", true], ['note', 'text', true, null, false]],
+    relkind: 'r',
+    columns: [
+      ['id', 'integer', false, "nextval('s'::regclass)", true, 'integer', false],
+      ['note', 'character varying(20)', true, null, false, 'character varying', false],
+      ['total', 'numeric(10,2)', true, null, false, 'numeric', true],
+      ['blob', 'bytea', true, null, false, 'bytea', false],
+    ],
     indexes: [['orders_pkey', true, ['id']], ['orders_lower', false, ['lower(note)']]],
   })
   assert.deepEqual(sql.parseStructure(`${out}\n`), {
     columns: [
-      { name: 'id', type: 'integer', nullable: false, default: "nextval('s'::regclass)", primaryKey: true },
-      { name: 'note', type: 'text', nullable: true, default: null, primaryKey: false },
+      { name: 'id', type: 'integer', nullable: false, default: "nextval('s'::regclass)", primaryKey: true, editable: false, castType: 'integer' },
+      { name: 'note', type: 'character varying(20)', nullable: true, default: null, primaryKey: false, editable: true, castType: 'character varying' },
+      { name: 'total', type: 'numeric(10,2)', nullable: true, default: null, primaryKey: false, editable: false, castType: 'numeric' },
+      { name: 'blob', type: 'bytea', nullable: true, default: null, primaryKey: false, editable: false, castType: 'bytea' },
     ],
     indexes: [{ name: 'orders_pkey', columns: ['id'], unique: true }, { name: 'orders_lower', columns: ['lower(note)'], unique: false }],
+    readOnlyReason: null,
   })
+  const foreign = sql.parseStructure(JSON.stringify({ relkind: 'f', columns: [], indexes: [] }))
+  assert.equal(foreign.readOnlyReason, 'Foreign tables are read-only here.')
 })
 
 test('rows query quotes names, sorts by the primary key by default and fetches one extra row', () => {

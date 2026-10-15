@@ -4,6 +4,7 @@ const { capture, toolEnv } = require('../connectivity/process')
 const { _internals: { pgEnv } } = require('../drivers/postgres-direct')
 const { postgresAccess, postgresExecOptions } = require('../containercreds/access')
 const sql = require('./postgres-sql')
+const write = require('./postgres-write')
 
 // PostgreSQL explorer. psql runs inside the container for Docker servers
 // (as the postgres OS user or the saved credentials, like drivers/postgres-docker.js) and in this
@@ -11,12 +12,16 @@ const sql = require('./postgres-sql')
 
 const PSQL_TIMEOUT_MS = 30000
 
-/** psql arguments; `header` prints column names (NUL-separated) instead of tuples only. */
-function psqlArgs(database, text, { header = false } = {}) {
+/**
+ * psql arguments; `header` prints column names (NUL-separated) instead of
+ * tuples only; `text` from postgres-write.js is passed with `raw` (it sets
+ * its own timeout and is not read-only).
+ */
+function psqlArgs(database, text, { header = false, raw = false } = {}) {
   return [
     '-X', '-w', '-q', '-v', 'ON_ERROR_STOP=1',
     ...(header ? ['-A', '-z', '-P', 'footer=off'] : ['-t', '-A']),
-    '-d', database, '-c', sql.readOnly(text),
+    '-d', database, '-c', raw ? text : sql.readOnly(text),
   ]
 }
 
@@ -42,6 +47,12 @@ function createSession(psql, database) {
       const result = sql.parseConsole(await run(sql.consoleSql(text, limit)))
       if (result.rows.length) return result
       return { columns: sql.parseHeader(await run(sql.consoleHeaderSql(text), { header: true })), rows: [] }
+    },
+    async updateRow(object, structure, request) {
+      return write.parseCount(await run(write.updateSql(object, structure.columns, request), { raw: true }))
+    },
+    async deleteRow(object, structure, request) {
+      return write.parseCount(await run(write.deleteSql(object, structure.columns, request), { raw: true }))
     },
   }
 }
