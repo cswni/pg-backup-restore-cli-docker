@@ -38,9 +38,12 @@ test('objects come from information_schema.TABLES', () => {
 test('structure groups index columns and reads booleans', () => {
   const text = sql.structureSql('shop', { name: 'it\'s' })
   assert.ok(text.includes("TABLE_NAME = 'it''s'"))
+  assert.ok(text.includes("EXTRA LIKE '%VIRTUAL%' OR EXTRA LIKE '%STORED%' OR EXTRA LIKE '%PERSISTENT%'"))
   const out = [
-    '["c", "id", "int(11)", 0, null, 1]',
-    '["c", "email", "varchar(200)", 1, "NULL", 0]',
+    '["c", "id", "int(11)", 0, null, 1, 0]',
+    '["c", "email", "varchar(200)", 1, "NULL", 0, 0]',
+    '["c", "full", "varchar(400)", 1, null, 0, 1]',
+    '["c", "photo", "blob", 1, null, 0, 0]',
     '["i", "PRIMARY", 1, "id"]',
     '["i", "by_name", 0, "last"]',
     '["i", "by_name", 0, "first"]',
@@ -48,8 +51,10 @@ test('structure groups index columns and reads booleans', () => {
   ].join('\n')
   assert.deepEqual(sql.parseStructure(out), {
     columns: [
-      { name: 'id', type: 'int(11)', nullable: false, default: null, primaryKey: true },
-      { name: 'email', type: 'varchar(200)', nullable: true, default: 'NULL', primaryKey: false },
+      { name: 'id', type: 'int(11)', nullable: false, default: null, primaryKey: true, editable: false },
+      { name: 'email', type: 'varchar(200)', nullable: true, default: 'NULL', primaryKey: false, editable: true },
+      { name: 'full', type: 'varchar(400)', nullable: true, default: null, primaryKey: false, editable: false },
+      { name: 'photo', type: 'blob', nullable: true, default: null, primaryKey: false, editable: false },
     ],
     indexes: [
       { name: 'PRIMARY', columns: ['id'], unique: true },

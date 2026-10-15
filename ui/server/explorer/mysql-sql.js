@@ -13,14 +13,26 @@ const STATEMENT_TIMEOUT_S = 10
  * max_execution_time (ms), MariaDB max_statement_time (s); a prepared SET
  * picks the right one without an extra round trip.
  */
+const TIMEOUT_LINES = [
+  `SET @pgui_timeout = IF(VERSION() LIKE '%MariaDB%', 'SET SESSION max_statement_time = ${STATEMENT_TIMEOUT_S}', 'SET SESSION max_execution_time = ${STATEMENT_TIMEOUT_S * 1000}');`,
+  'PREPARE pgui_timeout FROM @pgui_timeout;',
+  'EXECUTE pgui_timeout;',
+  'DEALLOCATE PREPARE pgui_timeout;',
+]
+
 function readOnly(sql) {
+  return ['SET SESSION TRANSACTION READ ONLY;', ...TIMEOUT_LINES, 'START TRANSACTION READ ONLY;', sql].join('\n')
+}
+
+/**
+ * Row edits: the same timeout without the read-only transaction. MySQL's
+ * max_execution_time only covers SELECT, so lock waits get the same limit.
+ */
+function writable(sql) {
   return [
-    'SET SESSION TRANSACTION READ ONLY;',
-    `SET @pgui_timeout = IF(VERSION() LIKE '%MariaDB%', 'SET SESSION max_statement_time = ${STATEMENT_TIMEOUT_S}', 'SET SESSION max_execution_time = ${STATEMENT_TIMEOUT_S * 1000}');`,
-    'PREPARE pgui_timeout FROM @pgui_timeout;',
-    'EXECUTE pgui_timeout;',
-    'DEALLOCATE PREPARE pgui_timeout;',
-    'START TRANSACTION READ ONLY;',
+    ...TIMEOUT_LINES,
+    `SET SESSION innodb_lock_wait_timeout = ${STATEMENT_TIMEOUT_S};`,
+    `SET SESSION lock_wait_timeout = ${STATEMENT_TIMEOUT_S};`,
     sql,
   ].join('\n')
 }
@@ -42,10 +54,15 @@ function parseObjects(out) {
   })
 }
 
-/** Columns and indexes in one call; the first array item tells the result sets apart. */
+/**
+ * Columns and indexes in one call; the first array item tells the result sets
+ * apart. Generated columns say VIRTUAL, STORED or PERSISTENT in EXTRA (MySQL's
+ * DEFAULT_GENERATED is only an expression default).
+ */
 function structureSql(database, object) {
   const where = `TABLE_SCHEMA = ${quoteLiteral(database)} AND TABLE_NAME = ${quoteLiteral(object.name)}`
-  return `SELECT JSON_ARRAY('c', COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE = 'YES', COLUMN_DEFAULT, COLUMN_KEY = 'PRI')
+  return `SELECT JSON_ARRAY('c', COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE = 'YES', COLUMN_DEFAULT, COLUMN_KEY = 'PRI',
+    EXTRA LIKE '%VIRTUAL%' OR EXTRA LIKE '%STORED%' OR EXTRA LIKE '%PERSISTENT%')
   FROM information_schema.COLUMNS WHERE ${where} ORDER BY ORDINAL_POSITION;
 SELECT JSON_ARRAY('i', INDEX_NAME, NON_UNIQUE = 0, COLUMN_NAME)
   FROM information_schema.STATISTICS WHERE ${where} ORDER BY INDEX_NAME, SEQ_IN_INDEX;`
@@ -56,8 +73,9 @@ function parseStructure(out) {
   const indexes = new Map()
   for (const [tag, ...fields] of jsonLines(out)) {
     if (tag === 'c') {
-      const [name, type, nullable, def, primaryKey] = fields
-      columns.push({ name, type, nullable: Boolean(nullable), default: def ?? null, primaryKey: Boolean(primaryKey) })
+      const [name, type, nullable, def, primaryKey, generated] = fields
+      const column = { name, type, nullable: Boolean(nullable), default: def ?? null, primaryKey: Boolean(primaryKey) }
+      columns.push({ ...column, editable: !column.primaryKey && !generated && columnKind(column) !== 'binary' })
     } else if (tag === 'i') {
       const [name, unique, column] = fields
       const index = indexes.get(name) || { name, columns: [], unique: Boolean(unique) }
@@ -148,6 +166,6 @@ function parseBatch(out) {
 }
 
 module.exports = {
-  STATEMENT_TIMEOUT_S, readOnly, objectsSql, parseObjects, structureSql, parseStructure, columnKind,
+  STATEMENT_TIMEOUT_S, readOnly, writable, jsonLines, objectsSql, parseObjects, structureSql, parseStructure, columnKind,
   rowsSql, parseRows, consoleSql, batchField, parseBatch,
 }

@@ -1,6 +1,7 @@
 const mysqlDocker = require('../drivers/mysql-docker')
 const mysqlDirect = require('../drivers/mysql-direct')
 const sql = require('./mysql-sql')
+const write = require('./mysql-write')
 
 // MySQL / MariaDB explorer. Reuses the backup drivers' runners: the client
 // runs in the container with the root password from the container's
@@ -16,6 +17,7 @@ const CHARSET_ARG = '--default-character-set=utf8mb4'
  */
 function createSession(runner, database) {
   const json = (text) => runner.capture('client', ['-N', '-B', '-r', CHARSET_ARG, '-e', sql.readOnly(text), database])
+  const edit = (text) => runner.capture('client', ['-N', '-B', '-r', CHARSET_ARG, '-e', text, database])
   return {
     async objects() {
       return sql.parseObjects(await json(sql.objectsSql(database)))
@@ -30,6 +32,12 @@ function createSession(runner, database) {
     async query(text, limit) {
       const out = await runner.capture('client', ['-B', CHARSET_ARG, '-e', sql.readOnly(sql.consoleSql(text, limit)), database])
       return sql.parseBatch(out)
+    },
+    async updateRow(object, structure, request) {
+      return write.parseMatched(await edit(write.updateSql(database, object, structure.columns, request)))
+    },
+    async deleteRow(object, structure, request) {
+      return write.parseRowCount(await edit(write.deleteSql(database, object, structure.columns, request)))
     },
   }
 }
